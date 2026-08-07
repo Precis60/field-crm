@@ -1237,8 +1237,8 @@ function CalendarPanel({ crm, uid }) {
     const from = view === "week" ? weekStart : startOfDay(selectedDay);
     const to = addDays(from, view === "week" ? 7 : 1);
     const rows = await crm.listEvents({
-      from: from.toISOString(),
-      to: to.toISOString(),
+      from: addDays(from, -90).toISOString(),
+      to: addDays(to, 90).toISOString(),
     }).catch(() => []);
     setEvents(rows || []);
   }
