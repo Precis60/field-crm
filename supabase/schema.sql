@@ -346,6 +346,10 @@ values (
 )
 on conflict (id) do update set auth_user_id = COALESCE(people.auth_user_id, EXCLUDED.auth_user_id);
 
+insert into people (id, name, role, business_name, active, sort_order)
+values ('staff-lucas-anderson', 'Lucas Anderson', 'staff', 'Property Assistant', true, 10)
+on conflict (id) do nothing;
+
 -- Sync sites.active with sites.status
 update sites set status = 'archived' where active = false and status != 'archived';
 
