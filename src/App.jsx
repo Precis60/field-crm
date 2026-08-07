@@ -3126,13 +3126,22 @@ function AdminPanel() {
                     </div>
                   </>
                 ) : (
-                  <div className="lp-person-head">
-                    <div>
-                      <strong>{s.name}</strong> <code className="lp-site-code">{s.id.toUpperCase()}</code>
-                      {s.status && <span className="lp-tag">{s.status}</span>}
-                      <span className="lp-worker-type">{[s.address, s.contact_name, s.contact_phone, s.contact_email].filter(Boolean).join(" · ") || "No details yet"}</span>
+                  <div className="lp-person-head" style={{ alignItems: "flex-start" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <strong style={{ fontSize: "1.1rem" }}>{s.name}</strong>
+                        <code className="lp-site-code">{s.id.toUpperCase()}</code>
+                        {s.status && <span className="lp-tag">{s.status}</span>}
+                      </div>
+                      {s.address && <span className="lp-hint">{s.address}</span>}
+                      <span className="lp-worker-type">
+                        {s.contact_name ? <span>{s.contact_name}</span> : null}
+                        {s.contact_phone ? <span style={{ marginLeft: s.contact_name ? 10 : 0 }}>{s.contact_phone}</span> : null}
+                        {s.contact_email ? <span style={{ marginLeft: s.contact_name || s.contact_phone ? 10 : 0 }}>{s.contact_email}</span> : null}
+                        {!s.contact_name && !s.contact_phone && !s.contact_email && "No contact details"}
+                      </span>
                     </div>
-                    <div className="lp-person-actions">
+                    <div className="lp-person-actions" style={{ marginTop: 0, alignSelf: "flex-start" }}>
                       <button className="lp-btn-ghost" onClick={() => { setErr(""); setEditingSite(s.id); setSiteDraft({ ...emptySite, name: s.name, address: s.address || "", contact_name: s.contact_name || "", contact_phone: s.contact_phone || "", contact_email: s.contact_email || "", status: s.status || "active" }); }}>
                         <Settings size={13} /> Edit
                       </button>
