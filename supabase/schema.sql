@@ -294,6 +294,22 @@ drop policy if exists zoho_sync_log_manager_all on zoho_sync_log;
 create policy zoho_sync_log_manager_all on zoho_sync_log
   for all using (is_manager()) with check (is_manager());
 
+-- People RLS: users can access their own row by auth id or email fallback.
+alter table people enable row level security;
+
+grant select, insert, update, delete on people to authenticated;
+
+drop policy if exists people_all on people;
+create policy people_all on people
+  for all using (
+    auth.uid() = auth_user_id
+    or auth.jwt()->>'email' = email
+  )
+  with check (
+    auth.uid() = auth_user_id
+    or auth.jwt()->>'email' = email
+  );
+
 -- Strip token columns from the authenticated role; service_role (edge fn) keeps them.
 revoke select on zoho_connections from authenticated, anon;
 grant select (id, org_name, region, status, connected_at, last_error, created_at)
@@ -305,6 +321,14 @@ grant update (status, last_error) on zoho_connections to authenticated;
 -- on conflict do nothing;
 
 -- Manager seed data
-insert into people (id, name, role, email, active, sort_order)
-values ('mgr-001', 'Jamie Anderson', 'manager', 'jamie@projects-consultant.com', true, 0)
-on conflict (id) do nothing;
+insert into people (id, name, role, email, active, sort_order, auth_user_id)
+values (
+  'mgr-001',
+  'Jamie Anderson',
+  'manager',
+  'jamie@projects-consultant.com',
+  true,
+  0,
+  (select id from auth.users where email = 'jamie@projects-consultant.com' limit 1)
+)
+on conflict (id) do update set auth_user_id = COALESCE(people.auth_user_id, EXCLUDED.auth_user_id);
