@@ -577,11 +577,13 @@ function ProjectList({ projects, customers, sites, crm, uid, onOpen, onChanged }
                 key={p.id}
                 onClick={() => onOpen(p.id)}
               >
-                <div className="lp-person-head">
-                  <div>
-                    <strong>{p.name}</strong>
-                    <span className="lp-tag">{statusLabel}</span>
-                    <span className="lp-worker-type">
+                <div className="lp-person-head" style={{ alignItems: "flex-start" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 0, textAlign: "left" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <strong style={{ fontSize: "1.1rem", lineHeight: 1.3 }}>{p.name}</strong>
+                      <span className="lp-tag">{statusLabel}</span>
+                    </div>
+                    <span className="lp-hint">
                       {[
                         p.customers?.name,
                         p.sites?.name,
@@ -589,7 +591,7 @@ function ProjectList({ projects, customers, sites, crm, uid, onOpen, onChanged }
                       ].filter(Boolean).join(" · ")}
                     </span>
                   </div>
-                  <ChevronRight size={16} />
+                  <ChevronRight size={16} style={{ alignSelf: "flex-start", marginTop: 4, flexShrink: 0 }} />
                 </div>
               </button>
             );
