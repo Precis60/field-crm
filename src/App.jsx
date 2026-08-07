@@ -2899,6 +2899,7 @@ function AdminPanel() {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
 
   const emptySite = { name: "", address: "", contact_name: "", contact_phone: "", contact_email: "", status: "active" };
@@ -2989,6 +2990,19 @@ function AdminPanel() {
     if (ok) { setNewPerson(emptyPerson); setAddingPerson(false); }
   }
 
+  async function sendPasswordReset(person) {
+    if (!person.email || !isEmail(person.email)) { setErr("No valid email to send a reset to."); return; }
+    setBusy(true); setErr(""); setMsg("");
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(person.email.trim(), { redirectTo: window.location.href });
+      if (error) throw error;
+      setMsg(`Password reset link sent to ${person.email.trim()}.`);
+    } catch (e) {
+      setErr(e.message || "Couldn't send password reset.");
+    }
+    setBusy(false);
+  }
+
   async function savePerson(personId) {
     if (!personDraft.name.trim()) { setErr("Enter a name."); return; }
     if (!isEmail(personDraft.email)) { setErr("Enter a valid login email."); return; }
@@ -3036,6 +3050,7 @@ function AdminPanel() {
       </div>
 
       {err && <p className="lp-error">{err}</p>}
+      {msg && <p className="lp-hint" style={{ color: "var(--green)" }}>{msg}</p>}
 
       {adminTab === "sites" && (
         <>
@@ -3289,6 +3304,9 @@ function AdminPanel() {
                             Edit sites
                           </button>
                         )}
+                        <button className="lp-btn-ghost" disabled={busy} onClick={() => sendPasswordReset(person)}>
+                          <Lock size={13} /> Reset password
+                        </button>
                         <button className="lp-btn-ghost" disabled={busy}
                           onClick={() => run(() => updatePerson(person.id, { active: !person.active }), "Couldn't change that person — try again.")}>
                           {person.active ? "Deactivate" : "Reactivate"}
