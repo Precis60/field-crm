@@ -383,7 +383,7 @@ create policy assigned_tasks_all on assigned_tasks
   for all using (auth.uid() is not null)
   with check (auth.uid() is not null);
 
-grant select on sites to authenticated;
+grant select, insert, update, delete on sites to authenticated;
 grant select on site_assignments to authenticated;
 grant select on roster to authenticated;
 
