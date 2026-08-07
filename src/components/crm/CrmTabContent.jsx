@@ -1440,45 +1440,50 @@ function CalendarPanel({ crm, uid }) {
             {events.map((e) => {
               const start = new Date(e.start_at);
               const end = e.end_at ? new Date(e.end_at) : addMinutes(start, 60);
-              const dayIndex = days.findIndex((d) => isSameDay(d, start));
-              if (dayIndex === -1) return null;
-              const startH = start.getHours() + start.getMinutes() / 60;
-              const endH = end.getHours() + end.getMinutes() / 60;
-              const top = (startH / 24) * 100;
-              const height = Math.max(((endH - startH) / 24) * 100, 1.8);
               const color = EVENT_CATEGORIES.find((c) => c.label === e.category)?.color || "#64748b";
-              return (
-                <button
-                  key={e.id}
-                  type="button"
-                  onClick={() => editEvent(e)}
-                  disabled={busy}
-                  style={{
-                    position: "absolute",
-                    left: `calc(60px + (100% - 60px) * ${dayIndex} / ${days.length})`,
-                    width: `calc((100% - 60px) / ${days.length} - 6px)`,
-                    top: `${top}%`,
-                    height: `${height}%`,
-                    backgroundColor: color + "33",
-                    borderLeft: `3px solid ${color}`,
-                    borderRadius: 4,
-                    padding: "3px 6px",
-                    fontSize: 10.5,
-                    color: "#333",
-                    overflow: "hidden",
-                    textAlign: "left",
-                    cursor: "pointer",
-                    zIndex: 1,
-                    border: "none",
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <strong style={{ lineHeight: 1.2 }}>{e.category}</strong>
-                  <span>{start.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })} – {end.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}</span>
-                  <span>{[e.project_name, e.site_name].filter(Boolean).join(" · ")}</span>
-                </button>
-              );
+              return days.map((day, dayIndex) => {
+                const dayStart = day;
+                const dayEnd = addDays(day, 1);
+                if (end <= dayStart || start >= dayEnd) return null;
+                const portionStart = start > dayStart ? start : dayStart;
+                const portionEnd = end < dayEnd ? end : dayEnd;
+                const startH = portionStart.getHours() + portionStart.getMinutes() / 60;
+                const endH = portionEnd.getHours() + portionEnd.getMinutes() / 60;
+                const top = (startH / 24) * 100;
+                const height = Math.max(((endH - startH) / 24) * 100, 1.8);
+                return (
+                  <button
+                    key={`${e.id}-${dayIndex}`}
+                    type="button"
+                    onClick={() => editEvent(e)}
+                    disabled={busy}
+                    style={{
+                      position: "absolute",
+                      left: `calc(60px + (100% - 60px) * ${dayIndex} / ${days.length})`,
+                      width: `calc((100% - 60px) / ${days.length} - 6px)`,
+                      top: `${top}%`,
+                      height: `${height}%`,
+                      backgroundColor: color + "33",
+                      borderLeft: `3px solid ${color}`,
+                      borderRadius: 4,
+                      padding: "3px 6px",
+                      fontSize: 10.5,
+                      color: "#333",
+                      overflow: "hidden",
+                      textAlign: "left",
+                      cursor: "pointer",
+                      zIndex: 1,
+                      border: "none",
+                      display: "flex",
+                      flexDirection: "column",
+                    }}
+                  >
+                    <strong style={{ lineHeight: 1.2 }}>{e.category}</strong>
+                    <span>{portionStart.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })} – {portionEnd.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}</span>
+                    <span>{[e.project_name, e.site_name].filter(Boolean).join(" · ")}</span>
+                  </button>
+                );
+              });
             })}
           </div>
         </div>
