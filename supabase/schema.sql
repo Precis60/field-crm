@@ -303,3 +303,8 @@ grant update (status, last_error) on zoho_connections to authenticated;
 -- Storage bucket for work photos (create in dashboard if missing)
 -- insert into storage.buckets (id, name, public) values ('work-photos', 'work-photos', false)
 -- on conflict do nothing;
+
+-- Manager seed data
+insert into people (id, name, role, email, active, sort_order)
+values ('mgr-001', 'Jamie Anderson', 'manager', 'jamie@projects-consultant.com', true, 0)
+on conflict (id) do nothing;
