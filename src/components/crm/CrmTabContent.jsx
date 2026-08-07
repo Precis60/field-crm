@@ -290,16 +290,22 @@ function CustomersPanel({ crm, uid, sites = [] }) {
                   </div>
                 </>
               ) : (
-                <div className="lp-person-head">
-                  <div>
-                    <strong>{c.name}</strong>
-                    {c.zoho_contact_id && <span className="lp-tag lp-tag--zoho">Zoho</span>}
-                    {!c.active && <span className="lp-tag">Inactive</span>}
-                    <span className="lp-worker-type">
-                      {[c.position, c.company, c.email, c.phone, c.status].filter(Boolean).join(" · ")}
-                    </span>
+                <div className="lp-person-head" style={{ alignItems: "flex-start" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <strong style={{ fontSize: "1.1rem" }}>{c.name}</strong>
+                      {c.status && <span className="lp-tag">{c.status}</span>}
+                      {c.zoho_contact_id && <span className="lp-tag lp-tag--zoho">Zoho</span>}
+                      {!c.active && <span className="lp-tag">Inactive</span>}
+                    </div>
+                    <div className="lp-hint" style={{ marginTop: 2 }}>
+                      {[c.position, c.company].filter(Boolean).join(" · ")}
+                    </div>
+                    <div className="lp-hint" style={{ marginTop: 2 }}>
+                      {[c.email, c.phone, c.abn].filter(Boolean).join(" · ")}
+                    </div>
                   </div>
-                  <div className="lp-person-actions">
+                  <div className="lp-person-actions" style={{ marginTop: 0, alignSelf: "flex-start" }}>
                     <button
                       className="lp-btn-ghost"
                       onClick={() => {
