@@ -1306,7 +1306,7 @@ function CalendarPanel({ crm, uid }) {
   }
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-  const hours = Array.from({ length: 24 }, (_, i) => i);
+  const slots = Array.from({ length: 96 }, (_, i) => i);
 
   return (
     <div className="lp-settings lp-settings--wide">
@@ -1397,16 +1397,21 @@ function CalendarPanel({ crm, uid }) {
             ))}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "60px repeat(7, 1fr)", position: "relative", height: 960, minWidth: 760 }}>
-            {hours.map((h) => (
-              <div key={h} style={{ display: "contents" }}>
-                <div style={{ borderTop: "1px solid var(--line)", padding: "4px 6px", fontSize: 10.5, color: "var(--muted)", textAlign: "right" }}>
-                  {h === 0 ? "12am" : h < 12 ? `${h}am` : h === 12 ? "12pm" : `${h - 12}pm`}
+            {slots.map((i) => {
+              const h = Math.floor(i / 4);
+              const isHour = i % 4 === 0;
+              const label = isHour ? (h === 0 ? "12am" : h < 12 ? `${h}am` : h === 12 ? "12pm" : `${h - 12}pm`) : null;
+              return (
+                <div key={i} style={{ display: "contents" }}>
+                  <div style={{ borderTop: isHour ? "1px solid var(--line)" : "1px solid rgba(0,0,0,0.05)", padding: "2px 6px", fontSize: 10.5, color: "var(--muted)", textAlign: "right" }}>
+                    {label}
+                  </div>
+                  {days.map((day) => (
+                    <div key={`${i}-${day.toISOString()}`} style={{ borderTop: isHour ? "1px solid var(--line)" : "1px solid rgba(0,0,0,0.05)", borderLeft: "1px solid var(--line)", position: "relative", background: day.getDay() % 6 === 0 ? "rgba(0,0,0,0.02)" : undefined }}></div>
+                  ))}
                 </div>
-                {days.map((day) => (
-                  <div key={`${h}-${day.toISOString()}`} style={{ borderTop: "1px solid var(--line)", borderLeft: "1px solid var(--line)", position: "relative", background: day.getDay() % 6 === 0 ? "rgba(0,0,0,0.02)" : undefined }}></div>
-                ))}
-              </div>
-            ))}
+              );
+            })}
             {events.map((e) => {
               const start = new Date(e.start_at);
               const end = e.end_at ? new Date(e.end_at) : addMinutes(start, 60);
