@@ -1320,12 +1320,22 @@ function CalendarPanel({ crm, uid }) {
 
   return (
     <div className="lp-settings lp-settings--wide">
-      <h3><CalendarDays size={16} /> Calendar</h3>
-      <p className="lp-hint">{view === "week" ? "Weekly" : "Daily"} view of events by category.</p>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginTop: 4 }}>
+        <div>
+          <h3 style={{ marginBottom: 0 }}><CalendarDays size={16} /> Calendar</h3>
+          <p className="lp-hint" style={{ marginTop: 4 }}>{view === "week" ? "Weekly" : "Daily"} view of events by category.</p>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <ChoiceRow options={["Day", "Week"]} value={view === "day" ? "Day" : "Week"} onChange={(v) => setView(v.toLowerCase())} />
+          {!adding && (
+            <button className="lp-btn-ghost" onClick={() => setAdding(true)}><Plus size={15} /> New event</button>
+          )}
+        </div>
+      </div>
 
       {err && <p className="lp-error">{err}</p>}
 
-      <div className="lp-person-actions" style={{ marginTop: 10 }}>
+      <div className="lp-person-actions" style={{ marginTop: 12, justifyContent: "center" }}>
         {view === "week" ? (
           <>
             <button className="lp-btn-ghost" onClick={() => setSelectedDay((d) => addDays(startOfWeek(d), -7))}>← Prev week</button>
@@ -1344,13 +1354,10 @@ function CalendarPanel({ crm, uid }) {
           </>
         )}
       </div>
-      <div style={{ marginTop: 8 }}>
-        <ChoiceRow options={["Day", "Week"]} value={view === "day" ? "Day" : "Week"} onChange={(v) => setView(v.toLowerCase())} />
-      </div>
 
-      <div className="lp-person-actions" style={{ marginTop: 8, flexWrap: "wrap" }}>
+      <div style={{ marginTop: 8, display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
         {EVENT_CATEGORIES.map((c) => (
-          <span key={c.label} className="lp-tag" style={{ background: c.color, color: "#fff" }}>{c.label}</span>
+          <span key={c.label} className="lp-tag" style={{ background: c.color, color: "#fff", whiteSpace: "nowrap", flexShrink: 0 }}>{c.label}</span>
         ))}
       </div>
 
@@ -1405,9 +1412,7 @@ function CalendarPanel({ crm, uid }) {
         </div>
       )}
 
-      {!adding && (
-        <button className="lp-btn-ghost" style={{ marginTop: 12 }} onClick={() => setAdding(true)}><Plus size={15} /> New event</button>
-      )}
+
 
       {loading ? (
         <p className="lp-hint">Loading calendar…</p>
