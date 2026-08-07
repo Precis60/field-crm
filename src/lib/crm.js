@@ -231,6 +231,32 @@ export function createCrmApi(supabaseFetch) {
     return { invoice, lines, project };
   }
 
+  /* ---------- Project timesheets ---------- */
+
+  async function listTimesheets(projectId) {
+    return (
+      (await supabaseFetch(
+        `/timesheets?project_id=eq.${projectId}&select=*,people(id,name)&order=created_at.desc`
+      ).catch(() => [])) || []
+    );
+  }
+
+  async function createTimesheet(timesheet) {
+    await supabaseFetch("/timesheets", { method: "POST", body: [timesheet] });
+    return timesheet;
+  }
+
+  async function updateTimesheet(id, patch) {
+    await supabaseFetch(`/timesheets?id=eq.${id}`, {
+      method: "PATCH",
+      body: { ...patch, updated_at: new Date().toISOString() },
+    });
+  }
+
+  async function deleteTimesheet(id) {
+    await supabaseFetch(`/timesheets?id=eq.${id}`, { method: "DELETE" });
+  }
+
   return {
     listCustomers,
     getCustomer,
@@ -258,5 +284,9 @@ export function createCrmApi(supabaseFetch) {
     createInvoice,
     updateInvoice,
     draftInvoiceFromProject,
+    listTimesheets,
+    createTimesheet,
+    updateTimesheet,
+    deleteTimesheet,
   };
 }

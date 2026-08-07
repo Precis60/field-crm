@@ -839,6 +839,10 @@ function ProjectDetail({ projectId, crm, zoho, uid, sites, customers, accessToke
 
       <hr className="lp-settings-divider" />
 
+      <TimesheetsSection projectId={projectId} crm={crm} uid={uid} />
+
+      <hr className="lp-settings-divider" />
+
       <h4 className="lp-schedule-heading">Cost lines</h4>
       <div className="lp-person-row">
         <Field label="Description">
@@ -922,6 +926,183 @@ function ProjectDetail({ projectId, crm, zoho, uid, sites, customers, accessToke
                     Push to Zoho
                   </button>
                 )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================== */
+/*  Timesheets                                                         */
+/* ================================================================== */
+
+function TimesheetsSection({ projectId, crm, uid }) {
+  const [timesheets, setTimesheets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const empty = () => ({
+    startAt: "",
+    endAt: "",
+    notes: "",
+    expenses: [{ description: "", amount: "" }],
+    followUps: [{ description: "" }],
+  });
+  const [draft, setDraft] = useState(empty);
+
+  async function refresh() {
+    const rows = await crm.listTimesheets(projectId).catch(() => []);
+    setTimesheets(rows || []);
+  }
+
+  useEffect(() => {
+    refresh().finally(() => setLoading(false));
+  }, [projectId, crm]);
+
+  async function save() {
+    if (!draft.startAt) { setErr("Enter a start time."); return; }
+    setBusy(true); setErr("");
+    try {
+      const expenses = draft.expenses
+        .filter((e) => e.description.trim())
+        .map((e) => ({ description: e.description.trim(), amount: Number(e.amount) || 0 }));
+      const followUps = draft.followUps
+        .filter((f) => f.description.trim())
+        .map((f) => ({ description: f.description.trim() }));
+      await crm.createTimesheet({
+        id: uid(),
+        project_id: projectId,
+        start_at: new Date(draft.startAt).toISOString(),
+        end_at: draft.endAt ? new Date(draft.endAt).toISOString() : null,
+        notes: draft.notes.trim() || null,
+        expenses,
+        follow_ups: followUps,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+      setDraft(empty());
+      setAdding(false);
+      await refresh();
+    } catch (e) {
+      setErr(e.message || "Couldn't save timesheet.");
+    }
+    setBusy(false);
+  }
+
+  async function remove(id) {
+    if (!confirm("Delete this timesheet?")) return;
+    setBusy(true); setErr("");
+    try {
+      await crm.deleteTimesheet(id);
+      await refresh();
+    } catch (e) {
+      setErr(e.message || "Couldn't delete timesheet.");
+    }
+    setBusy(false);
+  }
+
+  function formatDuration(start, end) {
+    if (!end) return "—";
+    const s = new Date(start);
+    const e = new Date(end);
+    const mins = Math.round((e - s) / 60000);
+    if (mins < 60) return `${mins} min`;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${h}h${m ? ` ${m}m` : ""}`.trim();
+  }
+
+  if (loading) return <p className="lp-hint">Loading timesheets…</p>;
+
+  return (
+    <div>
+      <h4 className="lp-schedule-heading">Timesheets</h4>
+      {err && <p className="lp-error">{err}</p>}
+      {adding ? (
+        <div className="lp-person-row">
+          <div className="lp-row2">
+            <Field label="Start">
+              <input className="lp-input" type="datetime-local" value={draft.startAt}
+                onChange={(e) => setDraft((d) => ({ ...d, startAt: e.target.value }))} />
+            </Field>
+            <Field label="End">
+              <input className="lp-input" type="datetime-local" value={draft.endAt}
+                onChange={(e) => setDraft((d) => ({ ...d, endAt: e.target.value }))} />
+            </Field>
+          </div>
+          <Field label="Notes">
+            <textarea className="lp-textarea" rows={2} value={draft.notes}
+              onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))} />
+          </Field>
+          <Field label="Expenses">
+            {draft.expenses.map((e, i) => (
+              <div className="lp-row3" key={i}>
+                <input className="lp-input" placeholder="Description" value={e.description}
+                  onChange={(ev) => setDraft((d) => { const arr = [...d.expenses]; arr[i] = { ...arr[i], description: ev.target.value }; return { ...d, expenses: arr }; })} />
+                <input className="lp-input" type="number" step="0.01" min="0" placeholder="$" value={e.amount}
+                  onChange={(ev) => setDraft((d) => { const arr = [...d.expenses]; arr[i] = { ...arr[i], amount: ev.target.value }; return { ...d, expenses: arr }; })} />
+                <button className="lp-btn-ghost" onClick={() => setDraft((d) => ({ ...d, expenses: d.expenses.filter((_, idx) => idx !== i) }))} disabled={draft.expenses.length === 1}>
+                  <X size={13} />
+                </button>
+              </div>
+            ))}
+            <button className="lp-btn-ghost" onClick={() => setDraft((d) => ({ ...d, expenses: [...d.expenses, { description: "", amount: "" }] }))}>
+              <Plus size={13} /> Add expense
+            </button>
+          </Field>
+          <Field label="Follow-up tasks">
+            {draft.followUps.map((f, i) => (
+              <div className="lp-row2" key={i}>
+                <input className="lp-input" placeholder="Task" value={f.description}
+                  onChange={(ev) => setDraft((d) => { const arr = [...d.followUps]; arr[i] = { ...arr[i], description: ev.target.value }; return { ...d, followUps: arr }; })} />
+                <button className="lp-btn-ghost" onClick={() => setDraft((d) => ({ ...d, followUps: d.followUps.filter((_, idx) => idx !== i) }))} disabled={draft.followUps.length === 1}>
+                  <X size={13} />
+                </button>
+              </div>
+            ))}
+            <button className="lp-btn-ghost" onClick={() => setDraft((d) => ({ ...d, followUps: [...d.followUps, { description: "" }] }))}>
+              <Plus size={13} /> Add follow-up
+            </button>
+          </Field>
+          <div className="lp-person-actions">
+            <button className="lp-btn-ghost" onClick={save} disabled={busy}>
+              <Check size={13} /> {busy ? "Saving…" : "Save"}
+            </button>
+            <button className="lp-btn-ghost" onClick={() => { setAdding(false); setErr(""); }}>
+              <X size={13} /> Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button className="lp-btn-ghost" onClick={() => setAdding(true)} style={{ marginTop: 8 }}>
+          <Plus size={15} /> Add timesheet
+        </button>
+      )}
+
+      <div className="lp-person-list">
+        {timesheets.length === 0 ? (
+          <EmptyState compact icon={<Clock size={16} />} text="No timesheets yet." />
+        ) : (
+          timesheets.map((t) => (
+            <div className="lp-person-row" key={t.id}>
+              <div className="lp-person-head" style={{ alignItems: "flex-start" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <strong style={{ fontSize: "1.05rem" }}>{new Date(t.start_at).toLocaleString("en-AU", { dateStyle: "short", timeStyle: "short" })}</strong>
+                    {t.end_at && <span className="lp-tag">{formatDuration(t.start_at, t.end_at)}</span>}
+                  </div>
+                  {t.end_at && <span className="lp-hint">End: {new Date(t.end_at).toLocaleString("en-AU", { dateStyle: "short", timeStyle: "short" })}</span>}
+                  {t.notes && <span className="lp-hint">{t.notes}</span>}
+                  {t.expenses?.length > 0 && <span className="lp-hint"><strong>Expenses:</strong> {t.expenses.map((e) => `${e.description} (${money(e.amount)})`).join(" · ")}</span>}
+                  {t.follow_ups?.length > 0 && <span className="lp-hint"><strong>Follow-ups:</strong> {t.follow_ups.map((f) => f.description).join(" · ")}</span>}
+                </div>
+                <button className="lp-btn-ghost lp-btn-danger" disabled={busy} onClick={() => remove(t.id)}>
+                  <Trash2 size={13} />
+                </button>
               </div>
             </div>
           ))

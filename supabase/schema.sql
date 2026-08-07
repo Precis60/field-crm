@@ -410,3 +410,27 @@ drop policy if exists customer_sites_all on customer_sites;
 create policy customer_sites_all on customer_sites
   for all using (auth.uid() is not null)
   with check (auth.uid() is not null);
+
+-- Project timesheets with expenses and follow-up tasks
+create table if not exists timesheets (
+  id text primary key,
+  project_id text not null references projects(id) on delete cascade,
+  person_id text references people(id) on delete set null,
+  start_at timestamptz not null,
+  end_at timestamptz,
+  notes text,
+  expenses jsonb not null default '[]'::jsonb,
+  follow_ups jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists timesheets_project_idx on timesheets (project_id);
+
+alter table timesheets enable row level security;
+grant select, insert, update, delete on timesheets to authenticated;
+
+drop policy if exists timesheets_all on timesheets;
+create policy timesheets_all on timesheets
+  for all using (auth.uid() is not null)
+  with check (auth.uid() is not null);
