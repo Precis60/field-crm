@@ -990,19 +990,19 @@ function TimesheetsSection({ projectId, crm, uid }) {
       setAdding(false);
       await refresh();
     } catch (e) {
-      setErr(e.message || "Couldn't save timesheet.");
+      setErr(e.message || "Couldn't save time entry.");
     }
     setBusy(false);
   }
 
   async function remove(id) {
-    if (!confirm("Delete this timesheet?")) return;
+    if (!confirm("Delete this time entry?")) return;
     setBusy(true); setErr("");
     try {
       await crm.deleteTimesheet(id);
       await refresh();
     } catch (e) {
-      setErr(e.message || "Couldn't delete timesheet.");
+      setErr(e.message || "Couldn't delete time entry.");
     }
     setBusy(false);
   }
@@ -1018,11 +1018,11 @@ function TimesheetsSection({ projectId, crm, uid }) {
     return `${h}h${m ? ` ${m}m` : ""}`.trim();
   }
 
-  if (loading) return <p className="lp-hint">Loading timesheets…</p>;
+  if (loading) return <p className="lp-hint">Loading time entries…</p>;
 
   return (
     <div>
-      <h4 className="lp-schedule-heading">Timesheets</h4>
+      <h4 className="lp-schedule-heading">Time entries</h4>
       {err && <p className="lp-error">{err}</p>}
       {adding ? (
         <div className="lp-person-row">
@@ -1081,13 +1081,13 @@ function TimesheetsSection({ projectId, crm, uid }) {
         </div>
       ) : (
         <button className="lp-btn-ghost" onClick={() => setAdding(true)} style={{ marginTop: 8 }}>
-          <Plus size={15} /> Add timesheet
+          <Plus size={15} /> Add time entry
         </button>
       )}
 
       <div className="lp-person-list">
         {timesheets.length === 0 ? (
-          <EmptyState compact icon={<Clock size={16} />} text="No timesheets yet." />
+          <EmptyState compact icon={<Clock size={16} />} text="No time entries yet." />
         ) : (
           timesheets.map((t) => (
             <div className="lp-person-row" key={t.id}>
