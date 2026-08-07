@@ -173,8 +173,8 @@ async function compressImage(file, maxWidth = 720, quality = 0.55) {
    Supabase project — a real database with a stable REST API. Direct
    fetch calls, no LLM in the loop for reads/writes.
 ------------------------------------------------------------------ */
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://rmwmwasgdpxlirxntfoy.supabase.co/rest/v1";
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJtd213YXNnZHB4bGlyeG50Zm95Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MDgyMjYsImV4cCI6MjEwMDk4NDIyNn0.Zs6VJW79HyLE0Hm7l-FrgRIWljnN3dsTXyvontmDIkE";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://zbmktdoivzlapmaccwvh.supabase.co/rest/v1";
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 const SUPABASE_PROJECT_URL = SUPABASE_URL.replace(/\/rest\/v1\/?$/, "");
 
 export const supabase = createClient(SUPABASE_PROJECT_URL, SUPABASE_KEY, {
