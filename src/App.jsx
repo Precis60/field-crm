@@ -1718,6 +1718,7 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
         <button className={`lp-tab ${tab === "sites" ? "is-active" : ""}`} onClick={() => setTab("sites")}>Admin</button>
         <button className={`lp-tab ${tab === "customers" ? "is-active" : ""}`} onClick={() => setTab("customers")}>Customers</button>
         <button className={`lp-tab ${tab === "projects" ? "is-active" : ""}`} onClick={() => setTab("projects")}>Projects</button>
+        <button className={`lp-tab ${tab === "calendar" ? "is-active" : ""}`} onClick={() => setTab("calendar")}>Calendar</button>
         <button className={`lp-tab ${tab === "zoho" ? "is-active" : ""}`} onClick={() => setTab("zoho")}>Zoho</button>
         <button className={`lp-tab ${tab === "settings" ? "is-active" : ""}`} onClick={() => setTab("settings")}>Settings</button>
       </div>
@@ -1746,7 +1747,7 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
       {tab === "schedule" && <ManagerSchedulePanel managers={managers} currentManager={currentManager} />}
       {tab === "log" && <FullLog monthsIndex={monthsIndex} getMonths={getMonths} cacheVersion={cacheVersion} onDeleteReport={onDeleteReport} />}
       {tab === "sites" && <AdminPanel />}
-      {["customers", "projects", "zoho"].includes(tab) && (
+      {["customers", "projects", "zoho", "calendar"].includes(tab) && (
         <CrmTabContent tab={tab} crm={crm} zoho={zoho} uid={uid} sites={sites} accessToken={accessToken} />
       )}
       {tab === "settings" && <ManagerSettings onRestored={onRestored} />}

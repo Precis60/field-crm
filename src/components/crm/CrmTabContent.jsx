@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   Check, X, AlertTriangle, Plus, Trash2, Search, Building2, Users,
-  Pencil, ChevronRight, ArrowLeft, Settings, Clock,
+  Pencil, ChevronRight, ArrowLeft, Settings, Clock, CalendarDays,
 } from "lucide-react";
 
 const CUSTOMER_STATUSES = ["active", "prospect", "inactive"];
@@ -14,6 +14,28 @@ const PROJECT_STATUSES = [
   { value: "complete", label: "Complete" },
   { value: "cancelled", label: "Cancelled" },
 ];
+const EVENT_CATEGORIES = [
+  { label: "Commercial", color: "#f59e0b" },
+  { label: "Daniel & Tanya Allison", color: "#10b981" },
+  { label: "Gandel Family", color: "#3b82f6" },
+  { label: "Jaki & Shane Lew", color: "#8b5cf6" },
+  { label: "Krongold Family", color: "#ef4444" },
+  { label: "Krongold Group", color: "#ec4899" },
+  { label: "Mara Sambucco", color: "#14b8a6" },
+  { label: "Nick & Liberty Wakim", color: "#f97316" },
+  { label: "Officework / Admin", color: "#64748b" },
+  { label: "Peter & Alla Lew", color: "#84cc16" },
+  { label: "Residential", color: "#06b6d4" },
+  { label: "Remote Programming", color: "#6366f1" },
+  { label: "Rosie Lew", color: "#d946ef" },
+  { label: "Shenkmann Family & Business", color: "#22c55e" },
+  { label: "Stevie & Lisa Lew", color: "#0ea5e9" },
+  { label: "Supply & Demand", color: "#a855f7" },
+  { label: "Training & Research", color: "#eab308" },
+  { label: "Travel Time", color: "#94a3b8" },
+  { label: "Website / Coding & Marketing", color: "#0d9488" },
+];
+
 const COST_TYPES = [
   { value: "labour", label: "Labour" },
   { value: "materials", label: "Materials" },
@@ -64,6 +86,7 @@ export default function CrmTabContent({ tab, crm, zoho, uid, sites = [], accessT
   if (tab === "customers") return <CustomersPanel crm={crm} uid={uid} sites={sites} />;
   if (tab === "projects") return <ProjectsPanel crm={crm} zoho={zoho} uid={uid} sites={sites} accessToken={accessToken} />;
   if (tab === "zoho") return <ZohoPanel crm={crm} zoho={zoho} accessToken={accessToken} />;
+  if (tab === "calendar") return <CalendarPanel crm={crm} uid={uid} />;
   return null;
 }
 
@@ -1144,6 +1167,251 @@ function TimesheetsSection({ projectId, crm, uid }) {
           ))
         )}
       </div>
+    </div>
+  );
+}
+
+/* ================================================================== */
+/*  Calendar                                                           */
+/* ================================================================== */
+
+function startOfWeek(d) {
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  date.setDate(date.getDate() + diff);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function addDays(d, n) {
+  const date = new Date(d);
+  date.setDate(date.getDate() + n);
+  return date;
+}
+
+function toISOStringLocal(d) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function CalendarPanel({ crm, uid }) {
+  const [weekStart, setWeekStart] = useState(startOfWeek(new Date()));
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const empty = () => ({
+    siteId: "",
+    siteName: "",
+    projectName: "",
+    siteAddress: "",
+    siteContact: "",
+    notes: "",
+    category: EVENT_CATEGORIES[0].label,
+    startAt: "",
+    endAt: "",
+  });
+  const [draft, setDraft] = useState(empty);
+
+  const weekEnd = addDays(weekStart, 7);
+
+  async function refresh() {
+    const rows = await crm.listEvents({
+      from: weekStart.toISOString(),
+      to: weekEnd.toISOString(),
+    }).catch(() => []);
+    setEvents(rows || []);
+  }
+
+  useEffect(() => {
+    refresh().finally(() => setLoading(false));
+  }, [weekStart, crm]);
+
+  async function save() {
+    if (!draft.startAt) { setErr("Enter a start time."); return; }
+    if (!draft.category) { setErr("Pick a category."); return; }
+    setBusy(true); setErr("");
+    try {
+      const payload = {
+        id: uid(),
+        site_id: draft.siteId.trim() || null,
+        site_name: draft.siteName.trim() || null,
+        project_name: draft.projectName.trim() || null,
+        site_address: draft.siteAddress.trim() || null,
+        site_contact: draft.siteContact.trim() || null,
+        notes: draft.notes.trim() || null,
+        category: draft.category,
+        start_at: new Date(draft.startAt).toISOString(),
+        end_at: draft.endAt ? new Date(draft.endAt).toISOString() : null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      if (editing) {
+        await crm.updateEvent(editing, payload);
+        setEditing(null);
+      } else {
+        await crm.createEvent(payload);
+      }
+      setDraft(empty());
+      setAdding(false);
+      await refresh();
+    } catch (e) {
+      setErr(e.message || "Couldn't save event.");
+    }
+    setBusy(false);
+  }
+
+  async function remove(id) {
+    if (!confirm("Delete this event?")) return;
+    setBusy(true); setErr("");
+    try {
+      await crm.deleteEvent(id);
+      await refresh();
+    } catch (e) {
+      setErr(e.message || "Couldn't delete event.");
+    }
+    setBusy(false);
+  }
+
+  function editEvent(e) {
+    setEditing(e.id);
+    setAdding(true);
+    setDraft({
+      siteId: e.site_id || "",
+      siteName: e.site_name || "",
+      projectName: e.project_name || "",
+      siteAddress: e.site_address || "",
+      siteContact: e.site_contact || "",
+      notes: e.notes || "",
+      category: e.category,
+      startAt: e.start_at ? toISOStringLocal(new Date(e.start_at)) : "",
+      endAt: e.end_at ? toISOStringLocal(new Date(e.end_at)) : "",
+    });
+  }
+
+  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
+  return (
+    <div className="lp-settings lp-settings--wide">
+      <h3><CalendarDays size={16} /> Calendar</h3>
+      <p className="lp-hint">Weekly view of events by category.</p>
+
+      {err && <p className="lp-error">{err}</p>}
+
+      <div className="lp-person-actions" style={{ marginTop: 10 }}>
+        <button className="lp-btn-ghost" onClick={() => setWeekStart((d) => addDays(d, -7))}>← Prev week</button>
+        <span className="lp-hint" style={{ alignSelf: "center" }}>
+          {weekStart.toLocaleDateString("en-AU")} – {addDays(weekStart, 6).toLocaleDateString("en-AU")}
+        </span>
+        <button className="lp-btn-ghost" onClick={() => setWeekStart((d) => addDays(d, 7))}>Next week →</button>
+      </div>
+
+      <div className="lp-person-actions" style={{ marginTop: 8, flexWrap: "wrap" }}>
+        {EVENT_CATEGORIES.map((c) => (
+          <span key={c.label} className="lp-tag" style={{ background: c.color, color: "#fff" }}>{c.label}</span>
+        ))}
+      </div>
+
+      {adding && (
+        <div className="lp-person-row" style={{ marginTop: 12 }}>
+          <div className="lp-row2">
+            <Field label="Site ID">
+              <input className="lp-input" value={draft.siteId} onChange={(e) => setDraft((d) => ({ ...d, siteId: e.target.value }))} />
+            </Field>
+            <Field label="Site name">
+              <input className="lp-input" value={draft.siteName} onChange={(e) => setDraft((d) => ({ ...d, siteName: e.target.value }))} />
+            </Field>
+          </div>
+          <Field label="Project name">
+            <input className="lp-input" value={draft.projectName} onChange={(e) => setDraft((d) => ({ ...d, projectName: e.target.value }))} />
+          </Field>
+          <div className="lp-row2">
+            <Field label="Site address">
+              <input className="lp-input" value={draft.siteAddress} onChange={(e) => setDraft((d) => ({ ...d, siteAddress: e.target.value }))} />
+            </Field>
+            <Field label="Site contact">
+              <input className="lp-input" value={draft.siteContact} onChange={(e) => setDraft((d) => ({ ...d, siteContact: e.target.value }))} />
+            </Field>
+          </div>
+          <div className="lp-row2">
+            <Field label="Start">
+              <input className="lp-input" type="datetime-local" value={draft.startAt} onChange={(e) => setDraft((d) => ({ ...d, startAt: e.target.value }))} />
+            </Field>
+            <Field label="End">
+              <input className="lp-input" type="datetime-local" value={draft.endAt} onChange={(e) => setDraft((d) => ({ ...d, endAt: e.target.value }))} />
+            </Field>
+          </div>
+          <Field label="Category">
+            <select className="lp-input" value={draft.category} onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value }))}>
+              {EVENT_CATEGORIES.map((c) => (
+                <option key={c.label} value={c.label}>{c.label}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Notes">
+            <textarea className="lp-textarea" rows={2} value={draft.notes} onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))} />
+          </Field>
+          <div className="lp-person-actions">
+            <button className="lp-btn-ghost" onClick={save} disabled={busy}><Check size={13} /> {busy ? "Saving…" : editing ? "Update event" : "Add event"}</button>
+            <button className="lp-btn-ghost" onClick={() => { setAdding(false); setEditing(null); setDraft(empty()); setErr(""); }}><X size={13} /> Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {!adding && (
+        <button className="lp-btn-ghost" style={{ marginTop: 12 }} onClick={() => setAdding(true)}><Plus size={15} /> New event</button>
+      )}
+
+      {loading ? (
+        <p className="lp-hint">Loading calendar…</p>
+      ) : (
+        <div className="lp-person-list" style={{ marginTop: 12 }}>
+          {days.map((day) => {
+            const dayEvents = events.filter((e) => {
+              const d = new Date(e.start_at);
+              return d.getFullYear() === day.getFullYear() && d.getMonth() === day.getMonth() && d.getDate() === day.getDate();
+            });
+            return (
+              <div className="lp-person-row" key={day.toISOString()}>
+                <div className="lp-person-head" style={{ alignItems: "flex-start" }}>
+                  <div style={{ flex: 1 }}>
+                    <strong style={{ fontSize: "1.05rem" }}>{day.toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "short" })}</strong>
+                    {dayEvents.length === 0 && <span className="lp-hint">No events</span>}
+                    {dayEvents.map((e) => {
+                      const color = EVENT_CATEGORIES.find((c) => c.label === e.category)?.color || "#64748b";
+                      const start = new Date(e.start_at).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" });
+                      const end = e.end_at ? new Date(e.end_at).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" }) : null;
+                      return (
+                        <div key={e.id} className="lp-person-row" style={{ borderLeft: `4px solid ${color}`, paddingLeft: 10, marginTop: 6 }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                              <span className="lp-tag" style={{ background: color, color: "#fff" }}>{e.category}</span>
+                              <strong>{start}{end ? ` – ${end}` : ""}</strong>
+                            </div>
+                            {[e.project_name, e.site_name, e.site_id].filter(Boolean).join(" · ") && (
+                              <span className="lp-hint">{[e.project_name, e.site_name, e.site_id].filter(Boolean).join(" · ")}</span>
+                            )}
+                            {e.site_address && <span className="lp-hint">{e.site_address}</span>}
+                            {e.site_contact && <span className="lp-hint">{e.site_contact}</span>}
+                            {e.notes && <span className="lp-hint">{e.notes}</span>}
+                          </div>
+                          <div className="lp-person-actions" style={{ marginTop: 0, alignSelf: "flex-start" }}>
+                            <button className="lp-btn-ghost" onClick={() => editEvent(e)} disabled={busy}><Pencil size={13} /></button>
+                            <button className="lp-btn-ghost lp-btn-danger" onClick={() => remove(e.id)} disabled={busy}><Trash2 size={13} /></button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

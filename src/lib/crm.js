@@ -257,6 +257,31 @@ export function createCrmApi(supabaseFetch) {
     await updateTimesheet(id, { invoiced });
   }
 
+  /* ---------- Calendar events ---------- */
+
+  async function listEvents({ from, to } = {}) {
+    let path = "/events?select=*&order=start_at";
+    if (from) path += `&start_at=gte.${encodeURIComponent(from)}`;
+    if (to) path += `&start_at=lt.${encodeURIComponent(to)}`;
+    return (await supabaseFetch(path).catch(() => [])) || [];
+  }
+
+  async function createEvent(event) {
+    await supabaseFetch("/events", { method: "POST", body: [event] });
+    return event;
+  }
+
+  async function updateEvent(id, patch) {
+    await supabaseFetch(`/events?id=eq.${id}`, {
+      method: "PATCH",
+      body: { ...patch, updated_at: new Date().toISOString() },
+    });
+  }
+
+  async function deleteEvent(id) {
+    await supabaseFetch(`/events?id=eq.${id}`, { method: "DELETE" });
+  }
+
   async function deleteTimesheet(id) {
     await supabaseFetch(`/timesheets?id=eq.${id}`, { method: "DELETE" });
   }
@@ -293,5 +318,9 @@ export function createCrmApi(supabaseFetch) {
     updateTimesheet,
     setTimesheetInvoiced,
     deleteTimesheet,
+    listEvents,
+    createEvent,
+    updateEvent,
+    deleteEvent,
   };
 }

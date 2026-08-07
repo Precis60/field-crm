@@ -435,3 +435,29 @@ drop policy if exists timesheets_all on timesheets;
 create policy timesheets_all on timesheets
   for all using (auth.uid() is not null)
   with check (auth.uid() is not null);
+
+-- Weekly calendar events
+create table if not exists events (
+  id text primary key,
+  site_id text,
+  site_name text,
+  project_name text,
+  site_address text,
+  site_contact text,
+  notes text,
+  category text not null,
+  start_at timestamptz not null,
+  end_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists events_start_at_idx on events (start_at);
+
+alter table events enable row level security;
+grant select, insert, update, delete on events to authenticated;
+
+drop policy if exists events_all on events;
+create policy events_all on events
+  for all using (auth.uid() is not null)
+  with check (auth.uid() is not null);
