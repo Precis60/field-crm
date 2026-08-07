@@ -261,9 +261,8 @@ export function createCrmApi(supabaseFetch) {
 
   async function listEvents({ from, to } = {}) {
     let path = "/events?select=*&order=start_at";
-    if (from && to) {
-      path += `&and=(start_at.lt.${encodeURIComponent(to)},or=(start_at.gte.${encodeURIComponent(from)},end_at.gt.${encodeURIComponent(from)}))`;
-    }
+    if (from) path += `&start_at=gte.${encodeURIComponent(from)}`;
+    if (to) path += `&start_at=lt.${encodeURIComponent(to)}`;
     return (await supabaseFetch(path).catch(() => [])) || [];
   }
 
