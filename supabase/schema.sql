@@ -308,20 +308,29 @@ drop policy if exists people_all on people;
 
 create policy people_select on people
   for select using (
-    auth.uid() = auth_user_id
+    is_manager()
+    or auth.uid() = auth_user_id
     or auth.jwt()->>'email' = email
     or active = true
   );
 
+create policy people_insert on people
+  for insert with check (is_manager());
+
 create policy people_update on people
   for update using (
-    auth.uid() = auth_user_id
+    is_manager()
+    or auth.uid() = auth_user_id
     or auth.jwt()->>'email' = email
   )
   with check (
-    auth.uid() = auth_user_id
+    is_manager()
+    or auth.uid() = auth_user_id
     or auth.jwt()->>'email' = email
   );
+
+create policy people_delete on people
+  for delete using (is_manager());
 
 -- Strip token columns from the authenticated role; service_role (edge fn) keeps them.
 revoke select on zoho_connections from authenticated, anon;
