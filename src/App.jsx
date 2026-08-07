@@ -2913,10 +2913,12 @@ function AdminPanel() {
   const [addingPerson, setAddingPerson] = useState(false);
   const [editingSitesFor, setEditingSitesFor] = useState(null);
   const [siteDraftIds, setSiteDraftIds] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [customerSites, setCustomerSites] = useState([]);
 
   async function refresh() {
-    const [s, p, a] = await Promise.all([loadAllSites(), loadAllPeople(), loadSiteAssignments()]);
-    setSites(s); setPeople(p); setAssignments(a);
+    const [s, p, a, c, cs] = await Promise.all([loadAllSites(), loadAllPeople(), loadSiteAssignments(), crm.listCustomers({ activeOnly: false }), crm.listCustomerSitesAll()]);
+    setSites(s); setPeople(p); setAssignments(a); setCustomers(c); setCustomerSites(cs);
   }
 
   useEffect(() => { (async () => { await refresh(); setLoading(false); })(); }, []);
@@ -3140,6 +3142,17 @@ function AdminPanel() {
                         {s.contact_email ? <span style={{ marginLeft: s.contact_name || s.contact_phone ? 10 : 0 }}>{s.contact_email}</span> : null}
                         {!s.contact_name && !s.contact_phone && !s.contact_email && "No contact details"}
                       </span>
+                      {(() => {
+                        const linked = customerSites
+                          .filter((cs) => cs.site_id === s.id)
+                          .map((cs) => customers.find((c) => c.id === cs.customer_id)?.name)
+                          .filter(Boolean);
+                        return linked.length ? (
+                          <div className="lp-hint" style={{ marginTop: 2 }}>
+                            <strong>Customers:</strong> {linked.join(" · ")}
+                          </div>
+                        ) : null;
+                      })()}
                     </div>
                     <div className="lp-person-actions" style={{ marginTop: 0, alignSelf: "flex-start" }}>
                       <button className="lp-btn-ghost" onClick={() => { setErr(""); setEditingSite(s.id); setSiteDraft({ ...emptySite, name: s.name, address: s.address || "", contact_name: s.contact_name || "", contact_phone: s.contact_phone || "", contact_email: s.contact_email || "", status: s.status || "active" }); }}>

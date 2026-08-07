@@ -81,6 +81,7 @@ function CustomersPanel({ crm, uid, sites = [] }) {
   const [editing, setEditing] = useState(null);
   const [editingSitesFor, setEditingSitesFor] = useState(null);
   const [siteDraftIds, setSiteDraftIds] = useState([]);
+  const [customerSites, setCustomerSites] = useState([]);
   const empty = () => ({
     name: "", position: "", company: "", email: "", phone: "", abn: "",
     billing_address: "", notes: "", status: "active",
@@ -88,7 +89,9 @@ function CustomersPanel({ crm, uid, sites = [] }) {
   const [draft, setDraft] = useState(empty);
 
   async function refresh(query = q) {
-    setCustomers(await crm.listCustomers({ q: query }));
+    const [c, cs] = await Promise.all([crm.listCustomers({ q: query }), crm.listCustomerSitesAll()]);
+    setCustomers(c);
+    setCustomerSites(cs);
   }
 
   useEffect(() => {
@@ -304,6 +307,17 @@ function CustomersPanel({ crm, uid, sites = [] }) {
                     <div className="lp-hint" style={{ marginTop: 2 }}>
                       {[c.email, c.phone, c.abn].filter(Boolean).join(" · ")}
                     </div>
+                    {(() => {
+                      const linked = customerSites
+                        .filter((cs) => cs.customer_id === c.id)
+                        .map((cs) => sites.find((s) => s.id === cs.site_id)?.name)
+                        .filter(Boolean);
+                      return linked.length ? (
+                        <div className="lp-hint" style={{ marginTop: 2 }}>
+                          <strong>Sites:</strong> {linked.join(" · ")}
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
                   <div className="lp-person-actions" style={{ marginTop: 0, alignSelf: "flex-start" }}>
                     <button
