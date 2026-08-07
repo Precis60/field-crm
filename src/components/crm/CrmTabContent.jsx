@@ -1007,6 +1007,13 @@ function TimesheetsSection({ projectId, crm, uid }) {
     setBusy(false);
   }
 
+  function hoursBetween(start, end) {
+    if (!end) return 0;
+    const s = new Date(start);
+    const e = new Date(end);
+    return Math.max(0, (e - s) / 3600000);
+  }
+
   function formatDuration(start, end) {
     if (!end) return "—";
     const s = new Date(start);
@@ -1018,11 +1025,31 @@ function TimesheetsSection({ projectId, crm, uid }) {
     return `${h}h${m ? ` ${m}m` : ""}`.trim();
   }
 
+  function toggleInvoiced(id, invoiced) {
+    setBusy(true); setErr("");
+    crm.setTimesheetInvoiced(id, !invoiced)
+      .then(() => refresh())
+      .catch((e) => setErr(e.message || "Couldn't update invoice status."))
+      .finally(() => setBusy(false));
+  }
+
+  const totalInvoiced = timesheets
+    .filter((t) => t.invoiced && t.end_at)
+    .reduce((sum, t) => sum + hoursBetween(t.start_at, t.end_at), 0);
+  const totalUninvoiced = timesheets
+    .filter((t) => !t.invoiced && t.end_at)
+    .reduce((sum, t) => sum + hoursBetween(t.start_at, t.end_at), 0);
+
   if (loading) return <p className="lp-hint">Loading time entries…</p>;
 
   return (
     <div>
       <h4 className="lp-schedule-heading">Time entries</h4>
+      {timesheets.length > 0 && (
+        <div className="lp-hint" style={{ marginTop: 2, marginBottom: 8 }}>
+          <strong>Invoiced:</strong> {totalInvoiced.toFixed(1)}h · <strong>Uninvoiced:</strong> {totalUninvoiced.toFixed(1)}h
+        </div>
+      )}
       {err && <p className="lp-error">{err}</p>}
       {adding ? (
         <div className="lp-person-row">
@@ -1096,15 +1123,22 @@ function TimesheetsSection({ projectId, crm, uid }) {
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                     <strong style={{ fontSize: "1.05rem" }}>{new Date(t.start_at).toLocaleString("en-AU", { dateStyle: "short", timeStyle: "short" })}</strong>
                     {t.end_at && <span className="lp-tag">{formatDuration(t.start_at, t.end_at)}</span>}
+                    {t.invoiced && <span className="lp-tag">Invoiced</span>}
                   </div>
                   {t.end_at && <span className="lp-hint">End: {new Date(t.end_at).toLocaleString("en-AU", { dateStyle: "short", timeStyle: "short" })}</span>}
                   {t.notes && <span className="lp-hint">{t.notes}</span>}
                   {t.expenses?.length > 0 && <span className="lp-hint"><strong>Expenses:</strong> {t.expenses.map((e) => `${e.description} (${money(e.amount)})`).join(" · ")}</span>}
                   {t.follow_ups?.length > 0 && <span className="lp-hint"><strong>Follow-ups:</strong> {t.follow_ups.map((f) => f.description).join(" · ")}</span>}
                 </div>
-                <button className="lp-btn-ghost lp-btn-danger" disabled={busy} onClick={() => remove(t.id)}>
-                  <Trash2 size={13} />
-                </button>
+                <div className="lp-person-actions" style={{ marginTop: 0, alignSelf: "flex-start", flexWrap: "nowrap" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "12.5px", color: "var(--muted)", cursor: "pointer" }}>
+                    <input type="checkbox" checked={t.invoiced} onChange={() => toggleInvoiced(t.id, t.invoiced)} disabled={busy} />
+                    Invoiced
+                  </label>
+                  <button className="lp-btn-ghost lp-btn-danger" disabled={busy} onClick={() => remove(t.id)}>
+                    <Trash2 size={13} />
+                  </button>
+                </div>
               </div>
             </div>
           ))

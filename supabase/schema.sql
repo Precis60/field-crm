@@ -421,6 +421,7 @@ create table if not exists timesheets (
   notes text,
   expenses jsonb not null default '[]'::jsonb,
   follow_ups jsonb not null default '[]'::jsonb,
+  invoiced boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

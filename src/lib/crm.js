@@ -253,6 +253,10 @@ export function createCrmApi(supabaseFetch) {
     });
   }
 
+  async function setTimesheetInvoiced(id, invoiced) {
+    await updateTimesheet(id, { invoiced });
+  }
+
   async function deleteTimesheet(id) {
     await supabaseFetch(`/timesheets?id=eq.${id}`, { method: "DELETE" });
   }
@@ -287,6 +291,7 @@ export function createCrmApi(supabaseFetch) {
     listTimesheets,
     createTimesheet,
     updateTimesheet,
+    setTimesheetInvoiced,
     deleteTimesheet,
   };
 }
