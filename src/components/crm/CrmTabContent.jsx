@@ -1312,6 +1312,7 @@ function CalendarPanel({ crm, uid }) {
     });
   }
 
+  const weekStart = startOfWeek(selectedDay);
   const days = view === "week"
     ? Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
     : [startOfDay(selectedDay)];
