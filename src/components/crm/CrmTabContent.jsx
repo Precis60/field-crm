@@ -1184,6 +1184,12 @@ function startOfWeek(d) {
   return date;
 }
 
+function startOfDay(d) {
+  const date = new Date(d);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
 function addDays(d, n) {
   const date = new Date(d);
   date.setDate(date.getDate() + n);
@@ -1206,7 +1212,8 @@ function isSameDay(a, b) {
 }
 
 function CalendarPanel({ crm, uid }) {
-  const [weekStart, setWeekStart] = useState(startOfWeek(new Date()));
+  const [selectedDay, setSelectedDay] = useState(new Date());
+  const [view, setView] = useState("week");
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -1226,19 +1233,19 @@ function CalendarPanel({ crm, uid }) {
   });
   const [draft, setDraft] = useState(empty);
 
-  const weekEnd = addDays(weekStart, 7);
-
   async function refresh() {
+    const from = view === "week" ? weekStart : startOfDay(selectedDay);
+    const to = addDays(from, view === "week" ? 7 : 1);
     const rows = await crm.listEvents({
-      from: weekStart.toISOString(),
-      to: weekEnd.toISOString(),
+      from: from.toISOString(),
+      to: to.toISOString(),
     }).catch(() => []);
     setEvents(rows || []);
   }
 
   useEffect(() => {
     refresh().finally(() => setLoading(false));
-  }, [weekStart, crm]);
+  }, [selectedDay, view, crm]);
 
   async function save() {
     if (!draft.startAt) { setErr("Enter a start time."); return; }
@@ -1305,22 +1312,39 @@ function CalendarPanel({ crm, uid }) {
     });
   }
 
-  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const days = view === "week"
+    ? Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+    : [startOfDay(selectedDay)];
   const slots = Array.from({ length: 96 }, (_, i) => i);
 
   return (
     <div className="lp-settings lp-settings--wide">
       <h3><CalendarDays size={16} /> Calendar</h3>
-      <p className="lp-hint">Weekly view of events by category.</p>
+      <p className="lp-hint">{view === "week" ? "Weekly" : "Daily"} view of events by category.</p>
 
       {err && <p className="lp-error">{err}</p>}
 
       <div className="lp-person-actions" style={{ marginTop: 10 }}>
-        <button className="lp-btn-ghost" onClick={() => setWeekStart((d) => addDays(d, -7))}>← Prev week</button>
-        <span className="lp-hint" style={{ alignSelf: "center" }}>
-          {weekStart.toLocaleDateString("en-AU")} – {addDays(weekStart, 6).toLocaleDateString("en-AU")}
-        </span>
-        <button className="lp-btn-ghost" onClick={() => setWeekStart((d) => addDays(d, 7))}>Next week →</button>
+        {view === "week" ? (
+          <>
+            <button className="lp-btn-ghost" onClick={() => setSelectedDay((d) => addDays(startOfWeek(d), -7))}>← Prev week</button>
+            <span className="lp-hint" style={{ alignSelf: "center" }}>
+              {weekStart.toLocaleDateString("en-AU")} – {addDays(weekStart, 6).toLocaleDateString("en-AU")}
+            </span>
+            <button className="lp-btn-ghost" onClick={() => setSelectedDay((d) => addDays(startOfWeek(d), 7))}>Next week →</button>
+          </>
+        ) : (
+          <>
+            <button className="lp-btn-ghost" onClick={() => setSelectedDay((d) => addDays(d, -1))}>← Prev day</button>
+            <span className="lp-hint" style={{ alignSelf: "center" }}>
+              {selectedDay.toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+            </span>
+            <button className="lp-btn-ghost" onClick={() => setSelectedDay((d) => addDays(d, 1))}>Next day →</button>
+          </>
+        )}
+      </div>
+      <div style={{ marginTop: 8 }}>
+        <ChoiceRow options={["Day", "Week"]} value={view === "day" ? "Day" : "Week"} onChange={(v) => setView(v.toLowerCase())} />
       </div>
 
       <div className="lp-person-actions" style={{ marginTop: 8, flexWrap: "wrap" }}>
@@ -1388,7 +1412,7 @@ function CalendarPanel({ crm, uid }) {
         <p className="lp-hint">Loading calendar…</p>
       ) : (
         <div style={{ marginTop: 12, border: "1px solid var(--line)", borderRadius: 12, overflow: "auto" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "60px repeat(7, 1fr)", borderBottom: "1px solid var(--line)", position: "sticky", top: 0, background: "var(--panel)", zIndex: 2, minWidth: 760 }}>
+          <div style={{ display: "grid", gridTemplateColumns: `60px repeat(${days.length}, 1fr)`, borderBottom: "1px solid var(--line)", position: "sticky", top: 0, background: "var(--panel)", zIndex: 2, minWidth: view === "week" ? 760 : 360 }}>
             <div style={{ padding: "10px 4px" }}></div>
             {days.map((day) => (
               <div key={day.toISOString()} style={{ padding: "10px 4px", textAlign: "center", fontWeight: "bold", borderLeft: "1px solid var(--line)" }}>
@@ -1396,7 +1420,7 @@ function CalendarPanel({ crm, uid }) {
               </div>
             ))}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "60px repeat(7, 1fr)", position: "relative", height: 960, minWidth: 760 }}>
+          <div style={{ display: "grid", gridTemplateColumns: `60px repeat(${days.length}, 1fr)`, position: "relative", height: 960, minWidth: view === "week" ? 760 : 360 }}>
             {slots.map((i) => {
               const h = Math.floor(i / 4);
               const isHour = i % 4 === 0;
@@ -1430,8 +1454,8 @@ function CalendarPanel({ crm, uid }) {
                   disabled={busy}
                   style={{
                     position: "absolute",
-                    left: `calc(60px + (100% - 60px) * ${dayIndex} / 7)`,
-                    width: `calc((100% - 60px) / 7 - 6px)`,
+                    left: `calc(60px + (100% - 60px) * ${dayIndex} / ${days.length})`,
+                    width: `calc((100% - 60px) / ${days.length} - 6px)`,
                     top: `${top}%`,
                     height: `${height}%`,
                     backgroundColor: color + "33",
