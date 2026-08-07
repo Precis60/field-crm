@@ -40,6 +40,21 @@ export function createCrmApi(supabaseFetch) {
     await updateCustomer(id, { active });
   }
 
+  async function listCustomerSites(customerId) {
+    const rows = await supabaseFetch(`/customer_sites?customer_id=eq.${customerId}&select=site_id`);
+    return (rows || []).map((r) => r.site_id);
+  }
+
+  async function setCustomerSites(customerId, siteIds) {
+    await supabaseFetch(`/customer_sites?customer_id=eq.${customerId}`, { method: "DELETE" });
+    if (siteIds.length) {
+      await supabaseFetch("/customer_sites", {
+        method: "POST",
+        body: siteIds.map((siteId) => ({ customer_id: customerId, site_id: siteId })),
+      });
+    }
+  }
+
   /* ---------- Projects ---------- */
 
   async function listProjects({ customerId, siteId, status, activeOnly = true } = {}) {
@@ -218,6 +233,8 @@ export function createCrmApi(supabaseFetch) {
     createCustomer,
     updateCustomer,
     setCustomerActive,
+    listCustomerSites,
+    setCustomerSites,
     listProjects,
     getProject,
     createProject,

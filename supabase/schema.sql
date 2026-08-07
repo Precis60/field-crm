@@ -386,3 +386,19 @@ create policy assigned_tasks_all on assigned_tasks
 grant select on sites to authenticated;
 grant select on site_assignments to authenticated;
 grant select on roster to authenticated;
+
+-- Customer <-> site assignments (independent of projects)
+create table if not exists customer_sites (
+  customer_id text not null references customers(id) on delete cascade,
+  site_id text not null references sites(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (customer_id, site_id)
+);
+
+alter table customer_sites enable row level security;
+grant select, insert, update, delete on customer_sites to authenticated;
+
+drop policy if exists customer_sites_all on customer_sites;
+create policy customer_sites_all on customer_sites
+  for all using (auth.uid() is not null)
+  with check (auth.uid() is not null);

@@ -61,7 +61,7 @@ function EmptyState({ icon, text, compact }) {
 }
 
 export default function CrmTabContent({ tab, crm, zoho, uid, sites = [], accessToken }) {
-  if (tab === "customers") return <CustomersPanel crm={crm} uid={uid} />;
+  if (tab === "customers") return <CustomersPanel crm={crm} uid={uid} sites={sites} />;
   if (tab === "projects") return <ProjectsPanel crm={crm} zoho={zoho} uid={uid} sites={sites} accessToken={accessToken} />;
   if (tab === "zoho") return <ZohoPanel crm={crm} zoho={zoho} accessToken={accessToken} />;
   return null;
@@ -71,7 +71,7 @@ export default function CrmTabContent({ tab, crm, zoho, uid, sites = [], accessT
 /*  Customers                                                          */
 /* ================================================================== */
 
-function CustomersPanel({ crm, uid }) {
+function CustomersPanel({ crm, uid, sites = [] }) {
   const [customers, setCustomers] = useState([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
@@ -79,6 +79,8 @@ function CustomersPanel({ crm, uid }) {
   const [busy, setBusy] = useState(false);
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [editingSitesFor, setEditingSitesFor] = useState(null);
+  const [siteDraftIds, setSiteDraftIds] = useState([]);
   const empty = () => ({
     name: "", company: "", email: "", phone: "", abn: "",
     billing_address: "", notes: "", status: "active",
@@ -88,6 +90,11 @@ function CustomersPanel({ crm, uid }) {
   async function refresh(query = q) {
     setCustomers(await crm.listCustomers({ q: query }));
   }
+
+  useEffect(() => {
+    if (!editingSitesFor) return;
+    crm.listCustomerSites(editingSitesFor).then(setSiteDraftIds).catch(() => setSiteDraftIds([]));
+  }, [editingSitesFor, crm]);
 
   useEffect(() => {
     refresh().finally(() => setLoading(false));
@@ -106,6 +113,15 @@ function CustomersPanel({ crm, uid }) {
     } finally {
       setBusy(false);
     }
+  }
+
+  function toggleSiteId(siteId) {
+    setSiteDraftIds((d) => (d.includes(siteId) ? d.filter((s) => s !== siteId) : [...d, siteId]));
+  }
+
+  async function saveCustomerSites(customerId) {
+    const ok = await run(() => crm.setCustomerSites(customerId, siteDraftIds), "Couldn't save site links.");
+    if (ok) setEditingSitesFor(null);
   }
 
   function validate() {
@@ -284,6 +300,7 @@ function CustomersPanel({ crm, uid }) {
                         setErr("");
                         setAdding(false);
                         setEditing(c.id);
+                        setEditingSitesFor(null);
                         setDraft({
                           name: c.name || "",
                           company: c.company || "",
@@ -300,6 +317,12 @@ function CustomersPanel({ crm, uid }) {
                     </button>
                     <button
                       className="lp-btn-ghost"
+                      onClick={() => { setErr(""); setEditing(null); setEditingSitesFor(c.id); }}
+                    >
+                      <Building2 size={13} /> Manage sites
+                    </button>
+                    <button
+                      className="lp-btn-ghost"
                       disabled={busy}
                       onClick={() =>
                         run(() => crm.setCustomerActive(c.id, !c.active), "Couldn't update that customer.")
@@ -310,7 +333,34 @@ function CustomersPanel({ crm, uid }) {
                   </div>
                 </div>
               )}
-              {c.notes && editing !== c.id && <p className="lp-hint">{c.notes}</p>}
+              {c.notes && editing !== c.id && editingSitesFor !== c.id && <p className="lp-hint">{c.notes}</p>}
+
+              {editingSitesFor === c.id && (
+                <div className="lp-person-row" style={{ border: "none", paddingTop: 8 }}>
+                  <p className="lp-hint">Tick the sites linked to this customer.</p>
+                  <div className="lp-person-list" style={{ marginTop: 8 }}>
+                    {sites.filter((s) => s.active).map((s) => (
+                      <label className="lp-row2" key={s.id} style={{ alignItems: "center", cursor: "pointer" }}>
+                        <input
+                          type="checkbox"
+                          checked={siteDraftIds.includes(s.id)}
+                          onChange={() => toggleSiteId(s.id)}
+                          style={{ marginRight: 8 }}
+                        />
+                        <span><strong>{s.name}</strong> <code className="lp-site-code">{s.id.toUpperCase()}</code></span>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="lp-person-actions">
+                    <button className="lp-btn-ghost" onClick={() => saveCustomerSites(c.id)} disabled={busy}>
+                      <Check size={13} /> {busy ? "Saving…" : "Save sites"}
+                    </button>
+                    <button className="lp-btn-ghost" onClick={() => setEditingSitesFor(null)}>
+                      <X size={13} /> Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ))
         )}
