@@ -1448,7 +1448,8 @@ function CalendarPanel({ crm, uid }) {
                 const portionStart = start > dayStart ? start : dayStart;
                 const portionEnd = end < dayEnd ? end : dayEnd;
                 const startH = portionStart.getHours() + portionStart.getMinutes() / 60;
-                const endH = portionEnd.getHours() + portionEnd.getMinutes() / 60;
+                let endH = portionEnd.getHours() + portionEnd.getMinutes() / 60;
+                if (endH === 0 && portionEnd.getTime() !== portionStart.getTime()) endH = 24;
                 const top = (startH / 24) * 100;
                 const height = Math.max(((endH - startH) / 24) * 100, 1.8);
                 return (
