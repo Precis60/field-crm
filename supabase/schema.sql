@@ -8,7 +8,11 @@ create table if not exists sites (
   id text primary key,
   name text not null,
   address text,
-  active boolean not null default true
+  contact_name text,
+  contact_phone text,
+  contact_email text,
+  active boolean not null default true,
+  status text not null default 'active' check (status in ('speculative', 'active', 'archived'))
 );
 
 create table if not exists people (
@@ -340,6 +344,22 @@ values (
   (select id from auth.users where email = 'jamie@projects-consultant.com' limit 1)
 )
 on conflict (id) do update set auth_user_id = COALESCE(people.auth_user_id, EXCLUDED.auth_user_id);
+
+-- Sync sites.active with sites.status
+update sites set status = 'archived' where active = false and status != 'archived';
+
+create or replace function sites_set_active()
+returns trigger as $$
+begin
+  new.active := (new.status != 'archived');
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists sites_active_sync on sites;
+create trigger sites_active_sync
+  before insert or update on sites
+  for each row execute function sites_set_active();
 
 -- Task and site permissions for staff/managers to assign and acknowledge
 alter table tasks enable row level security;

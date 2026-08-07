@@ -458,7 +458,7 @@ async function savePersonSites(personId, siteIds) {
 // Admin views need inactive rows too; the app-wide loaders only fetch active ones.
 async function loadAllSites() {
   try {
-    const rows = await supabaseFetch("/sites?select=id,name,address,active&order=id");
+    const rows = await supabaseFetch("/sites?select=id,name,address,contact_name,contact_phone,contact_email,active,status&order=id");
     return rows || [];
   } catch { return []; }
 }
@@ -475,7 +475,7 @@ async function createSite(site) {
 }
 
 async function setSiteActive(siteId, active) {
-  await supabaseFetch(`/sites?id=eq.${siteId}`, { method: "PATCH", body: { active } });
+  await supabaseFetch(`/sites?id=eq.${siteId}`, { method: "PATCH", body: { status: active ? "active" : "archived" } });
 }
 
 async function createPerson(person) {
@@ -600,8 +600,8 @@ async function updateScheduleItem(id, patch) {
   await supabaseFetch(`/manager_schedule?id=eq.${id}`, { method: "PATCH", body: patch });
 }
 
-async function saveSiteDetails(siteId, name, address) {
-  await supabaseFetch(`/sites?id=eq.${siteId}`, { method: "PATCH", body: { name, address: address || null } });
+async function saveSiteDetails(siteId, patch) {
+  await supabaseFetch(`/sites?id=eq.${siteId}`, { method: "PATCH", body: patch });
 }
 
 function roleLabel(role) {
@@ -2900,9 +2900,10 @@ function AdminPanel() {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const emptySite = { name: "", address: "", contact_name: "", contact_phone: "", contact_email: "", status: "active" };
   const [editingSite, setEditingSite] = useState(null);
-  const [siteDraft, setSiteDraft] = useState({ name: "", address: "" });
-  const [newSite, setNewSite] = useState({ name: "", address: "" });
+  const [siteDraft, setSiteDraft] = useState(emptySite);
+  const [newSite, setNewSite] = useState(emptySite);
   const [addingSite, setAddingSite] = useState(false);
 
   const [editingPerson, setEditingPerson] = useState(null);
@@ -2944,15 +2945,24 @@ function AdminPanel() {
       id: nextSiteId(sites),
       name: newSite.name.trim(),
       address: newSite.address.trim() || null,
-      active: true,
+      contact_name: newSite.contact_name.trim() || null,
+      contact_phone: newSite.contact_phone.trim() || null,
+      contact_email: newSite.contact_email.trim() || null,
+      status: newSite.status || "active",
     }), "Couldn't add that site — try again.");
-    if (ok) { setNewSite({ name: "", address: "" }); setAddingSite(false); }
+    if (ok) { setNewSite(emptySite); setAddingSite(false); }
   }
 
   async function saveSite(siteId) {
     if (!siteDraft.name.trim()) { setErr("A site needs a name."); return; }
-    const ok = await run(() => saveSiteDetails(siteId, siteDraft.name.trim(), siteDraft.address.trim()),
-      "Couldn't save that site — try again.");
+    const ok = await run(() => saveSiteDetails(siteId, {
+      name: siteDraft.name.trim(),
+      address: siteDraft.address.trim() || null,
+      contact_name: siteDraft.contact_name.trim() || null,
+      contact_phone: siteDraft.contact_phone.trim() || null,
+      contact_email: siteDraft.contact_email.trim() || null,
+      status: siteDraft.status || "active",
+    }), "Couldn't save that site — try again.");
     if (ok) setEditingSite(null);
   }
 
@@ -3042,6 +3052,26 @@ function AdminPanel() {
                   <input className="lp-input" value={newSite.address} placeholder="Optional"
                     onChange={(e) => setNewSite((d) => ({ ...d, address: e.target.value }))} />
                 </Field>
+                <Field label="Site contact">
+                  <input className="lp-input" value={newSite.contact_name} placeholder="Optional"
+                    onChange={(e) => setNewSite((d) => ({ ...d, contact_name: e.target.value }))} />
+                </Field>
+                <Field label="Contact phone">
+                  <input className="lp-input" value={newSite.contact_phone} placeholder="Optional"
+                    onChange={(e) => setNewSite((d) => ({ ...d, contact_phone: e.target.value }))} />
+                </Field>
+                <Field label="Contact email">
+                  <input className="lp-input" value={newSite.contact_email} placeholder="Optional"
+                    onChange={(e) => setNewSite((d) => ({ ...d, contact_email: e.target.value }))} />
+                </Field>
+                <Field label="Status">
+                  <select className="lp-input" value={newSite.status}
+                    onChange={(e) => setNewSite((d) => ({ ...d, status: e.target.value }))}>
+                    <option value="speculative">Speculative</option>
+                    <option value="active">Active</option>
+                    <option value="archived">Archived</option>
+                  </select>
+                </Field>
               </div>
               <p className="lp-hint">It'll be created as <code className="lp-site-code">{nextSiteId(sites).toUpperCase()}</code>.</p>
               <div className="lp-person-actions">
@@ -3067,6 +3097,26 @@ function AdminPanel() {
                         <input className="lp-input" value={siteDraft.address} placeholder="e.g. 14 Riverbend Rd, Kenthurst"
                           onChange={(e) => setSiteDraft((d) => ({ ...d, address: e.target.value }))} />
                       </Field>
+                      <Field label="Site contact">
+                        <input className="lp-input" value={siteDraft.contact_name}
+                          onChange={(e) => setSiteDraft((d) => ({ ...d, contact_name: e.target.value }))} />
+                      </Field>
+                      <Field label="Contact phone">
+                        <input className="lp-input" value={siteDraft.contact_phone}
+                          onChange={(e) => setSiteDraft((d) => ({ ...d, contact_phone: e.target.value }))} />
+                      </Field>
+                      <Field label="Contact email">
+                        <input className="lp-input" value={siteDraft.contact_email}
+                          onChange={(e) => setSiteDraft((d) => ({ ...d, contact_email: e.target.value }))} />
+                      </Field>
+                      <Field label="Status">
+                        <select className="lp-input" value={siteDraft.status}
+                          onChange={(e) => setSiteDraft((d) => ({ ...d, status: e.target.value }))}>
+                          <option value="speculative">Speculative</option>
+                          <option value="active">Active</option>
+                          <option value="archived">Archived</option>
+                        </select>
+                      </Field>
                     </div>
                     <div className="lp-person-actions">
                       <button className="lp-btn-ghost" onClick={() => saveSite(s.id)} disabled={busy}>
@@ -3079,15 +3129,15 @@ function AdminPanel() {
                   <div className="lp-person-head">
                     <div>
                       <strong>{s.name}</strong> <code className="lp-site-code">{s.id.toUpperCase()}</code>
-                      {!s.active && <span className="lp-tag">Inactive</span>}
-                      <span className="lp-worker-type">{s.address || "No address yet"}</span>
+                      {s.status && <span className="lp-tag">{s.status}</span>}
+                      <span className="lp-worker-type">{[s.address, s.contact_name, s.contact_phone, s.contact_email].filter(Boolean).join(" · ") || "No details yet"}</span>
                     </div>
                     <div className="lp-person-actions">
-                      <button className="lp-btn-ghost" onClick={() => { setErr(""); setEditingSite(s.id); setSiteDraft({ name: s.name, address: s.address || "" }); }}>
+                      <button className="lp-btn-ghost" onClick={() => { setErr(""); setEditingSite(s.id); setSiteDraft({ ...emptySite, name: s.name, address: s.address || "", contact_name: s.contact_name || "", contact_phone: s.contact_phone || "", contact_email: s.contact_email || "", status: s.status || "active" }); }}>
                         <Settings size={13} /> Edit
                       </button>
                       <button className="lp-btn-ghost" disabled={busy}
-                        onClick={() => run(() => setSiteActive(s.id, !s.active), "Couldn't change that site — try again.")}>
+                        onClick={() => run(() => setSiteActive(s.id, s.status === "archived"), "Couldn't change that site — try again.")}>
                         {s.active ? "Deactivate" : "Reactivate"}
                       </button>
                     </div>
