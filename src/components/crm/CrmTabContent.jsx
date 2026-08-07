@@ -82,7 +82,7 @@ function CustomersPanel({ crm, uid, sites = [] }) {
   const [editingSitesFor, setEditingSitesFor] = useState(null);
   const [siteDraftIds, setSiteDraftIds] = useState([]);
   const empty = () => ({
-    name: "", company: "", email: "", phone: "", abn: "",
+    name: "", position: "", company: "", email: "", phone: "", abn: "",
     billing_address: "", notes: "", status: "active",
   });
   const [draft, setDraft] = useState(empty);
@@ -140,6 +140,7 @@ function CustomersPanel({ crm, uid, sites = [] }) {
         crm.createCustomer({
           id: uid(),
           name: draft.name.trim() || draft.company.trim(),
+          position: draft.position.trim() || null,
           company: draft.company.trim() || null,
           email: draft.email.trim().toLowerCase() || null,
           phone: draft.phone.trim() || null,
@@ -164,6 +165,7 @@ function CustomersPanel({ crm, uid, sites = [] }) {
       () =>
         crm.updateCustomer(id, {
           name: draft.name.trim() || draft.company.trim(),
+          position: draft.position.trim() || null,
           company: draft.company.trim() || null,
           email: draft.email.trim().toLowerCase() || null,
           phone: draft.phone.trim() || null,
@@ -189,6 +191,10 @@ function CustomersPanel({ crm, uid, sites = [] }) {
             onChange={(e) => setDraft((d) => ({ ...d, company: e.target.value }))} />
         </Field>
       </div>
+      <Field label="Position">
+        <input className="lp-input" value={draft.position} placeholder="e.g. Facilities Manager"
+          onChange={(e) => setDraft((d) => ({ ...d, position: e.target.value }))} />
+      </Field>
       <div className="lp-row2">
         <Field label="Email">
           <input className="lp-input" type="email" value={draft.email}
@@ -290,7 +296,7 @@ function CustomersPanel({ crm, uid, sites = [] }) {
                     {c.zoho_contact_id && <span className="lp-tag lp-tag--zoho">Zoho</span>}
                     {!c.active && <span className="lp-tag">Inactive</span>}
                     <span className="lp-worker-type">
-                      {[c.company, c.email, c.phone, c.status].filter(Boolean).join(" · ")}
+                      {[c.position, c.company, c.email, c.phone, c.status].filter(Boolean).join(" · ")}
                     </span>
                   </div>
                   <div className="lp-person-actions">
@@ -303,6 +309,7 @@ function CustomersPanel({ crm, uid, sites = [] }) {
                         setEditingSitesFor(null);
                         setDraft({
                           name: c.name || "",
+                          position: c.position || "",
                           company: c.company || "",
                           email: c.email || "",
                           phone: c.phone || "",

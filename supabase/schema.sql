@@ -121,6 +121,7 @@ create table if not exists manager_schedule (
 create table if not exists customers (
   id text primary key,
   name text not null,
+  position text,
   company text,
   email text,
   phone text,
