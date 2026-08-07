@@ -300,8 +300,16 @@ alter table people enable row level security;
 grant select, insert, update, delete on people to authenticated;
 
 drop policy if exists people_all on people;
-create policy people_all on people
-  for all using (
+
+create policy people_select on people
+  for select using (
+    auth.uid() = auth_user_id
+    or auth.jwt()->>'email' = email
+    or active = true
+  );
+
+create policy people_update on people
+  for update using (
     auth.uid() = auth_user_id
     or auth.jwt()->>'email' = email
   )
@@ -332,3 +340,29 @@ values (
   (select id from auth.users where email = 'jamie@projects-consultant.com' limit 1)
 )
 on conflict (id) do update set auth_user_id = COALESCE(people.auth_user_id, EXCLUDED.auth_user_id);
+
+-- Task and site permissions for staff/managers to assign and acknowledge
+alter table tasks enable row level security;
+grant select, insert, update, delete on tasks to authenticated;
+drop policy if exists tasks_all on tasks;
+create policy tasks_all on tasks
+  for all using (auth.uid() is not null)
+  with check (auth.uid() is not null);
+
+alter table task_assignees enable row level security;
+grant select, insert, update, delete on task_assignees to authenticated;
+drop policy if exists task_assignees_all on task_assignees;
+create policy task_assignees_all on task_assignees
+  for all using (auth.uid() is not null)
+  with check (auth.uid() is not null);
+
+alter table assigned_tasks enable row level security;
+grant select, insert, update, delete on assigned_tasks to authenticated;
+drop policy if exists assigned_tasks_all on assigned_tasks;
+create policy assigned_tasks_all on assigned_tasks
+  for all using (auth.uid() is not null)
+  with check (auth.uid() is not null);
+
+grant select on sites to authenticated;
+grant select on site_assignments to authenticated;
+grant select on roster to authenticated;
