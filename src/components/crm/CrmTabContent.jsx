@@ -1195,6 +1195,16 @@ function toISOStringLocal(d) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+function addMinutes(d, m) {
+  const date = new Date(d);
+  date.setMinutes(date.getMinutes() + m);
+  return date;
+}
+
+function isSameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
 function CalendarPanel({ crm, uid }) {
   const [weekStart, setWeekStart] = useState(startOfWeek(new Date()));
   const [events, setEvents] = useState([]);
@@ -1269,6 +1279,9 @@ function CalendarPanel({ crm, uid }) {
     setBusy(true); setErr("");
     try {
       await crm.deleteEvent(id);
+      setAdding(false);
+      setEditing(null);
+      setDraft(empty());
       await refresh();
     } catch (e) {
       setErr(e.message || "Couldn't delete event.");
@@ -1293,6 +1306,7 @@ function CalendarPanel({ crm, uid }) {
   }
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const hours = Array.from({ length: 24 }, (_, i) => i);
 
   return (
     <div className="lp-settings lp-settings--wide">
@@ -1356,6 +1370,11 @@ function CalendarPanel({ crm, uid }) {
           </Field>
           <div className="lp-person-actions">
             <button className="lp-btn-ghost" onClick={save} disabled={busy}><Check size={13} /> {busy ? "Saving…" : editing ? "Update event" : "Add event"}</button>
+            {editing && (
+              <button className="lp-btn-ghost lp-btn-danger" onClick={() => remove(editing)} disabled={busy}>
+                <Trash2 size={13} /> Delete
+              </button>
+            )}
             <button className="lp-btn-ghost" onClick={() => { setAdding(false); setEditing(null); setDraft(empty()); setErr(""); }}><X size={13} /> Cancel</button>
           </div>
         </div>
@@ -1368,48 +1387,70 @@ function CalendarPanel({ crm, uid }) {
       {loading ? (
         <p className="lp-hint">Loading calendar…</p>
       ) : (
-        <div className="lp-person-list" style={{ marginTop: 12 }}>
-          {days.map((day) => {
-            const dayEvents = events.filter((e) => {
-              const d = new Date(e.start_at);
-              return d.getFullYear() === day.getFullYear() && d.getMonth() === day.getMonth() && d.getDate() === day.getDate();
-            });
-            return (
-              <div className="lp-person-row" key={day.toISOString()}>
-                <div className="lp-person-head" style={{ alignItems: "flex-start" }}>
-                  <div style={{ flex: 1 }}>
-                    <strong style={{ fontSize: "1.05rem" }}>{day.toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "short" })}</strong>
-                    {dayEvents.length === 0 && <span className="lp-hint">No events</span>}
-                    {dayEvents.map((e) => {
-                      const color = EVENT_CATEGORIES.find((c) => c.label === e.category)?.color || "#64748b";
-                      const start = new Date(e.start_at).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" });
-                      const end = e.end_at ? new Date(e.end_at).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" }) : null;
-                      return (
-                        <div key={e.id} className="lp-person-row" style={{ borderLeft: `4px solid ${color}`, paddingLeft: 10, marginTop: 6 }}>
-                          <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                              <span className="lp-tag" style={{ background: color, color: "#fff" }}>{e.category}</span>
-                              <strong>{start}{end ? ` – ${end}` : ""}</strong>
-                            </div>
-                            {[e.project_name, e.site_name, e.site_id].filter(Boolean).join(" · ") && (
-                              <span className="lp-hint">{[e.project_name, e.site_name, e.site_id].filter(Boolean).join(" · ")}</span>
-                            )}
-                            {e.site_address && <span className="lp-hint">{e.site_address}</span>}
-                            {e.site_contact && <span className="lp-hint">{e.site_contact}</span>}
-                            {e.notes && <span className="lp-hint">{e.notes}</span>}
-                          </div>
-                          <div className="lp-person-actions" style={{ marginTop: 0, alignSelf: "flex-start" }}>
-                            <button className="lp-btn-ghost" onClick={() => editEvent(e)} disabled={busy}><Pencil size={13} /></button>
-                            <button className="lp-btn-ghost lp-btn-danger" onClick={() => remove(e.id)} disabled={busy}><Trash2 size={13} /></button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+        <div style={{ marginTop: 12, border: "1px solid var(--line)", borderRadius: 12, overflow: "auto" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "60px repeat(7, 1fr)", borderBottom: "1px solid var(--line)", position: "sticky", top: 0, background: "var(--panel)", zIndex: 2, minWidth: 760 }}>
+            <div style={{ padding: "10px 4px" }}></div>
+            {days.map((day) => (
+              <div key={day.toISOString()} style={{ padding: "10px 4px", textAlign: "center", fontWeight: "bold", borderLeft: "1px solid var(--line)" }}>
+                {day.toLocaleDateString("en-AU", { weekday: "short", day: "numeric" })}
               </div>
-            );
-          })}
+            ))}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "60px repeat(7, 1fr)", position: "relative", height: 960, minWidth: 760 }}>
+            {hours.map((h) => (
+              <div key={h} style={{ display: "contents" }}>
+                <div style={{ borderTop: "1px solid var(--line)", padding: "4px 6px", fontSize: 10.5, color: "var(--muted)", textAlign: "right" }}>
+                  {h === 0 ? "12am" : h < 12 ? `${h}am` : h === 12 ? "12pm" : `${h - 12}pm`}
+                </div>
+                {days.map((day) => (
+                  <div key={`${h}-${day.toISOString()}`} style={{ borderTop: "1px solid var(--line)", borderLeft: "1px solid var(--line)", position: "relative", background: day.getDay() % 6 === 0 ? "rgba(0,0,0,0.02)" : undefined }}></div>
+                ))}
+              </div>
+            ))}
+            {events.map((e) => {
+              const start = new Date(e.start_at);
+              const end = e.end_at ? new Date(e.end_at) : addMinutes(start, 60);
+              const dayIndex = days.findIndex((d) => isSameDay(d, start));
+              if (dayIndex === -1) return null;
+              const startH = start.getHours() + start.getMinutes() / 60;
+              const endH = end.getHours() + end.getMinutes() / 60;
+              const top = (startH / 24) * 100;
+              const height = Math.max(((endH - startH) / 24) * 100, 1.8);
+              const color = EVENT_CATEGORIES.find((c) => c.label === e.category)?.color || "#64748b";
+              return (
+                <button
+                  key={e.id}
+                  type="button"
+                  onClick={() => editEvent(e)}
+                  disabled={busy}
+                  style={{
+                    position: "absolute",
+                    left: `calc(60px + (100% - 60px) * ${dayIndex} / 7)`,
+                    width: `calc((100% - 60px) / 7 - 6px)`,
+                    top: `${top}%`,
+                    height: `${height}%`,
+                    backgroundColor: color + "33",
+                    borderLeft: `3px solid ${color}`,
+                    borderRadius: 4,
+                    padding: "3px 6px",
+                    fontSize: 10.5,
+                    color: "#333",
+                    overflow: "hidden",
+                    textAlign: "left",
+                    cursor: "pointer",
+                    zIndex: 1,
+                    border: "none",
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  <strong style={{ lineHeight: 1.2 }}>{e.category}</strong>
+                  <span>{start.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })} – {end.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}</span>
+                  <span>{[e.project_name, e.site_name].filter(Boolean).join(" · ")}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
