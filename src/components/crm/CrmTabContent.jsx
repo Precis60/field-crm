@@ -1070,7 +1070,7 @@ function TimesheetsSection({ projectId, crm, uid }) {
       <h4 className="lp-schedule-heading">Time entries</h4>
       {timesheets.length > 0 && (
         <div className="lp-hint" style={{ marginTop: 2, marginBottom: 8 }}>
-          <strong>Invoiced:</strong> {totalInvoiced.toFixed(1)}h · <strong>Uninvoiced:</strong> {totalUninvoiced.toFixed(1)}h
+          <strong>Invoiced:</strong> {totalInvoiced.toFixed(2)}h · <strong>Uninvoiced:</strong> {totalUninvoiced.toFixed(2)}h
         </div>
       )}
       {err && <p className="lp-error">{err}</p>}
