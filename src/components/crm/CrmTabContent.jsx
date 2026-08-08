@@ -17,6 +17,7 @@ const PROJECT_STATUSES = [
 const EVENT_CATEGORIES = [
   { label: "Commercial", color: "#f59e0b" },
   { label: "Daniel & Tanya Allison", color: "#10b981" },
+  { label: "Family", color: "#65a30d" },
   { label: "Gandel Family", color: "#3b82f6" },
   { label: "Jaki & Shane Lew", color: "#8b5cf6" },
   { label: "Krongold Family", color: "#ef4444" },
@@ -24,6 +25,7 @@ const EVENT_CATEGORIES = [
   { label: "Mara Sambucco", color: "#14b8a6" },
   { label: "Nick & Liberty Wakim", color: "#f97316" },
   { label: "Officework / Admin", color: "#64748b" },
+  { label: "Person Life", color: "#fb923c" },
   { label: "Peter & Alla Lew", color: "#84cc16" },
   { label: "Residential", color: "#06b6d4" },
   { label: "Remote Programming", color: "#6366f1" },
