@@ -1250,6 +1250,12 @@ function CalendarPanel({ crm, uid }) {
   });
   const [draft, setDraft] = useState(empty);
   const [hiddenCategories, setHiddenCategories] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [msg, setMsg] = useState("");
+
+  useEffect(() => {
+    crm.listProjects({ activeOnly: true }).then((rows) => setProjects(rows || [])).catch(() => setProjects([]));
+  }, [crm]);
 
   async function refresh() {
     const from = view === "week" ? weekStart : startOfDay(selectedDay);
@@ -1295,6 +1301,33 @@ function CalendarPanel({ crm, uid }) {
       await refresh();
     } catch (e) {
       setErr(e.message || "Couldn't save event.");
+    }
+    setBusy(false);
+  }
+
+  async function addToTimesheet() {
+    if (!draft.startAt) { setErr("This event has no start time."); return; }
+    const name = draft.projectName.trim();
+    const p = projects.find((pr) => (name && (pr.name === name || pr.id === name)));
+    if (!p) { setErr("No matching active project found for this event's project name."); return; }
+    setBusy(true); setErr(""); setMsg("");
+    try {
+      await crm.createTimesheet({
+        id: uid(),
+        project_id: p.id,
+        person_id: uid,
+        start_at: new Date(draft.startAt).toISOString(),
+        end_at: draft.endAt ? new Date(draft.endAt).toISOString() : null,
+        notes: draft.notes.trim() || null,
+        expenses: [],
+        follow_ups: [],
+        invoiced: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+      setMsg(`Time entry added to ${p.name}.`);
+    } catch (e) {
+      setErr(e.message || "Couldn't add time entry.");
     }
     setBusy(false);
   }
@@ -1352,6 +1385,7 @@ function CalendarPanel({ crm, uid }) {
       </div>
 
       {err && <p className="lp-error">{err}</p>}
+      {msg && <p className="lp-saved"><Check size={13} /> {msg}</p>}
 
       <div className="lp-person-actions" style={{ marginTop: 12, justifyContent: "center" }}>
         {view === "week" ? (
@@ -1448,7 +1482,10 @@ function CalendarPanel({ crm, uid }) {
                 </button>
               </>
             )}
-            <button className="lp-btn-ghost" onClick={() => { setAdding(false); setEditing(null); setDraft(empty()); setErr(""); }}><X size={13} /> Cancel</button>
+            <button className="lp-btn-ghost" onClick={addToTimesheet} disabled={busy}>
+              <Clock size={13} /> Add to time entries
+            </button>
+            <button className="lp-btn-ghost" onClick={() => { setAdding(false); setEditing(null); setDraft(empty()); setErr(""); setMsg(""); }}><X size={13} /> Cancel</button>
           </div>
         </div>
       )}
