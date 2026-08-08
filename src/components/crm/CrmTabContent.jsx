@@ -681,6 +681,18 @@ function ProjectDetail({ projectId, crm, zoho, uid, sites, customers, accessToke
     setBusy(false);
   }
 
+  async function remove() {
+    if (!confirm("Delete this project?")) return;
+    setBusy(true); setErr(""); setMsg("");
+    try {
+      await crm.deleteProject(projectId);
+      onBack();
+    } catch (e) {
+      setErr(e.message || "Couldn't delete project.");
+    }
+    setBusy(false);
+  }
+
   async function addCost() {
     if (!costDraft.description.trim()) { setErr("Describe the cost line."); return; }
     if (!costDraft.unit_rate || Number(costDraft.unit_rate) < 0) {
@@ -826,6 +838,9 @@ function ProjectDetail({ projectId, crm, zoho, uid, sites, customers, accessToke
         </div>
       ) : (
         <div className="lp-person-actions">
+          <button className="lp-btn-ghost lp-btn-danger" onClick={remove} disabled={busy}>
+            <Trash2 size={13} /> Delete project
+          </button>
           <button
             className="lp-btn-ghost"
             onClick={() => {

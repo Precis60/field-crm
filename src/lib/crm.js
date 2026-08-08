@@ -89,6 +89,10 @@ export function createCrmApi(supabaseFetch) {
     });
   }
 
+  async function deleteProject(id) {
+    await supabaseFetch(`/projects?id=eq.${id}`, { method: "DELETE" });
+  }
+
   async function setProjectActive(id, active) {
     await updateProject(id, { active });
   }
@@ -299,6 +303,7 @@ export function createCrmApi(supabaseFetch) {
     getProject,
     createProject,
     updateProject,
+    deleteProject,
     setProjectActive,
     listProjectCosts,
     addProjectCost,
