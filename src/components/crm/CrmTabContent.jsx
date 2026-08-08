@@ -1403,9 +1403,14 @@ function CalendarPanel({ crm, uid }) {
           <div className="lp-person-actions">
             <button className="lp-btn-ghost" onClick={save} disabled={busy}><Check size={13} /> {busy ? "Saving…" : editing ? "Update event" : "Add event"}</button>
             {editing && (
-              <button className="lp-btn-ghost lp-btn-danger" onClick={() => remove(editing)} disabled={busy}>
-                <Trash2 size={13} /> Delete
-              </button>
+              <>
+                <button className="lp-btn-ghost" onClick={() => { setEditing(null); }} disabled={busy}>
+                  <Plus size={13} /> Duplicate
+                </button>
+                <button className="lp-btn-ghost lp-btn-danger" onClick={() => remove(editing)} disabled={busy}>
+                  <Trash2 size={13} /> Delete
+                </button>
+              </>
             )}
             <button className="lp-btn-ghost" onClick={() => { setAdding(false); setEditing(null); setDraft(empty()); setErr(""); }}><X size={13} /> Cancel</button>
           </div>
