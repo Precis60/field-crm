@@ -1317,7 +1317,7 @@ function CalendarPanel({ crm, uid }) {
     setDraft({
       siteId: e.site_id || "",
       siteName: e.site_name || "",
-      projectName: e.project_name || "",
+      projectName: e.project_name || e.projectName || "",
       siteAddress: e.site_address || "",
       siteContact: e.site_contact || "",
       notes: e.notes || "",
