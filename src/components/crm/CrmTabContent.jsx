@@ -1249,6 +1249,7 @@ function CalendarPanel({ crm, uid }) {
     endAt: "",
   });
   const [draft, setDraft] = useState(empty);
+  const [hiddenCategories, setHiddenCategories] = useState([]);
 
   async function refresh() {
     const from = view === "week" ? weekStart : startOfDay(selectedDay);
@@ -1372,10 +1373,28 @@ function CalendarPanel({ crm, uid }) {
         )}
       </div>
 
-      <div style={{ marginTop: 8, display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
-        {EVENT_CATEGORIES.map((c) => (
-          <span key={c.label} className="lp-tag" style={{ background: c.color, color: "#fff", whiteSpace: "nowrap", flexShrink: 0 }}>{c.label}</span>
-        ))}
+      <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6, paddingBottom: 4 }}>
+        {EVENT_CATEGORIES.map((c) => {
+          const hidden = hiddenCategories.includes(c.label);
+          return (
+            <button
+              key={c.label}
+              type="button"
+              className="lp-tag"
+              onClick={() => setHiddenCategories((prev) => hidden ? prev.filter((x) => x !== c.label) : [...prev, c.label])}
+              style={{
+                background: c.color,
+                color: "#fff",
+                whiteSpace: "nowrap",
+                opacity: hidden ? 0.45 : 1,
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              {c.label}
+            </button>
+          );
+        })}
       </div>
 
       {adding && (
@@ -1464,7 +1483,7 @@ function CalendarPanel({ crm, uid }) {
                 </div>
               );
             })}
-            {events.map((e) => {
+            {events.filter((e) => !hiddenCategories.includes(e.category)).map((e) => {
               const start = new Date(e.start_at);
               const end = e.end_at ? new Date(e.end_at) : addMinutes(start, 60);
               const color = EVENT_CATEGORIES.find((c) => c.label === e.category)?.color || "#64748b";
