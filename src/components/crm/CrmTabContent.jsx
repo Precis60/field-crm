@@ -25,6 +25,7 @@ const EVENT_CATEGORIES = [
   { label: "Mara Sambucco", color: "#3b82f6" },
   { label: "Nick & Liberty Wakim", color: "#f97316" },
   { label: "Officework / Admin", color: "#64748b" },
+  { label: "Brandon & Devina Chizik", color: "#f43f5e" },
   { label: "Personal Life & Fitness", color: "#fb923c" },
   { label: "Peter & Alla Lew", color: "#84cc16" },
   { label: "Residential Properties", color: "#06b6d4" },
