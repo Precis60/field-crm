@@ -1337,7 +1337,7 @@ function CalendarPanel({ crm, uid }) {
   const slots = Array.from({ length: 96 }, (_, i) => i);
 
   return (
-    <div className="lp-settings lp-settings--wide">
+    <div className="lp-settings lp-settings--wide" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 160px)" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginTop: 4 }}>
         <div>
           <h3 style={{ marginBottom: 0 }}><CalendarDays size={16} /> Calendar</h3>
@@ -1458,7 +1458,7 @@ function CalendarPanel({ crm, uid }) {
       {loading ? (
         <p className="lp-hint">Loading calendar…</p>
       ) : (
-        <div style={{ marginTop: 12, border: "1px solid var(--line)", borderRadius: 12, overflow: "auto" }}>
+        <div style={{ marginTop: 12, border: "1px solid var(--line)", borderRadius: 12, overflow: "auto", flex: "1 1 auto" }}>
           <div style={{ display: "grid", gridTemplateColumns: `60px repeat(${days.length}, 1fr)`, borderBottom: "1px solid var(--line)", position: "sticky", top: 0, background: "var(--panel)", zIndex: 2, minWidth: view === "week" ? 760 : 360 }}>
             <div style={{ padding: "10px 4px" }}></div>
             {days.map((day) => (
