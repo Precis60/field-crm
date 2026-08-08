@@ -138,6 +138,22 @@ create table if not exists customers (
 
 create index if not exists customers_name_idx on customers (name);
 
+create table if not exists contacts (
+  id text primary key,
+  name text not null,
+  company text,
+  role text,
+  email text,
+  phone text,
+  notes text,
+  active boolean not null default true,
+  sort_order int not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists contacts_name_idx on contacts (name);
+
 create table if not exists projects (
   id text primary key,
   name text not null,
@@ -147,6 +163,7 @@ create table if not exists projects (
     check (status in ('lead', 'quoted', 'approved', 'in_progress', 'on_hold', 'complete', 'cancelled')),
   description text,
   budget numeric,
+  contact_id text references contacts(id) on delete set null,
   active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -297,6 +314,15 @@ create policy zoho_connections_manager_update_status on zoho_connections
 
 drop policy if exists zoho_sync_log_manager_all on zoho_sync_log;
 create policy zoho_sync_log_manager_all on zoho_sync_log
+  for all using (is_manager()) with check (is_manager());
+
+-- Contacts RLS: managers manage contacts.
+alter table contacts enable row level security;
+
+grant select, insert, update, delete on contacts to authenticated;
+
+drop policy if exists contacts_manager_all on contacts;
+create policy contacts_manager_all on contacts
   for all using (is_manager()) with check (is_manager());
 
 -- People RLS: users can access their own row by auth id or email fallback.
@@ -457,6 +483,7 @@ create table if not exists events (
   project_name text,
   site_address text,
   site_contact text,
+  contact_id text references contacts(id) on delete set null,
   notes text,
   category text not null,
   start_at timestamptz not null,

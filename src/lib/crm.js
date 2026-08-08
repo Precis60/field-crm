@@ -59,6 +59,26 @@ export function createCrmApi(supabaseFetch) {
     }
   }
 
+  async function listContacts() {
+    return (await supabaseFetch("/contacts?select=*&active=eq.true&order=sort_order,name").catch(() => [])) || [];
+  }
+
+  async function createContact(contact) {
+    await supabaseFetch("/contacts", { method: "POST", body: [contact] });
+    return contact;
+  }
+
+  async function updateContact(id, patch) {
+    await supabaseFetch(`/contacts?id=eq.${id}`, {
+      method: "PATCH",
+      body: { ...patch, updated_at: new Date().toISOString() },
+    });
+  }
+
+  async function deleteContact(id) {
+    await supabaseFetch(`/contacts?id=eq.${id}`, { method: "DELETE" });
+  }
+
   /* ---------- Projects ---------- */
 
   async function listProjects({ customerId, siteId, status, activeOnly = true } = {}) {
@@ -264,7 +284,7 @@ export function createCrmApi(supabaseFetch) {
   /* ---------- Calendar events ---------- */
 
   async function listEvents({ from, to } = {}) {
-    let path = "/events?select=id,site_id,site_name,project_name,site_address,site_contact,notes,category,start_at,end_at,created_at,updated_at&order=start_at";
+    let path = "/events?select=id,site_id,site_name,project_name,site_address,site_contact,contact_id,notes,category,start_at,end_at,created_at,updated_at&order=start_at";
     if (from) path += `&start_at=gte.${encodeURIComponent(from)}`;
     if (to) path += `&start_at=lt.${encodeURIComponent(to)}`;
     return (await supabaseFetch(path).catch(() => [])) || [];
@@ -299,6 +319,10 @@ export function createCrmApi(supabaseFetch) {
     listCustomerSites,
     listCustomerSitesAll,
     setCustomerSites,
+    listContacts,
+    createContact,
+    updateContact,
+    deleteContact,
     listProjects,
     getProject,
     createProject,

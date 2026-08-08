@@ -86,6 +86,7 @@ function EmptyState({ icon, text, compact }) {
 
 export default function CrmTabContent({ tab, crm, zoho, uid, sites = [], accessToken }) {
   if (tab === "customers") return <CustomersPanel crm={crm} uid={uid} sites={sites} />;
+  if (tab === "contacts") return <ContactsPanel crm={crm} uid={uid} />;
   if (tab === "projects") return <ProjectsPanel crm={crm} zoho={zoho} uid={uid} sites={sites} accessToken={accessToken} />;
   if (tab === "zoho") return <ZohoPanel crm={crm} zoho={zoho} accessToken={accessToken} />;
   if (tab === "calendar") return <CalendarPanel crm={crm} uid={uid} />;
@@ -425,6 +426,136 @@ function CustomersPanel({ crm, uid, sites = [] }) {
 /*  Projects                                                           */
 /* ================================================================== */
 
+function ContactsPanel({ crm }) {
+  const [contacts, setContacts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const empty = () => ({ name: "", company: "", role: "", email: "", phone: "", notes: "" });
+  const [draft, setDraft] = useState(empty);
+
+  async function refresh() {
+    const rows = await crm.listContacts().catch(() => []);
+    setContacts(rows || []);
+  }
+
+  useEffect(() => { refresh().finally(() => setLoading(false)); }, []);
+
+  async function run(fn, fallback) {
+    setBusy(true); setErr("");
+    try { await fn(); await refresh(); return true; } catch (e) { setErr(e.message || fallback); return false; }
+    finally { setBusy(false); }
+  }
+
+  function validate() {
+    if (!draft.name.trim()) return "Enter a contact name.";
+    if (draft.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.email.trim())) return "That email doesn't look right.";
+    return "";
+  }
+
+  async function saveNew() {
+    const problem = validate(); if (problem) { setErr(problem); return; }
+    const ok = await run(() => crm.createContact({
+      id: uid(), name: draft.name.trim(), company: draft.company.trim() || null,
+      role: draft.role.trim() || null, email: draft.email.trim().toLowerCase() || null,
+      phone: draft.phone.trim() || null, notes: draft.notes.trim() || null,
+      active: true, sort_order: contacts.length + 1, created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }), "Couldn't add that contact.");
+    if (ok) { setAdding(false); setDraft(empty()); }
+  }
+
+  async function saveEdit(id) {
+    const problem = validate(); if (problem) { setErr(problem); return; }
+    const ok = await run(() => crm.updateContact(id, {
+      name: draft.name.trim(), company: draft.company.trim() || null,
+      role: draft.role.trim() || null, email: draft.email.trim().toLowerCase() || null,
+      phone: draft.phone.trim() || null, notes: draft.notes.trim() || null,
+    }), "Couldn't save that contact.");
+    if (ok) setEditing(null);
+  }
+
+  async function remove(id) {
+    if (!confirm("Delete this contact?")) return;
+    await run(() => crm.deleteContact(id), "Couldn't delete that contact.");
+  }
+
+  const form = (
+    <>
+      <div className="lp-row2">
+        <Field label="Name"><input className="lp-input" value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} /></Field>
+        <Field label="Company"><input className="lp-input" value={draft.company} onChange={(e) => setDraft((d) => ({ ...d, company: e.target.value }))} /></Field>
+      </div>
+      <div className="lp-row2">
+        <Field label="Role"><input className="lp-input" value={draft.role} onChange={(e) => setDraft((d) => ({ ...d, role: e.target.value }))} /></Field>
+        <Field label="Phone"><input className="lp-input" value={draft.phone} onChange={(e) => setDraft((d) => ({ ...d, phone: e.target.value }))} /></Field>
+      </div>
+      <div className="lp-row2">
+        <Field label="Email"><input className="lp-input" type="email" value={draft.email} onChange={(e) => setDraft((d) => ({ ...d, email: e.target.value }))} /></Field>
+      </div>
+      <Field label="Notes"><textarea className="lp-textarea" rows={2} value={draft.notes} onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))} /></Field>
+    </>
+  );
+
+  if (loading) return <div className="lp-settings lp-settings--wide"><p className="lp-hint">Loading contacts…</p></div>;
+
+  return (
+    <div className="lp-settings lp-settings--wide">
+      <h3><Users size={16} /> Contacts</h3>
+      <p className="lp-hint">People you can assign as a site or project contact.</p>
+
+      {err && <p className="lp-error">{err}</p>}
+
+      {adding ? (
+        <div className="lp-person-row" style={{ marginTop: 12 }}>
+          {form}
+          <div className="lp-person-actions">
+            <button className="lp-btn-ghost" onClick={saveNew} disabled={busy}><Check size={13} /> {busy ? "Saving…" : "Add contact"}</button>
+            <button className="lp-btn-ghost" onClick={() => { setAdding(false); setErr(""); }}><X size={13} /> Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <button className="lp-btn-ghost" style={{ marginTop: 10 }} onClick={() => { setAdding(true); setEditing(null); setDraft(empty()); setErr(""); }}>
+          <Plus size={15} /> Add a contact
+        </button>
+      )}
+
+      <div className="lp-person-list" style={{ marginTop: 12 }}>
+        {contacts.map((c) => (
+          <div className="lp-person-row" key={c.id}>
+            {editing === c.id ? (
+              <>
+                {form}
+                <div className="lp-person-actions">
+                  <button className="lp-btn-ghost" onClick={() => saveEdit(c.id)} disabled={busy}><Check size={13} /> {busy ? "Saving…" : "Save"}</button>
+                  <button className="lp-btn-ghost" onClick={() => { setEditing(null); setErr(""); }}><X size={13} /> Cancel</button>
+                </div>
+              </>
+            ) : (
+              <div className="lp-person-head">
+                <div>
+                  <strong>{c.name}</strong>
+                  {[c.role, c.company, c.phone, c.email].filter(Boolean).join(" · ")}
+                </div>
+                <div className="lp-person-actions">
+                  <button className="lp-btn-ghost" onClick={() => { setEditing(c.id); setDraft({ name: c.name || "", company: c.company || "", role: c.role || "", email: c.email || "", phone: c.phone || "", notes: c.notes || "" }); }}>
+                    <Settings size={13} /> Edit
+                  </button>
+                  <button className="lp-btn-ghost lp-btn-danger" onClick={() => remove(c.id)} disabled={busy}>
+                    <Trash2 size={13} /> Delete
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ProjectsPanel({ crm, zoho, uid, sites, accessToken }) {
   const [projects, setProjects] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -637,9 +768,14 @@ function ProjectDetail({ projectId, crm, zoho, uid, sites, customers, accessToke
   const [msg, setMsg] = useState("");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(null);
+  const [contacts, setContacts] = useState([]);
   const [costDraft, setCostDraft] = useState({
     description: "", cost_type: "labour", quantity: "1", unit_rate: "",
   });
+
+  useEffect(() => {
+    crm.listContacts().then((rows) => setContacts(rows || [])).catch(() => setContacts([]));
+  }, [crm]);
 
   async function refresh() {
     const [p, c, inv] = await Promise.all([
@@ -674,6 +810,7 @@ function ProjectDetail({ projectId, crm, zoho, uid, sites, customers, accessToke
         status: draft.status,
         description: draft.description.trim() || null,
         budget: draft.budget ? Number(draft.budget) : null,
+        ...(draft.contactId ? { contact_id: draft.contactId } : {}),
       });
       setEditing(false);
       await refresh();
@@ -812,6 +949,17 @@ function ProjectDetail({ projectId, crm, zoho, uid, sites, customers, accessToke
             </Field>
           </div>
           <div className="lp-row2">
+            <Field label="Site contact">
+              <select className="lp-input" value={draft.contactId}
+                onChange={(e) => setDraft((d) => ({ ...d, contactId: e.target.value }))}>
+                <option value="">None</option>
+                {contacts.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+          <div className="lp-row2">
             <Field label="Status">
               <select className="lp-input" value={draft.status}
                 onChange={(e) => setDraft((d) => ({ ...d, status: e.target.value }))}>
@@ -850,6 +998,7 @@ function ProjectDetail({ projectId, crm, zoho, uid, sites, customers, accessToke
                 name: project.name,
                 customerId: project.customer_id || "",
                 siteId: project.site_id || "",
+                contactId: project.contact_id || "",
                 status: project.status,
                 description: project.description || "",
                 budget: project.budget != null ? String(project.budget) : "",
@@ -1243,6 +1392,7 @@ function CalendarPanel({ crm, uid }) {
     projectName: "",
     siteAddress: "",
     siteContact: "",
+    contactId: "",
     notes: "",
     category: EVENT_CATEGORIES[0].label,
     startAt: "",
@@ -1251,10 +1401,12 @@ function CalendarPanel({ crm, uid }) {
   const [draft, setDraft] = useState(empty);
   const [hiddenCategories, setHiddenCategories] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [contacts, setContacts] = useState([]);
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
     crm.listProjects({ activeOnly: true }).then((rows) => setProjects(rows || [])).catch(() => setProjects([]));
+    crm.listContacts().then((rows) => setContacts(rows || [])).catch(() => setContacts([]));
   }, [crm]);
 
   async function refresh() {
@@ -1289,6 +1441,7 @@ function CalendarPanel({ crm, uid }) {
         end_at: draft.endAt ? new Date(draft.endAt).toISOString() : null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        ...(draft.contactId ? { contact_id: draft.contactId } : {}),
       };
       if (editing) {
         await crm.updateEvent(editing, payload);
@@ -1356,6 +1509,7 @@ function CalendarPanel({ crm, uid }) {
       projectName: e.project_name || e.projectName || "",
       siteAddress: e.site_address || "",
       siteContact: e.site_contact || "",
+      contactId: e.contact_id || "",
       notes: e.notes || "",
       category: e.category,
       startAt: e.start_at ? toISOStringLocal(new Date(e.start_at)) : "",
@@ -1449,9 +1603,24 @@ function CalendarPanel({ crm, uid }) {
               <input className="lp-input" value={draft.siteAddress} onChange={(e) => setDraft((d) => ({ ...d, siteAddress: e.target.value }))} />
             </Field>
             <Field label="Site contact">
-              <input className="lp-input" value={draft.siteContact} onChange={(e) => setDraft((d) => ({ ...d, siteContact: e.target.value }))} />
+              <select className="lp-input" value={draft.contactId}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  const contact = contacts.find((c) => c.id === id);
+                  setDraft((d) => ({ ...d, contactId: id, siteContact: contact ? contact.name : d.siteContact }));
+                }}>
+                <option value="">Other / manual</option>
+                {contacts.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
             </Field>
           </div>
+          {draft.contactId === "" && (
+            <Field label="Contact name">
+              <input className="lp-input" value={draft.siteContact} onChange={(e) => setDraft((d) => ({ ...d, siteContact: e.target.value }))} />
+            </Field>
+          )}
           <div className="lp-row2">
             <Field label="Start">
               <input className="lp-input" type="datetime-local" value={draft.startAt} onChange={(e) => setDraft((d) => ({ ...d, startAt: e.target.value }))} />
