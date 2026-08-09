@@ -59,6 +59,26 @@ export function createCrmApi(supabaseFetch) {
     }
   }
 
+  async function listSuppliers() {
+    return (await supabaseFetch("/suppliers?select=*&order=name").catch(() => [])) || [];
+  }
+
+  async function createSupplier(supplier) {
+    await supabaseFetch("/suppliers", { method: "POST", body: [supplier] });
+    return supplier;
+  }
+
+  async function updateSupplier(id, patch) {
+    await supabaseFetch(`/suppliers?id=eq.${id}`, {
+      method: "PATCH",
+      body: { ...patch, updated_at: new Date().toISOString() },
+    });
+  }
+
+  async function deleteSupplier(id) {
+    await supabaseFetch(`/suppliers?id=eq.${id}`, { method: "DELETE" });
+  }
+
   async function listContacts() {
     return (await supabaseFetch("/contacts?select=*&active=eq.true&order=sort_order,name").catch(() => [])) || [];
   }
@@ -122,7 +142,7 @@ export function createCrmApi(supabaseFetch) {
   async function listProjectCosts(projectId) {
     return (
       (await supabaseFetch(
-        `/project_costs?project_id=eq.${projectId}&select=*&order=created_at`
+        `/project_costs?project_id=eq.${projectId}&select=*,suppliers(*)&order=created_at`
       ).catch(() => [])) || []
     );
   }
@@ -145,6 +165,7 @@ export function createCrmApi(supabaseFetch) {
 
   function sumCosts(costs) {
     return (costs || []).reduce((sum, c) => {
+      if (c.amount != null) return sum + Number(c.amount);
       const qty = Number(c.quantity) || 0;
       const rate = Number(c.unit_rate) || 0;
       return sum + qty * rate;
@@ -355,6 +376,10 @@ export function createCrmApi(supabaseFetch) {
     listSettings,
     getSetting,
     setSetting,
+    listSuppliers,
+    createSupplier,
+    updateSupplier,
+    deleteSupplier,
     listContacts,
     createContact,
     updateContact,

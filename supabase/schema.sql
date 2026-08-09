@@ -173,14 +173,32 @@ create table if not exists projects (
 create index if not exists projects_customer_idx on projects (customer_id);
 create index if not exists projects_status_idx on projects (status);
 
+create table if not exists suppliers (
+  id text primary key,
+  name text not null,
+  contact_name text,
+  phone text,
+  email text,
+  abn text,
+  address text,
+  notes text,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists suppliers_name_idx on suppliers (name);
+
 create table if not exists project_costs (
   id text primary key,
   project_id text not null references projects(id) on delete cascade,
   description text not null,
   cost_type text not null default 'other'
     check (cost_type in ('labour', 'materials', 'plant', 'subcontractor', 'other')),
+  supplier_id text references suppliers(id) on delete set null,
   quantity numeric not null default 1,
   unit_rate numeric not null default 0,
+  amount numeric not null default 0,
   created_at timestamptz not null default now()
 );
 
@@ -287,6 +305,15 @@ drop policy if exists invoice_lines_manager_all on invoice_lines;
 create policy invoice_lines_manager_all on invoice_lines
   for all using (is_manager()) with check (is_manager());
 
+
+-- Suppliers RLS: managers manage suppliers.
+alter table suppliers enable row level security;
+
+grant select, insert, update, delete on suppliers to authenticated;
+
+drop policy if exists suppliers_manager_all on suppliers;
+create policy suppliers_manager_all on suppliers
+  for all using (is_manager()) with check (is_manager());
 
 -- Contacts RLS: managers manage contacts.
 alter table contacts enable row level security;

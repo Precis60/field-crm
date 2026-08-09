@@ -88,6 +88,7 @@ function EmptyState({ icon, text, compact }) {
 export default function CrmTabContent({ tab, crm, uid, sites = [] }) {
   if (tab === "customers") return <CustomersPanel crm={crm} uid={uid} sites={sites} />;
   if (tab === "contacts") return <ContactsPanel crm={crm} />;
+  if (tab === "suppliers") return <SuppliersPanel crm={crm} uid={uid} />;
   if (tab === "projects") return <ProjectsPanel crm={crm} uid={uid} sites={sites} />;
   if (tab === "calendar") return <CalendarPanel crm={crm} uid={uid} />;
   if (tab === "invoices") return <InvoicesPanel crm={crm} uid={uid} />;
@@ -890,12 +891,14 @@ function ProjectDetail({ projectId, crm, uid, sites, customers, onBack }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(null);
   const [contacts, setContacts] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [costDraft, setCostDraft] = useState({
-    description: "", cost_type: "labour", quantity: "1", unit_rate: "",
+    description: "", cost_type: "labour", quantity: "1", unit_rate: "", supplier_id: "",
   });
 
   useEffect(() => {
     crm.listContacts().then((rows) => setContacts(rows || [])).catch(() => setContacts([]));
+    crm.listSuppliers().then((rows) => setSuppliers(rows || [])).catch(() => setSuppliers([]));
   }, [crm]);
 
   async function refresh() {
@@ -962,16 +965,20 @@ function ProjectDetail({ projectId, crm, uid, sites, customers, onBack }) {
     setBusy(true);
     setErr("");
     try {
+      const qty = Number(costDraft.quantity) || 1;
+      const rate = Number(costDraft.unit_rate) || 0;
       await crm.addProjectCost({
         id: uid(),
         project_id: projectId,
         description: costDraft.description.trim(),
         cost_type: costDraft.cost_type,
-        quantity: Number(costDraft.quantity) || 1,
-        unit_rate: Number(costDraft.unit_rate) || 0,
+        supplier_id: costDraft.supplier_id || null,
+        quantity: qty,
+        unit_rate: rate,
+        amount: Math.round(qty * rate * 100) / 100,
         created_at: new Date().toISOString(),
       });
-      setCostDraft({ description: "", cost_type: "labour", quantity: "1", unit_rate: "" });
+      setCostDraft({ description: "", cost_type: "labour", quantity: "1", unit_rate: "", supplier_id: "" });
       await refresh();
     } catch (e) {
       setErr(e.message || "Couldn't add that cost.");
@@ -1148,7 +1155,7 @@ function ProjectDetail({ projectId, crm, uid, sites, customers, onBack }) {
           <input className="lp-input" value={costDraft.description} placeholder="e.g. Hedge reduction — north boundary"
             onChange={(e) => setCostDraft((d) => ({ ...d, description: e.target.value }))} />
         </Field>
-        <div className="lp-row3">
+        <div className="lp-row2">
           <Field label="Type">
             <select className="lp-input" value={costDraft.cost_type}
               onChange={(e) => setCostDraft((d) => ({ ...d, cost_type: e.target.value }))}>
@@ -1157,6 +1164,17 @@ function ProjectDetail({ projectId, crm, uid, sites, customers, onBack }) {
               ))}
             </select>
           </Field>
+          <Field label="Supplier">
+            <select className="lp-input" value={costDraft.supplier_id}
+              onChange={(e) => setCostDraft((d) => ({ ...d, supplier_id: e.target.value }))}>
+              <option value="">None</option>
+              {suppliers.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </Field>
+        </div>
+        <div className="lp-row3">
           <Field label="Qty">
             <input className="lp-input" type="number" min="0" step="0.01" value={costDraft.quantity}
               onChange={(e) => setCostDraft((d) => ({ ...d, quantity: e.target.value }))} />
@@ -1164,6 +1182,12 @@ function ProjectDetail({ projectId, crm, uid, sites, customers, onBack }) {
           <Field label="Unit rate ($)">
             <input className="lp-input" type="number" min="0" step="0.01" value={costDraft.unit_rate}
               onChange={(e) => setCostDraft((d) => ({ ...d, unit_rate: e.target.value }))} />
+          </Field>
+          <Field label="Total ($)">
+            <input className="lp-input" type="number" readOnly
+              value={costDraft.quantity && costDraft.unit_rate
+                ? Math.round((Number(costDraft.quantity) || 0) * (Number(costDraft.unit_rate) || 0) * 100) / 100
+                : ""} />
           </Field>
         </div>
         <button className="lp-btn-ghost" onClick={addCost} disabled={busy}>
@@ -1177,14 +1201,17 @@ function ProjectDetail({ projectId, crm, uid, sites, customers, onBack }) {
         ) : (
           costs.map((c) => (
             <div className="lp-person-row" key={c.id}>
-              <div className="lp-person-head">
-                <div>
+              <div className="lp-person-head" style={{ alignItems: "flex-start" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 0 }}>
                   <strong>{c.description}</strong>
-                  <span className="lp-tag">
-                    {COST_TYPES.find((t) => t.value === c.cost_type)?.label || c.cost_type}
-                  </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span className="lp-tag">
+                      {COST_TYPES.find((t) => t.value === c.cost_type)?.label || c.cost_type}
+                    </span>
+                    {c.suppliers?.name && <span className="lp-tag">{c.suppliers.name}</span>}
+                  </div>
                   <span className="lp-worker-type">
-                    {c.quantity} × {money(c.unit_rate)} = {money((c.quantity || 0) * (c.unit_rate || 0))}
+                    {c.quantity} × {money(c.unit_rate)} = {money(c.amount != null ? c.amount : (c.quantity || 0) * (c.unit_rate || 0))}
                   </span>
                 </div>
                 <button className="lp-btn-ghost lp-btn-danger" disabled={busy} onClick={() => removeCost(c.id)}>
@@ -2132,6 +2159,212 @@ function InvoicesPanel({ crm, uid }) {
             </div>
           ))
         )}
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================== */
+/*  Suppliers                                                          */
+/* ================================================================== */
+
+function SuppliersPanel({ crm, uid }) {
+  const [suppliers, setSuppliers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [filterLetter, setFilterLetter] = useState("");
+  const empty = () => ({ name: "", contact_name: "", phone: "", email: "", abn: "", address: "", notes: "" });
+  const [draft, setDraft] = useState(empty);
+
+  async function refresh() {
+    const rows = await crm.listSuppliers().catch(() => []);
+    setSuppliers(rows || []);
+  }
+
+  useEffect(() => { refresh().finally(() => setLoading(false)); }, []);
+
+  async function run(fn, fallback) {
+    setBusy(true); setErr("");
+    try { await fn(); await refresh(); return true; } catch (e) { setErr(e.message || fallback); return false; }
+    finally { setBusy(false); }
+  }
+
+  function validate() {
+    if (!draft.name.trim()) return "Enter a supplier name.";
+    if (draft.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.email.trim())) return "That email doesn't look right.";
+    return "";
+  }
+
+  async function saveNew() {
+    const problem = validate(); if (problem) { setErr(problem); return; }
+    const ok = await run(() => crm.createSupplier({
+      id: uid(),
+      name: draft.name.trim(),
+      contact_name: draft.contact_name.trim() || null,
+      phone: draft.phone.trim() || null,
+      email: draft.email.trim().toLowerCase() || null,
+      abn: draft.abn.trim() || null,
+      address: draft.address.trim() || null,
+      notes: draft.notes.trim() || null,
+      active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }), "Couldn't add that supplier.");
+    if (ok) { setAdding(false); setDraft(empty()); }
+  }
+
+  async function saveEdit(id) {
+    const problem = validate(); if (problem) { setErr(problem); return; }
+    const ok = await run(() => crm.updateSupplier(id, {
+      name: draft.name.trim(),
+      contact_name: draft.contact_name.trim() || null,
+      phone: draft.phone.trim() || null,
+      email: draft.email.trim().toLowerCase() || null,
+      abn: draft.abn.trim() || null,
+      address: draft.address.trim() || null,
+      notes: draft.notes.trim() || null,
+    }), "Couldn't save that supplier.");
+    if (ok) setEditing(null);
+  }
+
+  async function remove(id) {
+    if (!confirm("Delete this supplier?")) return;
+    await run(() => crm.deleteSupplier(id), "Couldn't delete that supplier.");
+  }
+
+  const form = (
+    <>
+      <div className="lp-row2">
+        <Field label="Name *">
+          <input className="lp-input" value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} />
+        </Field>
+        <Field label="Contact name">
+          <input className="lp-input" value={draft.contact_name} onChange={(e) => setDraft((d) => ({ ...d, contact_name: e.target.value }))} />
+        </Field>
+      </div>
+      <div className="lp-row2">
+        <Field label="Phone">
+          <input className="lp-input" value={draft.phone} onChange={(e) => setDraft((d) => ({ ...d, phone: e.target.value }))} />
+        </Field>
+        <Field label="Email">
+          <input className="lp-input" type="email" value={draft.email} onChange={(e) => setDraft((d) => ({ ...d, email: e.target.value }))} />
+        </Field>
+      </div>
+      <div className="lp-row2">
+        <Field label="ABN">
+          <input className="lp-input" value={draft.abn} onChange={(e) => setDraft((d) => ({ ...d, abn: e.target.value }))} />
+        </Field>
+        <Field label="Address">
+          <input className="lp-input" value={draft.address} onChange={(e) => setDraft((d) => ({ ...d, address: e.target.value }))} />
+        </Field>
+      </div>
+      <Field label="Notes">
+        <textarea className="lp-textarea" rows={2} value={draft.notes} onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))} />
+      </Field>
+    </>
+  );
+
+  const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+  const sortedSuppliers = useMemo(() => {
+    return suppliers.map((s) => ({
+      ...s,
+      letter: (s.name || "").trim()[0]?.toUpperCase() || "#",
+    })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [suppliers]);
+  const visible = filterLetter ? sortedSuppliers.filter((s) => s.letter === filterLetter) : sortedSuppliers;
+  const counts = ALPHABET.reduce((acc, l) => { acc[l] = sortedSuppliers.filter((s) => s.letter === l).length; return acc; }, {});
+
+  if (loading) return <div className="lp-settings lp-settings--wide"><p className="lp-hint">Loading suppliers…</p></div>;
+
+  return (
+    <div className="lp-settings lp-settings--wide">
+      <h3><Building2 size={16} /> Suppliers</h3>
+      <p className="lp-hint">Suppliers and vendors for the business.</p>
+
+      {err && <p className="lp-error">{err}</p>}
+
+      {adding ? (
+        <div className="lp-person-row" style={{ marginTop: 12 }}>
+          {form}
+          <div className="lp-person-actions">
+            <button className="lp-btn-ghost" onClick={saveNew} disabled={busy}><Check size={13} /> {busy ? "Saving…" : "Add supplier"}</button>
+            <button className="lp-btn-ghost" onClick={() => { setAdding(false); setErr(""); }}><X size={13} /> Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <button className="lp-btn-ghost" style={{ marginTop: 10 }} onClick={() => { setAdding(true); setEditing(null); setDraft(empty()); setErr(""); }}>
+          <Plus size={15} /> Add a supplier
+        </button>
+      )}
+
+      <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
+        <span className="lp-hint">Jump:</span>
+        {ALPHABET.map((l) => (
+          <button
+            key={l}
+            className="lp-btn-ghost"
+            disabled={counts[l] === 0}
+            onClick={() => setFilterLetter(filterLetter === l ? "" : l)}
+            style={{
+              padding: "4px 8px",
+              fontSize: 12,
+              borderRadius: 6,
+              background: filterLetter === l ? "var(--text)" : "transparent",
+              color: filterLetter === l ? "var(--bg)" : undefined,
+            }}
+          >
+            {l}
+          </button>
+        ))}
+        {filterLetter && (
+          <button className="lp-btn-ghost" onClick={() => setFilterLetter("")} style={{ fontSize: 12 }}>
+            <X size={12} /> Clear
+          </button>
+        )}
+      </div>
+
+      <div className="lp-person-list" style={{ marginTop: 12 }}>
+        {visible.map((s) => (
+          <div className="lp-person-row" key={s.id}>
+            {editing === s.id ? (
+              <>
+                {form}
+                <div className="lp-person-actions">
+                  <button className="lp-btn-ghost" onClick={() => saveEdit(s.id)} disabled={busy}><Check size={13} /> {busy ? "Saving…" : "Save"}</button>
+                  <button className="lp-btn-ghost" onClick={() => { setEditing(null); setErr(""); }}><X size={13} /> Cancel</button>
+                </div>
+              </>
+            ) : (
+              <div className="lp-person-head" style={{ alignItems: "flex-start", gap: 12 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <strong>{s.name}</strong>
+                  <span className="lp-hint" style={{ lineHeight: 1.4 }}>
+                    {[s.contact_name, s.abn].filter(Boolean).join(" · ")}
+                  </span>
+                  <span className="lp-hint" style={{ lineHeight: 1.4 }}>
+                    {[s.phone, s.email].filter(Boolean).join(" · ")}
+                  </span>
+                  {(s.address || s.notes) && (
+                    <span className="lp-hint" style={{ lineHeight: 1.4 }}>
+                      {[s.address, s.notes].filter(Boolean).join(" · ")}
+                    </span>
+                  )}
+                </div>
+                <div className="lp-person-actions" style={{ flexShrink: 0 }}>
+                  <button className="lp-btn-ghost" onClick={() => { setEditing(s.id); setDraft({ name: s.name || "", contact_name: s.contact_name || "", phone: s.phone || "", email: s.email || "", abn: s.abn || "", address: s.address || "", notes: s.notes || "" }); }}>
+                    <Pencil size={13} /> Edit
+                  </button>
+                  <button className="lp-btn-ghost lp-btn-danger" onClick={() => remove(s.id)} disabled={busy}>
+                    <Trash2 size={13} /> Delete
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
