@@ -7,7 +7,7 @@ export function createCrmApi(supabaseFetch) {
   /* ---------- Customers ---------- */
 
   async function listCustomers({ activeOnly = true, q = "" } = {}) {
-    let path = `/customers?select=*&order=name`;
+    let path = `/customers?select=*,contacts:site_contact_id(name)&order=name`;
     if (activeOnly) path += `&active=eq.true`;
     const rows = await supabaseFetch(path).catch(() => []);
     if (!q.trim()) return rows || [];

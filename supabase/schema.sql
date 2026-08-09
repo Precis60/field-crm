@@ -127,6 +127,7 @@ create table if not exists customers (
   phone text,
   abn text,
   billing_address text,
+  site_contact_id text references contacts(id) on delete set null,
   notes text,
   status text not null default 'active'
     check (status in ('active', 'prospect', 'inactive')),

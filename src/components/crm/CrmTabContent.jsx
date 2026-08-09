@@ -104,6 +104,7 @@ export default function CrmTabContent({ tab, crm, uid, sites = [] }) {
 
 function CustomersPanel({ crm, uid, sites = [] }) {
   const [customers, setCustomers] = useState([]);
+  const [contacts, setContacts] = useState([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -116,7 +117,7 @@ function CustomersPanel({ crm, uid, sites = [] }) {
   const [filterLetter, setFilterLetter] = useState("");
   const empty = () => ({
     name: "", position: "", company: "", email: "", phone: "", abn: "",
-    billing_address: "", notes: "", status: "active",
+    billing_address: "", siteContactId: "", notes: "", status: "active",
   });
   const [draft, setDraft] = useState(empty);
 
@@ -141,6 +142,7 @@ function CustomersPanel({ crm, uid, sites = [] }) {
 
   useEffect(() => {
     refresh().finally(() => setLoading(false));
+    crm.listContacts().then((rows) => setContacts(rows || [])).catch(() => setContacts([]));
   }, []);
 
   async function run(fn, fallback) {
@@ -189,6 +191,7 @@ function CustomersPanel({ crm, uid, sites = [] }) {
           phone: draft.phone.trim() || null,
           abn: draft.abn.trim() || null,
           billing_address: draft.billing_address.trim() || null,
+          site_contact_id: draft.siteContactId.trim() || null,
           notes: draft.notes.trim() || null,
           status: draft.status,
           active: true,
@@ -213,6 +216,7 @@ function CustomersPanel({ crm, uid, sites = [] }) {
           phone: draft.phone.trim() || null,
           abn: draft.abn.trim() || null,
           billing_address: draft.billing_address.trim() || null,
+          site_contact_id: draft.siteContactId.trim() || null,
           notes: draft.notes.trim() || null,
           status: draft.status,
         }),
@@ -263,6 +267,15 @@ function CustomersPanel({ crm, uid, sites = [] }) {
       <Field label="Billing address">
         <textarea className="lp-textarea" rows={2} value={draft.billing_address}
           onChange={(e) => setDraft((d) => ({ ...d, billing_address: e.target.value }))} />
+      </Field>
+      <Field label="Site contact">
+        <select className="lp-input" value={draft.siteContactId}
+          onChange={(e) => setDraft((d) => ({ ...d, siteContactId: e.target.value }))}>
+          <option value="">None / manual</option>
+          {contacts.map((c) => (
+            <option key={c.id} value={c.id}>{c.name} {c.company ? `(${c.company})` : ""}</option>
+          ))}
+        </select>
       </Field>
       <Field label="Notes">
         <textarea className="lp-textarea" rows={2} value={draft.notes}
@@ -385,6 +398,11 @@ function CustomersPanel({ crm, uid, sites = [] }) {
                         </div>
                       ) : null;
                     })()}
+                    {c.contacts?.name && (
+                      <div className="lp-hint" style={{ marginTop: 2 }}>
+                        <strong>Site contact:</strong> {c.contacts.name}
+                      </div>
+                    )}
                   </div>
                   <div className="lp-person-actions" style={{ marginTop: 0, alignSelf: "flex-start" }}>
                     <button
@@ -402,6 +420,7 @@ function CustomersPanel({ crm, uid, sites = [] }) {
                           phone: c.phone || "",
                           abn: c.abn || "",
                           billing_address: c.billing_address || "",
+                          siteContactId: c.site_contact_id || "",
                           notes: c.notes || "",
                           status: c.status || "active",
                         });
@@ -1651,6 +1670,7 @@ function CalendarPanel({ crm, uid }) {
   const empty = () => ({
     siteId: "",
     siteName: "",
+    projectId: "",
     projectName: "",
     siteAddress: "",
     siteContact: "",
@@ -1722,9 +1742,10 @@ function CalendarPanel({ crm, uid }) {
 
   async function addToTimesheet() {
     if (!draft.startAt) { setErr("This event has no start time."); return; }
-    const name = draft.projectName.trim();
-    const p = projects.find((pr) => (name && (pr.name === name || pr.id === name)));
-    if (!p) { setErr("No matching active project found for this event's project name."); return; }
+    const p = draft.projectId
+      ? projects.find((pr) => pr.id === draft.projectId)
+      : projects.find((pr) => pr.name === draft.projectName.trim());
+    if (!p) { setErr("No matching active project found for this event."); return; }
     setBusy(true); setErr(""); setMsg("");
     try {
       await crm.createTimesheet({
@@ -1763,11 +1784,13 @@ function CalendarPanel({ crm, uid }) {
   }
 
   function editEvent(e) {
+    const matched = e.project_name ? projects.find((p) => p.name === e.project_name) : null;
     setEditing(e.id);
     setAdding(true);
     setDraft({
       siteId: e.site_id || "",
       siteName: e.site_name || "",
+      projectId: matched ? matched.id : "",
       projectName: e.project_name || e.projectName || "",
       siteAddress: e.site_address || "",
       siteContact: e.site_contact || "",
@@ -1857,9 +1880,36 @@ function CalendarPanel({ crm, uid }) {
               <input className="lp-input" value={draft.siteName} onChange={(e) => setDraft((d) => ({ ...d, siteName: e.target.value }))} />
             </Field>
           </div>
-          <Field label="Project name">
-            <input className="lp-input" value={draft.projectName} onChange={(e) => setDraft((d) => ({ ...d, projectName: e.target.value }))} />
+          <Field label="Project">
+            <select
+              className="lp-input"
+              value={draft.projectId}
+              onChange={(e) => {
+                const pid = e.target.value;
+                const p = projects.find((pr) => pr.id === pid);
+                setDraft((d) => ({
+                  ...d,
+                  projectId: pid,
+                  projectName: p ? p.name : d.projectName,
+                  siteId: p ? p.site_id || "" : d.siteId,
+                  siteName: p ? (p.sites?.name || "") : d.siteName,
+                }));
+              }}
+            >
+              <option value="">Manual / other…</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
           </Field>
+          {!draft.projectId && (
+            <Field label="Project name (manual)">
+              <input className="lp-input" value={draft.projectName} onChange={(e) => setDraft((d) => ({ ...d, projectName: e.target.value }))} />
+            </Field>
+          )}
+          {draft.projectId && draft.projectName && (
+            <p className="lp-hint" style={{ marginTop: -6 }}>{draft.projectName}</p>
+          )}
           <div className="lp-row2">
             <Field label="Site address">
               <input className="lp-input" value={draft.siteAddress} onChange={(e) => setDraft((d) => ({ ...d, siteAddress: e.target.value }))} />
