@@ -6,7 +6,6 @@ import {
   CalendarDays, ImageOff, ShieldCheck, LogOut, Search, Building2, Users, Pencil
 } from "lucide-react";
 import { createCrmApi } from "./lib/crm.js";
-import { createZohoApi } from "./lib/zoho.js";
 import CrmTabContent from "./components/crm/CrmTabContent.jsx";
 
 /* ---------------------------------------------------------------
@@ -219,7 +218,6 @@ async function supabaseFetch(path, { method = "GET", body, timeoutMs = 15000 } =
 }
 
 export const crm = createCrmApi(supabaseFetch);
-export const zoho = createZohoApi(supabaseFetch, SUPABASE_PROJECT_URL);
 
 function rowToReport(row) {
   return {
@@ -1720,7 +1718,6 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
         <button className={`lp-tab ${tab === "contacts" ? "is-active" : ""}`} onClick={() => setTab("contacts")}>Contacts</button>
         <button className={`lp-tab ${tab === "projects" ? "is-active" : ""}`} onClick={() => setTab("projects")}>Projects</button>
         <button className={`lp-tab ${tab === "calendar" ? "is-active" : ""}`} onClick={() => setTab("calendar")}>Calendar</button>
-        <button className={`lp-tab ${tab === "zoho" ? "is-active" : ""}`} onClick={() => setTab("zoho")}>Zoho</button>
         <button className={`lp-tab ${tab === "settings" ? "is-active" : ""}`} onClick={() => setTab("settings")}>Settings</button>
       </div>
       {tab === "brief" && <MorningBrief getMonths={getMonths} refreshMonths={refreshMonths} cacheVersion={cacheVersion} assignedTasks={assignedTasks} />}
@@ -1748,8 +1745,8 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
       {tab === "schedule" && <ManagerSchedulePanel managers={managers} currentManager={currentManager} />}
       {tab === "log" && <FullLog monthsIndex={monthsIndex} getMonths={getMonths} cacheVersion={cacheVersion} onDeleteReport={onDeleteReport} />}
       {tab === "sites" && <AdminPanel />}
-      {["customers", "contacts", "projects", "zoho", "calendar"].includes(tab) && (
-        <CrmTabContent tab={tab} crm={crm} zoho={zoho} uid={uid} sites={sites} accessToken={accessToken} />
+      {["customers", "contacts", "projects", "calendar"].includes(tab) && (
+        <CrmTabContent tab={tab} crm={crm} uid={uid} sites={sites} />
       )}
       {tab === "settings" && <ManagerSettings onRestored={onRestored} />}
     </div>
@@ -3666,7 +3663,7 @@ body{margin:0;}
 .lp-settings-restore{margin-top:18px;padding-top:14px;border-top:1px dashed var(--line);}
 .lp-confirm--tight{padding:10px 12px;margin:8px 0 12px;font-size:12.5px;}
 .lp-settings--wide{max-width:760px;}
-.lp-tag--zoho{background:#E8F0FE;color:#1a56db;}
+
 .lp-project-row{width:100%;text-align:left;cursor:pointer;}
 .lp-project-row:hover{border-color:var(--brass);}
 .lp-project-header h3{font-family:'Fraunces',serif;margin:8px 0 4px;}

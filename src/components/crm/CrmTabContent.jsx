@@ -85,11 +85,10 @@ function EmptyState({ icon, text, compact }) {
   );
 }
 
-export default function CrmTabContent({ tab, crm, zoho, uid, sites = [], accessToken }) {
+export default function CrmTabContent({ tab, crm, uid, sites = [] }) {
   if (tab === "customers") return <CustomersPanel crm={crm} uid={uid} sites={sites} />;
   if (tab === "contacts") return <ContactsPanel crm={crm} />;
-  if (tab === "projects") return <ProjectsPanel crm={crm} zoho={zoho} uid={uid} sites={sites} accessToken={accessToken} />;
-  if (tab === "zoho") return <ZohoPanel crm={crm} zoho={zoho} accessToken={accessToken} />;
+  if (tab === "projects") return <ProjectsPanel crm={crm} uid={uid} sites={sites} />;
   if (tab === "calendar") return <CalendarPanel crm={crm} uid={uid} />;
   return null;
 }
@@ -179,7 +178,6 @@ function CustomersPanel({ crm, uid, sites = [] }) {
           notes: draft.notes.trim() || null,
           status: draft.status,
           active: true,
-          zoho_contact_id: null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }),
@@ -264,7 +262,7 @@ function CustomersPanel({ crm, uid, sites = [] }) {
   return (
     <div className="lp-settings lp-settings--wide">
       <h3><Users size={16} /> Customers</h3>
-      <p className="lp-hint">Clients you quote and invoice. Link them to projects, then push invoices to Zoho when ready.</p>
+      <p className="lp-hint">Clients you quote and invoice. Link them to projects.</p>
 
       <div className="lp-log-search" style={{ marginTop: 12 }}>
         <Search size={15} />
@@ -325,7 +323,6 @@ function CustomersPanel({ crm, uid, sites = [] }) {
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                       <strong style={{ fontSize: "1.1rem" }}>{c.name}</strong>
                       {c.status && <span className="lp-tag">{c.status}</span>}
-                      {c.zoho_contact_id && <span className="lp-tag lp-tag--zoho">Zoho</span>}
                       {!c.active && <span className="lp-tag">Inactive</span>}
                     </div>
                     <div className="lp-hint" style={{ marginTop: 2 }}>
@@ -565,7 +562,7 @@ function ContactsPanel({ crm, uid }) {
   );
 }
 
-function ProjectsPanel({ crm, zoho, uid, sites, accessToken }) {
+function ProjectsPanel({ crm, uid, sites }) {
   const [projects, setProjects] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -588,11 +585,9 @@ function ProjectsPanel({ crm, zoho, uid, sites, accessToken }) {
       <ProjectDetail
         projectId={selectedId}
         crm={crm}
-        zoho={zoho}
         uid={uid}
         sites={sites}
         customers={customers}
-        accessToken={accessToken}
         onBack={() => { setSelectedId(null); refresh(); }}
       />
     );
@@ -654,7 +649,7 @@ function ProjectList({ projects, customers, sites, crm, uid, onOpen, onChanged }
   return (
     <div className="lp-settings lp-settings--wide">
       <h3><Building2 size={16} /> Projects</h3>
-      <p className="lp-hint">Track quoted and live work. Costs roll into draft invoices you can push to Zoho.</p>
+      <p className="lp-hint">Track quoted and live work. Costs roll into draft invoices.</p>
 
       <div className="lp-settings-row" style={{ marginTop: 12, alignItems: "center" }}>
         <span className="lp-staff-pin-label">Status</span>
@@ -767,7 +762,7 @@ function ProjectList({ projects, customers, sites, crm, uid, onOpen, onChanged }
   );
 }
 
-function ProjectDetail({ projectId, crm, zoho, uid, sites, customers, accessToken, onBack }) {
+function ProjectDetail({ projectId, crm, uid, sites, customers, onBack }) {
   const [project, setProject] = useState(null);
   const [costs, setCosts] = useState([]);
   const [invoices, setInvoices] = useState([]);
@@ -889,29 +884,6 @@ function ProjectDetail({ projectId, crm, zoho, uid, sites, customers, accessToke
       await refresh();
     } catch (e) {
       setErr(e.message || "Couldn't draft that invoice.");
-    }
-    setBusy(false);
-  }
-
-  async function pushToZoho(invoiceId) {
-    setBusy(true);
-    setErr("");
-    setMsg("");
-    try {
-      const result = await zoho.pushInvoice(invoiceId, { accessToken });
-      if (result?.queued) {
-        setMsg(result.message);
-      } else {
-        setMsg("Invoice pushed to Zoho Books.");
-        await crm.updateInvoice(invoiceId, {
-          status: "sent",
-          zoho_synced_at: new Date().toISOString(),
-          issued_at: new Date().toISOString(),
-        });
-      }
-      await refresh();
-    } catch (e) {
-      setErr(e.message || "Couldn't push to Zoho.");
     }
     setBusy(false);
   }
@@ -1100,7 +1072,7 @@ function ProjectDetail({ projectId, crm, zoho, uid, sites, customers, accessToke
       <hr className="lp-settings-divider" />
 
       <h4 className="lp-schedule-heading">Invoices</h4>
-      <p className="lp-hint">Draft locally from cost lines, then push to Zoho Books when the edge function is live.</p>
+      <p className="lp-hint">Draft locally from cost lines.</p>
       <button className="lp-btn-ghost" onClick={draftInvoice} disabled={busy || !costs.length} style={{ marginTop: 8 }}>
         <Plus size={15} /> Draft invoice from costs
       </button>
@@ -1115,17 +1087,10 @@ function ProjectDetail({ projectId, crm, zoho, uid, sites, customers, accessToke
                 <div>
                   <strong>{money(inv.total)}</strong>
                   <span className="lp-tag">{inv.status}</span>
-                  {inv.zoho_invoice_id && <span className="lp-tag lp-tag--zoho">Zoho</span>}
                   <span className="lp-worker-type">
                     Subtotal {money(inv.subtotal)} · GST {money(inv.tax)}
-                    {inv.zoho_synced_at ? ` · synced ${new Date(inv.zoho_synced_at).toLocaleDateString("en-AU")}` : ""}
                   </span>
                 </div>
-                {inv.status === "draft" && (
-                  <button className="lp-btn-ghost" disabled={busy} onClick={() => pushToZoho(inv.id)}>
-                    Push to Zoho
-                  </button>
-                )}
               </div>
             </div>
           ))
@@ -1754,200 +1719,3 @@ function CalendarPanel({ crm, uid }) {
   );
 }
 
-/* ================================================================== */
-/*  Zoho                                                               */
-/* ================================================================== */
-
-function ZohoPanel({ crm, zoho, accessToken }) {
-  const [connection, setConnection] = useState(null);
-  const [log, setLog] = useState([]);
-  const [invoices, setInvoices] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [region, setRegion] = useState("au");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
-  const [msg, setMsg] = useState("");
-
-  async function refresh() {
-    const [c, l, inv] = await Promise.all([
-      zoho.getConnection(),
-      zoho.listSyncLog(),
-      crm.listInvoices(),
-    ]);
-    setConnection(c);
-    setLog(l);
-    setInvoices(inv.filter((i) => i.status === "draft" || !i.zoho_invoice_id));
-  }
-
-  useEffect(() => {
-    refresh().finally(() => setLoading(false));
-  }, []);
-
-  async function connect() {
-    setBusy(true);
-    setErr("");
-    setMsg("");
-    try {
-      const result = await zoho.beginConnect({ region, accessToken });
-      if (result?.redirected) return;
-      if (result?.ready === false) {
-        setMsg(result.message);
-      } else if (result?.message) {
-        setMsg(result.message);
-      }
-      await refresh();
-    } catch (e) {
-      setErr(e.message || "Couldn't start Zoho connect.");
-    }
-    setBusy(false);
-  }
-
-  async function disconnect() {
-    setBusy(true);
-    setErr("");
-    try {
-      await zoho.disconnect();
-      setMsg("Disconnected from Zoho.");
-      await refresh();
-    } catch (e) {
-      setErr(e.message || "Couldn't disconnect.");
-    }
-    setBusy(false);
-  }
-
-  async function pushOne(invoiceId) {
-    setBusy(true);
-    setErr("");
-    setMsg("");
-    try {
-      const result = await zoho.pushInvoice(invoiceId, { accessToken });
-      setMsg(result?.queued ? result.message : "Pushed to Zoho.");
-      if (!result?.queued) {
-        await crm.updateInvoice(invoiceId, {
-          status: "sent",
-          zoho_synced_at: new Date().toISOString(),
-          issued_at: new Date().toISOString(),
-        });
-      }
-      await refresh();
-    } catch (e) {
-      setErr(e.message || "Push failed.");
-    }
-    setBusy(false);
-  }
-
-  if (loading) return <div className="lp-settings lp-settings--wide"><p className="lp-hint">Loading Zoho status…</p></div>;
-
-  const connected = connection?.status === "connected";
-
-  return (
-    <div className="lp-settings lp-settings--wide">
-      <h3><Settings size={16} /> Zoho Books</h3>
-      <p className="lp-hint">
-        Field CRM drafts invoices from project costs. When Zoho is connected, one tap pushes them into Books for payment and GST reporting.
-      </p>
-
-      {err && <p className="lp-error"><AlertTriangle size={13} /> {err}</p>}
-      {msg && <p className="lp-saved"><Check size={13} /> {msg}</p>}
-
-      <div className="lp-person-row" style={{ marginTop: 14 }}>
-        <div className="lp-person-head">
-          <div>
-            <strong>{connected ? "Connected" : "Not connected"}</strong>
-            {connected && connection.org_name && (
-              <span className="lp-tag lp-tag--zoho">{connection.org_name}</span>
-            )}
-            <span className="lp-worker-type">
-              {connected
-                ? `Since ${new Date(connection.connected_at).toLocaleDateString("en-AU")} · region ${connection.region || "au"}`
-                : "OAuth tokens are stored server-side only — never in this browser."}
-            </span>
-          </div>
-        </div>
-
-        {connected ? (
-          <div className="lp-person-actions">
-            <button className="lp-btn-ghost lp-btn-danger" onClick={disconnect} disabled={busy}>
-              Disconnect
-            </button>
-          </div>
-        ) : (
-          <>
-            <Field label="Zoho region">
-              <select className="lp-input" value={region} onChange={(e) => setRegion(e.target.value)}>
-                {Object.keys(zoho.ZOHO_REGIONS).map((r) => (
-                  <option key={r} value={r}>{r.toUpperCase()}</option>
-                ))}
-              </select>
-            </Field>
-            <button className="lp-btn-ghost" onClick={connect} disabled={busy}>
-              {busy ? "Connecting…" : "Connect Zoho Books"}
-            </button>
-          </>
-        )}
-      </div>
-
-      <hr className="lp-settings-divider" />
-
-      <h4 className="lp-schedule-heading">Setup checklist</h4>
-      <ol className="lp-qb-steps">
-        <li>Create a Zoho API client (Books scope) in the Zoho API Console for your region.</li>
-        <li>Deploy <code>supabase/functions/zoho-oauth</code> with <code>ZOHO_CLIENT_ID</code>, <code>ZOHO_CLIENT_SECRET</code>, and <code>ZOHO_REDIRECT_URI</code>.</li>
-        <li>Run <code>supabase/schema.sql</code> so customers, projects, invoices, and zoho_* tables exist.</li>
-        <li>Click Connect above — the edge function handles tokens and invoice POSTs.</li>
-      </ol>
-
-      <hr className="lp-settings-divider" />
-
-      <h4 className="lp-schedule-heading">Draft invoices ready to push</h4>
-      <div className="lp-person-list">
-        {invoices.length === 0 ? (
-          <EmptyState compact icon={<Check size={16} />} text="No draft invoices waiting." />
-        ) : (
-          invoices.map((inv) => (
-            <div className="lp-person-row" key={inv.id}>
-              <div className="lp-person-head">
-                <div>
-                  <strong>{money(inv.total)}</strong>
-                  <span className="lp-tag">{inv.status}</span>
-                  <span className="lp-worker-type">
-                    {[inv.customers?.name, inv.projects?.name].filter(Boolean).join(" · ")}
-                  </span>
-                </div>
-                <button className="lp-btn-ghost" disabled={busy} onClick={() => pushOne(inv.id)}>
-                  Push to Zoho
-                </button>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      <hr className="lp-settings-divider" />
-
-      <h4 className="lp-schedule-heading">Sync log</h4>
-      <div className="lp-person-list">
-        {log.length === 0 ? (
-          <EmptyState compact icon={<Clock size={16} />} text="No sync activity yet." />
-        ) : (
-          log.map((row) => (
-            <div className="lp-person-row" key={row.id || `${row.action}-${row.created_at}`}>
-              <div className="lp-person-head">
-                <div>
-                  <strong>{row.action}</strong>
-                  <span className={`lp-tag ${row.status === "error" ? "lp-tag--warn" : row.status === "ok" ? "lp-tag--zoho" : ""}`}>
-                    {row.status}
-                  </span>
-                  <span className="lp-worker-type">
-                    {row.created_at ? new Date(row.created_at).toLocaleString("en-AU") : ""}
-                    {row.error ? ` · ${row.error}` : ""}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
-}

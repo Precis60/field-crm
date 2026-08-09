@@ -1,6 +1,6 @@
 -- Field CRM schema
 -- Run in the Supabase SQL editor (or `supabase db push`).
--- Extends the existing property-maintenance tables with CRM + Zoho.
+-- Extends the existing property-maintenance tables with CRM.
 
 -- ========== Existing core (safe to re-run) ==========
 
@@ -131,7 +131,6 @@ create table if not exists customers (
   status text not null default 'active'
     check (status in ('active', 'prospect', 'inactive')),
   active boolean not null default true,
-  zoho_contact_id text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -211,8 +210,6 @@ create table if not exists invoices (
   tax numeric not null default 0,
   total numeric not null default 0,
   notes text,
-  zoho_invoice_id text,
-  zoho_synced_at timestamptz,
   issued_at timestamptz,
   due_at timestamptz,
   created_at timestamptz not null default now(),
@@ -232,32 +229,6 @@ create table if not exists invoice_lines (
   cost_type text
 );
 
--- ========== Zoho bridge ==========
-
--- Refresh tokens must NEVER be selected by the anon/authenticated client.
--- Only the edge function (service role) reads token columns.
-create table if not exists zoho_connections (
-  id text primary key default gen_random_uuid()::text,
-  org_name text,
-  region text not null default 'au',
-  status text not null default 'disconnected'
-    check (status in ('connected', 'disconnected', 'error')),
-  access_token text,
-  refresh_token text,
-  token_expires_at timestamptz,
-  connected_at timestamptz,
-  last_error text,
-  created_at timestamptz not null default now()
-);
-
-create table if not exists zoho_sync_log (
-  id bigserial primary key,
-  action text not null,
-  status text not null,
-  payload jsonb,
-  error text,
-  created_at timestamptz not null default now()
-);
 
 -- ========== RLS (managers write CRM; staff read little) ==========
 
@@ -267,8 +238,6 @@ alter table project_costs enable row level security;
 alter table quotes enable row level security;
 alter table invoices enable row level security;
 alter table invoice_lines enable row level security;
-alter table zoho_connections enable row level security;
-alter table zoho_sync_log enable row level security;
 
 -- Helper: is the signed-in user a manager?
 create or replace function is_manager() returns boolean
@@ -303,18 +272,6 @@ drop policy if exists invoice_lines_manager_all on invoice_lines;
 create policy invoice_lines_manager_all on invoice_lines
   for all using (is_manager()) with check (is_manager());
 
--- Clients may read connection status fields only (tokens blocked by column grants below).
-drop policy if exists zoho_connections_manager_read on zoho_connections;
-create policy zoho_connections_manager_read on zoho_connections
-  for select using (is_manager());
-
-drop policy if exists zoho_connections_manager_update_status on zoho_connections;
-create policy zoho_connections_manager_update_status on zoho_connections
-  for update using (is_manager()) with check (is_manager());
-
-drop policy if exists zoho_sync_log_manager_all on zoho_sync_log;
-create policy zoho_sync_log_manager_all on zoho_sync_log
-  for all using (is_manager()) with check (is_manager());
 
 -- Contacts RLS: managers manage contacts.
 alter table contacts enable row level security;
@@ -358,11 +315,6 @@ create policy people_update on people
 create policy people_delete on people
   for delete using (is_manager());
 
--- Strip token columns from the authenticated role; service_role (edge fn) keeps them.
-revoke select on zoho_connections from authenticated, anon;
-grant select (id, org_name, region, status, connected_at, last_error, created_at)
-  on zoho_connections to authenticated;
-grant update (status, last_error) on zoho_connections to authenticated;
 
 -- Storage bucket for work photos (create in dashboard if missing)
 -- insert into storage.buckets (id, name, public) values ('work-photos', 'work-photos', false)

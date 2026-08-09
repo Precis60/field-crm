@@ -172,7 +172,7 @@ export function createCrmApi(supabaseFetch) {
     });
   }
 
-  /* ---------- Invoices (local, ready for Zoho push) ---------- */
+  /* ---------- Invoices ---------- */
 
   async function listInvoices({ projectId, customerId, status } = {}) {
     let path = `/invoices?select=*,customers(id,name),projects(id,name)&order=created_at.desc`;
@@ -209,7 +209,6 @@ export function createCrmApi(supabaseFetch) {
 
   /**
    * Build a draft invoice from a project's cost lines.
-   * Does not push to Zoho — call zoho.pushInvoice after the manager reviews.
    */
   async function draftInvoiceFromProject(projectId, { uid, taxRate = 0.1, notes = "" } = {}) {
     const project = await getProject(projectId);
@@ -234,8 +233,6 @@ export function createCrmApi(supabaseFetch) {
       tax,
       total,
       notes: notes || null,
-      zoho_invoice_id: null,
-      zoho_synced_at: null,
       issued_at: null,
       due_at: null,
       created_at: new Date().toISOString(),
