@@ -560,11 +560,11 @@ function ContactsPanel({ crm, uid }) {
       <div
         style={{
           position: "sticky",
-          top: 100,
+          top: 96,
           zIndex: 90,
           background: "var(--paper)",
           margin: "-20px -16px 0",
-          padding: "20px 16px 12px",
+          padding: "12px 16px 12px",
           borderBottom: "1px solid var(--line)",
         }}
       >
