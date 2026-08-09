@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Check, X, AlertTriangle, Plus, Trash2, Search, Building2, Users,
   Pencil, ChevronRight, ArrowLeft, Settings, Clock, CalendarDays,
@@ -431,6 +431,7 @@ function ContactsPanel({ crm, uid }) {
   const [busy, setBusy] = useState(false);
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [filterLetter, setFilterLetter] = useState("");
   const empty = () => ({ name: "", company: "", role: "", email: "", phone: "", notes: "" });
   const [draft, setDraft] = useState(empty);
 
@@ -498,6 +499,17 @@ function ContactsPanel({ crm, uid }) {
     </>
   );
 
+  const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+  const sortedContacts = useMemo(() => {
+    return contacts.map((c) => {
+      const parts = (c.name || "").trim().split(/\s+/);
+      const surname = parts.length > 1 ? parts[parts.length - 1] : c.name || "";
+      return { ...c, surname, letter: (surname[0] || "").toUpperCase() };
+    }).sort((a, b) => a.surname.localeCompare(b.surname));
+  }, [contacts]);
+  const visible = filterLetter ? sortedContacts.filter((c) => c.letter === filterLetter) : sortedContacts;
+  const counts = ALPHABET.reduce((acc, l) => { acc[l] = sortedContacts.filter((c) => c.letter === l).length; return acc; }, {});
+
   if (loading) return <div className="lp-settings lp-settings--wide"><p className="lp-hint">Loading contacts…</p></div>;
 
   return (
@@ -521,8 +533,34 @@ function ContactsPanel({ crm, uid }) {
         </button>
       )}
 
+      <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
+        <span className="lp-hint">Jump:</span>
+        {ALPHABET.map((l) => (
+          <button
+            key={l}
+            className="lp-btn-ghost"
+            disabled={counts[l] === 0}
+            onClick={() => setFilterLetter(filterLetter === l ? "" : l)}
+            style={{
+              padding: "4px 8px",
+              fontSize: 12,
+              borderRadius: 6,
+              background: filterLetter === l ? "var(--text)" : "transparent",
+              color: filterLetter === l ? "var(--bg)" : undefined,
+            }}
+          >
+            {l}
+          </button>
+        ))}
+        {filterLetter && (
+          <button className="lp-btn-ghost" onClick={() => setFilterLetter("")} style={{ fontSize: 12 }}>
+            <X size={12} /> Clear
+          </button>
+        )}
+      </div>
+
       <div className="lp-person-list" style={{ marginTop: 12 }}>
-        {contacts.map((c) => (
+        {visible.map((c) => (
           <div className="lp-person-row" key={c.id}>
             {editing === c.id ? (
               <>
@@ -535,7 +573,11 @@ function ContactsPanel({ crm, uid }) {
             ) : (
               <div className="lp-person-head" style={{ alignItems: "flex-start", gap: 12 }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                  <strong>{c.name}</strong>
+                  <strong>
+                    {c.surname && c.name !== c.surname
+                      ? `${c.surname}, ${c.name.slice(0, c.name.lastIndexOf(c.surname)).trim()}`
+                      : c.name}
+                  </strong>
                   <span className="lp-hint" style={{ lineHeight: 1.4 }}>
                     {[c.role, c.company].filter(Boolean).join(" · ")}
                   </span>
