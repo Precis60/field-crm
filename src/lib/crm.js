@@ -228,6 +228,14 @@ export function createCrmApi(supabaseFetch) {
     return invoice;
   }
 
+  async function createInvoiceLines(invoiceId, lines) {
+    if (!lines.length) return;
+    await supabaseFetch("/invoice_lines", {
+      method: "POST",
+      body: lines.map((l) => ({ ...l, invoice_id: invoiceId })),
+    });
+  }
+
   async function updateInvoice(id, patch) {
     await supabaseFetch(`/invoices?id=eq.${id}`, {
       method: "PATCH",
@@ -368,6 +376,7 @@ export function createCrmApi(supabaseFetch) {
     listInvoices,
     getInvoice,
     createInvoice,
+    createInvoiceLines,
     updateInvoice,
     draftInvoiceFromProject,
     listTimesheets,

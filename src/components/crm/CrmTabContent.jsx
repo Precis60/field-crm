@@ -1138,7 +1138,7 @@ function ProjectDetail({ projectId, crm, uid, sites, customers, onBack }) {
 
       <hr className="lp-settings-divider" />
 
-      <TimesheetsSection projectId={projectId} crm={crm} uid={uid} />
+      <TimesheetsSection projectId={projectId} customerId={project.customer_id} crm={crm} uid={uid} />
 
       <hr className="lp-settings-divider" />
 
@@ -1231,12 +1231,17 @@ function ProjectDetail({ projectId, crm, uid, sites, customers, onBack }) {
 /*  Timesheets                                                         */
 /* ================================================================== */
 
-function TimesheetsSection({ projectId, crm, uid }) {
+function TimesheetsSection({ projectId, customerId, crm, uid }) {
   const [timesheets, setTimesheets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [selected, setSelected] = useState([]);
+  const [invoicing, setInvoicing] = useState(false);
+  const [rate, setRate] = useState("");
+  const [invoiceTarget, setInvoiceTarget] = useState("new");
+  const [draftInvoices, setDraftInvoices] = useState([]);
   const empty = () => ({
     startAt: "",
     endAt: "",
@@ -1315,6 +1320,84 @@ function TimesheetsSection({ projectId, crm, uid }) {
     return `${h}h${m ? ` ${m}m` : ""}`.trim();
   }
 
+  function toggleSelected(id) {
+    setSelected((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]);
+  }
+
+  async function loadDraftInvoices() {
+    const rows = await crm.listInvoices({ projectId }).catch(() => []);
+    setDraftInvoices((rows || []).filter((i) => i.status === "draft"));
+  }
+
+  function openInvoiceForm() {
+    loadDraftInvoices();
+    setInvoicing(true);
+  }
+
+  async function addToInvoice() {
+    if (!selected.length) { setErr("Select at least one time entry."); return; }
+    if (!rate || Number(rate) <= 0) { setErr("Enter an hourly rate."); return; }
+    setBusy(true); setErr("");
+    try {
+      const unitRate = Number(rate);
+      const lines = selected.map((sid) => {
+        const t = timesheets.find((x) => x.id === sid);
+        const qty = Math.round(hoursBetween(t.start_at, t.end_at) * 100) / 100;
+        const amount = Math.round(qty * unitRate * 100) / 100;
+        return {
+          id: uid(),
+          description: [t.notes?.trim(), `${formatDuration(t.start_at, t.end_at)} on ${new Date(t.start_at).toLocaleDateString("en-AU")}`].filter(Boolean).join(" · "),
+          quantity: qty,
+          unit_rate: unitRate,
+          amount,
+          cost_type: "labour",
+        };
+      });
+      const subtotal = lines.reduce((sum, l) => sum + Number(l.amount), 0);
+      const tax = Math.round(subtotal * 0.1 * 100) / 100;
+      const total = Math.round((subtotal + tax) * 100) / 100;
+
+      let invoiceId;
+      if (invoiceTarget === "new") {
+        invoiceId = uid();
+        await crm.createInvoice({
+          id: invoiceId,
+          project_id: projectId,
+          customer_id: customerId,
+          status: "draft",
+          terms: "Due on Receipt",
+          subtotal,
+          tax,
+          total,
+          notes: null,
+          issued_at: null,
+          due_at: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }, lines);
+      } else {
+        invoiceId = invoiceTarget;
+        await crm.createInvoiceLines(invoiceId, lines);
+        const inv = await crm.getInvoice(invoiceId);
+        const all = [...(inv.invoice_lines || []), ...lines];
+        const sub = all.reduce((sum, l) => sum + Number(l.amount), 0);
+        const tx = Math.round(sub * 0.1 * 100) / 100;
+        const tot = Math.round((sub + tx) * 100) / 100;
+        await crm.updateInvoice(invoiceId, { subtotal: sub, tax: tx, total: tot });
+      }
+
+      await Promise.all(selected.map((sid) => crm.setTimesheetInvoiced(sid, true)));
+      setSelected([]);
+      setRate("");
+      setInvoiceTarget("new");
+      setInvoicing(false);
+      await refresh();
+    } catch (e) {
+      setErr(e.message || "Couldn't add to invoice.");
+    }
+    setBusy(false);
+  }
+
   function toggleInvoiced(id, invoiced) {
     setBusy(true); setErr("");
     crm.setTimesheetInvoiced(id, !invoiced)
@@ -1341,6 +1424,40 @@ function TimesheetsSection({ projectId, crm, uid }) {
         </div>
       )}
       {err && <p className="lp-error">{err}</p>}
+
+      {invoicing ? (
+        <div className="lp-person-row" style={{ marginTop: 12 }}>
+          <div className="lp-row2">
+            <Field label="Hourly rate ($)">
+              <input className="lp-input" type="number" min="0" step="0.01" value={rate}
+                onChange={(e) => setRate(e.target.value)} />
+            </Field>
+            <Field label="Add to invoice">
+              <select className="lp-input" value={invoiceTarget}
+                onChange={(e) => setInvoiceTarget(e.target.value)}>
+                <option value="new">Create new invoice</option>
+                {draftInvoices.map((i) => (
+                  <option key={i.id} value={i.id}>{i.invoice_number} ({money(i.total)})</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+          <div className="lp-person-actions">
+            <button className="lp-btn-ghost" onClick={addToInvoice} disabled={busy || !selected.length}>
+              <Check size={13} /> {busy ? "Adding…" : `Add ${selected.length} to invoice`}
+            </button>
+            <button className="lp-btn-ghost" onClick={() => { setInvoicing(false); setErr(""); }}>
+              <X size={13} /> Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button className="lp-btn-ghost" onClick={openInvoiceForm} style={{ marginTop: 8 }}
+          disabled={!selected.length}>
+          <Plus size={15} /> Add selected to invoice
+        </button>
+      )}
+
       {adding ? (
         <div className="lp-person-row">
           <div className="lp-row2">
@@ -1421,9 +1538,9 @@ function TimesheetsSection({ projectId, crm, uid }) {
                   {t.follow_ups?.length > 0 && <span className="lp-hint"><strong>Follow-ups:</strong> {t.follow_ups.map((f) => f.description).join(" · ")}</span>}
                 </div>
                 <div className="lp-person-actions" style={{ marginTop: 0, alignSelf: "flex-start", flexWrap: "nowrap" }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "12.5px", color: "var(--muted)", cursor: "pointer" }}>
-                    <input type="checkbox" checked={t.invoiced} onChange={() => toggleInvoiced(t.id, t.invoiced)} disabled={busy} />
-                    Invoiced
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "12.5px", color: "var(--muted)", cursor: t.invoiced ? "default" : "pointer" }}>
+                    <input type="checkbox" checked={selected.includes(t.id)} onChange={() => toggleSelected(t.id)} disabled={busy || t.invoiced} />
+                    Select
                   </label>
                   <button className="lp-btn-ghost lp-btn-danger" disabled={busy} onClick={() => remove(t.id)}>
                     <Trash2 size={13} />
