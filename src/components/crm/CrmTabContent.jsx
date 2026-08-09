@@ -90,6 +90,7 @@ export default function CrmTabContent({ tab, crm, uid, sites = [] }) {
   if (tab === "contacts") return <ContactsPanel crm={crm} />;
   if (tab === "projects") return <ProjectsPanel crm={crm} uid={uid} sites={sites} />;
   if (tab === "calendar") return <CalendarPanel crm={crm} uid={uid} />;
+  if (tab === "invoices") return <InvoicesPanel crm={crm} uid={uid} />;
   return null;
 }
 
@@ -1841,6 +1842,180 @@ function CalendarPanel({ crm, uid }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function InvoiceDetail({ id, crm, onBack }) {
+  const [invoice, setInvoice] = useState(null);
+  const [settings, setSettings] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      const [inv, s] = await Promise.all([crm.getInvoice(id), crm.listSettings()]);
+      setInvoice(inv);
+      setSettings(Object.fromEntries((s || []).map((x) => [x.key, x.value])));
+      setLoading(false);
+    })();
+  }, [id, crm]);
+
+  if (loading || !invoice) return <div className="lp-settings lp-settings--wide"><p className="lp-hint">Loading invoice…</p></div>;
+
+  const lines = invoice.invoice_lines || [];
+  const subtotal = Number(invoice.subtotal) || lines.reduce((sum, l) => sum + Number(l.amount || 0), 0);
+  const tax = Number(invoice.tax) || Math.round(subtotal * 0.1 * 100) / 100;
+  const total = Number(invoice.total) || Math.round((subtotal + tax) * 100) / 100;
+  const c = invoice.customers || {};
+  const fmt = (d) => d ? new Date(d).toLocaleDateString("en-AU") : "—";
+  const get = (k) => settings[k] || "";
+
+  return (
+    <div className="lp-settings lp-settings--wide">
+      <style>{`@media print { .no-print { display: none !important; } }`}</style>
+      <div className="no-print" style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+        <button className="lp-btn-ghost" onClick={onBack}><ArrowLeft size={13} /> Back</button>
+        <button className="lp-btn-ghost" onClick={() => window.print()}>Print</button>
+      </div>
+      <div style={{ background: "#fff", color: "#000", padding: 32, maxWidth: 800, margin: "0 auto", border: "1px solid var(--line)", borderRadius: 8 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24 }}>
+          <div style={{ maxWidth: 360 }}>
+            {get("business_logo_url") ? <img src={get("business_logo_url")} alt="" style={{ maxWidth: 120, maxHeight: 80, marginBottom: 8 }} /> : null}
+            <div style={{ fontSize: 20, fontWeight: "bold" }}>{get("business_name") || "Business name — set in Settings"}</div>
+            <div>{get("business_address") || "Address — set in Settings"}</div>
+            <div>{[get("business_phone"), get("business_email")].filter(Boolean).join(" · ") || "Phone / email — set in Settings"}</div>
+            {get("business_abn") ? <div>ABN: {get("business_abn")}</div> : null}
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 28, fontWeight: "bold" }}>INVOICE</div>
+            <div>{invoice.invoice_number}</div>
+            <div style={{ fontSize: 18, marginTop: 8, fontWeight: "bold" }}>Balance Due {money(total)}</div>
+          </div>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24 }}>
+          <div>
+            <div style={{ fontWeight: "bold", marginBottom: 4 }}>Bill To</div>
+            <div><strong>{c.name || invoice.customer_name || "—"}</strong></div>
+            <div>{c.billing_address || invoice.billing_address || "—"}</div>
+            <div>{[c.phone, c.email].filter(Boolean).join(" · ") || null}</div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div><strong>Invoice Date</strong> {fmt(invoice.issued_at)}</div>
+            <div><strong>Terms</strong> {invoice.terms || "—"}</div>
+            <div><strong>Due Date</strong> {fmt(invoice.due_at)}</div>
+          </div>
+        </div>
+        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 24 }}>
+          <thead>
+            <tr style={{ borderBottom: "2px solid #000" }}>
+              <th style={{ textAlign: "left", padding: "6px 0" }}>#</th>
+              <th style={{ textAlign: "left", padding: "6px 0" }}>Task & Description</th>
+              <th style={{ textAlign: "right", padding: "6px 0" }}>Project Hours</th>
+              <th style={{ textAlign: "right", padding: "6px 0" }}>Rate</th>
+              <th style={{ textAlign: "right", padding: "6px 0" }}>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lines.map((l, idx) => (
+              <tr key={l.id || idx} style={{ borderBottom: "1px solid #ddd" }}>
+                <td style={{ padding: "6px 0" }}>{idx + 1}</td>
+                <td style={{ padding: "6px 0" }}>{l.description || "—"}</td>
+                <td style={{ textAlign: "right", padding: "6px 0" }}>{l.quantity}</td>
+                <td style={{ textAlign: "right", padding: "6px 0" }}>{money(l.unit_rate)}</td>
+                <td style={{ textAlign: "right", padding: "6px 0" }}>{money(l.amount)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 24 }}>
+          <div style={{ minWidth: 200 }}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}><span>Sub Total</span><span>{money(subtotal)}</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}><span>GST (10%)</span><span>{money(tax)}</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "bold" }}><span>Total</span><span>{money(total)}</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "bold" }}><span>Balance Due</span><span>{money(total)}</span></div>
+          </div>
+        </div>
+        <div style={{ borderTop: "1px solid #000", paddingTop: 12 }}>
+          <div style={{ fontWeight: "bold", marginBottom: 4 }}>Terms & Conditions</div>
+          <div>Account Name: {get("business_account_name") || "—"}</div>
+          <div>Address: {get("business_bank_address") || "—"}</div>
+          <div>BSB: {get("business_bsb") || "—"}</div>
+          <div>Account Number: {get("business_account_number") || "—"}</div>
+          <div>ABN: {get("business_abn") || "—"}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InvoicesPanel({ crm, uid }) {
+  const [invoices, setInvoices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filterLetter, setFilterLetter] = useState("");
+  const [selected, setSelected] = useState(null);
+  const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+  useEffect(() => {
+    crm.listInvoices().then((d) => { setInvoices(d || []); setLoading(false); }).catch(() => setLoading(false));
+  }, [crm]);
+
+  const sorted = useMemo(() => invoices.map((i) => {
+    const customerName = (i.customers?.name || i.customer_name || "").trim();
+    return { ...i, customerName, letter: customerName[0]?.toUpperCase() || "#" };
+  }).sort((a, b) => a.customerName.localeCompare(b.customerName)), [invoices]);
+
+  const visible = filterLetter ? sorted.filter((i) => i.letter === filterLetter) : sorted;
+  const counts = ALPHABET.reduce((acc, l) => { acc[l] = sorted.filter((i) => i.letter === l).length; return acc; }, {});
+
+  if (selected) return <InvoiceDetail id={selected} crm={crm} onBack={() => setSelected(null)} />;
+  if (loading) return <div className="lp-settings lp-settings--wide"><p className="lp-hint">Loading invoices…</p></div>;
+
+  return (
+    <div className="lp-settings lp-settings--wide">
+      <h3><Building2 size={16} /> Invoices</h3>
+      <p className="lp-hint">All invoices by customer.</p>
+
+      <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
+        <span className="lp-hint">Jump:</span>
+        {ALPHABET.map((l) => (
+          <button
+            key={l}
+            className="lp-btn-ghost"
+            disabled={counts[l] === 0}
+            onClick={() => setFilterLetter(filterLetter === l ? "" : l)}
+            style={{ padding: "4px 8px", fontSize: 12, borderRadius: 6, background: filterLetter === l ? "var(--text)" : "transparent", color: filterLetter === l ? "var(--bg)" : undefined }}
+          >
+            {l}
+          </button>
+        ))}
+        {filterLetter && (
+          <button className="lp-btn-ghost" onClick={() => setFilterLetter("")} style={{ fontSize: 12 }}>
+            <X size={12} /> Clear
+          </button>
+        )}
+      </div>
+
+      <div className="lp-person-list">
+        {visible.length === 0 ? (
+          <EmptyState compact icon={<Building2 size={16} />} text="No invoices found." />
+        ) : (
+          visible.map((i) => (
+            <div key={i.id} className="lp-person-row" onClick={() => setSelected(i.id)} style={{ cursor: "pointer" }}>
+              <div className="lp-person-head" style={{ alignItems: "center" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <strong style={{ fontSize: "1.1rem" }}>{i.invoice_number || "—"}</strong>
+                    <span className="lp-tag">{i.status}</span>
+                    <span className="lp-hint">{money(i.total)}</span>
+                  </div>
+                  <div className="lp-hint">{i.customerName} · {i.issued_at ? new Date(i.issued_at).toLocaleDateString("en-AU") : "—"}</div>
+                </div>
+                <ChevronRight size={15} />
+              </div>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 }
