@@ -19,6 +19,7 @@ const EVENT_CATEGORIES = [
   { label: "Daniel & Tanya Allison", color: "#10b981" },
   { label: "Family", color: "#65a30d" },
   { label: "Gandel Family", color: "#14b8a6" },
+  { label: "Home School", color: "#fbbf24" },
   { label: "Jaki & Shane Lew", color: "#8b5cf6" },
   { label: "Krongold Family", color: "#ef4444" },
   { label: "Krongold Group", color: "#ec4899" },
