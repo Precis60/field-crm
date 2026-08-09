@@ -201,12 +201,16 @@ create table if not exists quotes (
   updated_at timestamptz not null default now()
 );
 
+create sequence if not exists invoice_number_seq start with 1;
+
 create table if not exists invoices (
   id text primary key,
+  invoice_number text unique not null default 'INV-' || to_char(nextval('invoice_number_seq'), 'FM000000'),
   project_id text references projects(id) on delete set null,
   customer_id text not null references customers(id),
   status text not null default 'draft'
     check (status in ('draft', 'sent', 'paid', 'void', 'overdue')),
+  terms text not null default 'Due on Receipt',
   currency text not null default 'AUD',
   subtotal numeric not null default 0,
   tax numeric not null default 0,
@@ -220,6 +224,7 @@ create table if not exists invoices (
 
 create index if not exists invoices_project_idx on invoices (project_id);
 create index if not exists invoices_status_idx on invoices (status);
+create index if not exists invoices_number_idx on invoices (invoice_number);
 
 create table if not exists invoice_lines (
   id text primary key,
@@ -231,6 +236,14 @@ create table if not exists invoice_lines (
   cost_type text
 );
 
+
+create table if not exists settings (
+  key text primary key,
+  value text not null,
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists settings_key_idx on settings (key);
 
 -- ========== RLS (managers write CRM; staff read little) ==========
 
@@ -282,6 +295,15 @@ grant select, insert, update, delete on contacts to authenticated;
 
 drop policy if exists contacts_manager_all on contacts;
 create policy contacts_manager_all on contacts
+  for all using (is_manager()) with check (is_manager());
+
+-- Settings RLS: managers manage business settings.
+alter table settings enable row level security;
+
+grant select, insert, update, delete on settings to authenticated;
+
+drop policy if exists settings_manager_all on settings;
+create policy settings_manager_all on settings
   for all using (is_manager()) with check (is_manager());
 
 -- People RLS: users can access their own row by auth id or email fallback.

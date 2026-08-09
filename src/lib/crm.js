@@ -172,10 +172,38 @@ export function createCrmApi(supabaseFetch) {
     });
   }
 
+  /* ---------- Settings ---------- */
+
+  async function listSettings() {
+    return (await supabaseFetch("/settings?select=*").catch(() => [])) || [];
+  }
+
+  async function getSetting(key) {
+    const rows = await supabaseFetch(`/settings?key=eq.${encodeURIComponent(key)}&select=value`);
+    return rows?.[0]?.value || "";
+  }
+
+  async function setSetting(key, value) {
+    const rows = await supabaseFetch(`/settings?key=eq.${encodeURIComponent(key)}&select=key`);
+    const exists = (rows || []).length > 0;
+    if (exists) {
+      await supabaseFetch(`/settings?key=eq.${encodeURIComponent(key)}`, {
+        method: "PATCH",
+        body: { value, updated_at: new Date().toISOString() },
+      });
+    } else {
+      await supabaseFetch("/settings", {
+        method: "POST",
+        body: [{ key, value, updated_at: new Date().toISOString() }],
+      });
+    }
+    return { key, value };
+  }
+
   /* ---------- Invoices ---------- */
 
   async function listInvoices({ projectId, customerId, status } = {}) {
-    let path = `/invoices?select=*,customers(id,name),projects(id,name)&order=created_at.desc`;
+    let path = `/invoices?select=*,customers(*),projects(id,name)&order=created_at.desc`;
     if (projectId) path += `&project_id=eq.${projectId}`;
     if (customerId) path += `&customer_id=eq.${customerId}`;
     if (status) path += `&status=eq.${status}`;
@@ -316,6 +344,9 @@ export function createCrmApi(supabaseFetch) {
     listCustomerSites,
     listCustomerSitesAll,
     setCustomerSites,
+    listSettings,
+    getSetting,
+    setSetting,
     listContacts,
     createContact,
     updateContact,
