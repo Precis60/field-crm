@@ -557,26 +557,37 @@ function ContactsPanel({ crm, uid }) {
 
   return (
     <div className="lp-settings lp-settings--wide">
-      <h3><Users size={16} /> Contacts</h3>
-      <p className="lp-hint">People you can assign as a site or project contact.</p>
+      <div
+        style={{
+          position: "sticky",
+          top: 100,
+          zIndex: 90,
+          background: "var(--paper)",
+          margin: "-20px -16px 0",
+          padding: "20px 16px 12px",
+          borderBottom: "1px solid var(--line)",
+        }}
+      >
+        <h3><Users size={16} /> Contacts</h3>
+        <p className="lp-hint">People you can assign as a site or project contact.</p>
 
-      {err && <p className="lp-error">{err}</p>}
+        {err && <p className="lp-error">{err}</p>}
 
-      {adding ? (
-        <div className="lp-person-row" style={{ marginTop: 12 }}>
-          {form}
-          <div className="lp-person-actions">
-            <button className="lp-btn-ghost" onClick={saveNew} disabled={busy}><Check size={13} /> {busy ? "Saving…" : "Add contact"}</button>
-            <button className="lp-btn-ghost" onClick={() => { setAdding(false); setErr(""); }}><X size={13} /> Cancel</button>
+        {adding ? (
+          <div className="lp-person-row" style={{ marginTop: 12 }}>
+            {form}
+            <div className="lp-person-actions">
+              <button className="lp-btn-ghost" onClick={saveNew} disabled={busy}><Check size={13} /> {busy ? "Saving…" : "Add contact"}</button>
+              <button className="lp-btn-ghost" onClick={() => { setAdding(false); setErr(""); }}><X size={13} /> Cancel</button>
+            </div>
           </div>
-        </div>
-      ) : (
-        <button className="lp-btn-ghost" style={{ marginTop: 10 }} onClick={() => { setAdding(true); setEditing(null); setDraft(empty()); setErr(""); }}>
-          <Plus size={15} /> Add a contact
-        </button>
-      )}
+        ) : (
+          <button className="lp-btn-ghost" style={{ marginTop: 10 }} onClick={() => { setAdding(true); setEditing(null); setDraft(empty()); setErr(""); }}>
+            <Plus size={15} /> Add a contact
+          </button>
+        )}
 
-      <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
+        <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
         <span className="lp-hint">Jump:</span>
         {ALPHABET.map((l) => (
           <button
@@ -600,6 +611,7 @@ function ContactsPanel({ crm, uid }) {
             <X size={12} /> Clear
           </button>
         )}
+      </div>
       </div>
 
       <div className="lp-person-list" style={{ marginTop: 12 }}>
