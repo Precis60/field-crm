@@ -119,6 +119,26 @@ export function createCrmApi(supabaseFetch) {
     await supabaseFetch(`/site_tasks?id=eq.${id}`, { method: "DELETE" });
   }
 
+  async function listSiteNotes(siteId) {
+    return (await supabaseFetch(`/site_notes?select=*&site_id=eq.${siteId}&active=eq.true&order=title`).catch(() => [])) || [];
+  }
+
+  async function createSiteNote(note) {
+    await supabaseFetch("/site_notes", { method: "POST", body: [note] });
+    return note;
+  }
+
+  async function updateSiteNote(id, patch) {
+    await supabaseFetch(`/site_notes?id=eq.${id}`, {
+      method: "PATCH",
+      body: { ...patch, updated_at: new Date().toISOString() },
+    });
+  }
+
+  async function deleteSiteNote(id) {
+    await supabaseFetch(`/site_notes?id=eq.${id}`, { method: "DELETE" });
+  }
+
   async function listContacts() {
     return (await supabaseFetch("/contacts?select=*&active=eq.true&order=sort_order,name").catch(() => [])) || [];
   }
@@ -429,6 +449,10 @@ export function createCrmApi(supabaseFetch) {
     createSiteTask,
     updateSiteTask,
     deleteSiteTask,
+    listSiteNotes,
+    createSiteNote,
+    updateSiteNote,
+    deleteSiteNote,
     listContacts,
     createContact,
     updateContact,

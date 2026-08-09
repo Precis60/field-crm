@@ -93,6 +93,7 @@ export default function CrmTabContent({ tab, crm, uid, sites = [] }) {
   if (tab === "projects") return <ProjectsPanel crm={crm} uid={uid} sites={sites} />;
   if (tab === "calendar") return <CalendarPanel crm={crm} uid={uid} />;
   if (tab === "site_tasks") return <SiteTasksPanel crm={crm} uid={uid} sites={sites} />;
+  if (tab === "site_notes") return <SiteNotesPanel crm={crm} uid={uid} sites={sites} />;
   if (tab === "invoices") return <InvoicesPanel crm={crm} uid={uid} />;
   return null;
 }
@@ -2954,3 +2955,374 @@ function SiteTasksPanel({ crm, uid, sites = [] }) {
   );
 }
 
+function SiteNotesPanel({ crm, uid, sites = [] }) {
+  const [siteNotes, setSiteNotes] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [filterLetter, setFilterLetter] = useState("");
+  const [noteFilterLetter, setNoteFilterLetter] = useState("");
+  const [selectedSite, setSelectedSite] = useState(null);
+  const [selectedNote, setSelectedNote] = useState(null);
+  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [draft, setDraft] = useState({ title: "", content: "" });
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+  const sortedSites = useMemo(() => {
+    return sites
+      .map((s) => ({
+        ...s,
+        letter: (s.name || "").trim()[0]?.toUpperCase() || "#",
+      }))
+      .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  }, [sites]);
+  const siteCounts = useMemo(() => {
+    return ALPHABET.reduce((acc, l) => {
+      acc[l] = sortedSites.filter((s) => s.letter === l).length;
+      return acc;
+    }, {});
+  }, [sortedSites]);
+  const visibleSites = useMemo(
+    () => (filterLetter ? sortedSites.filter((s) => s.letter === filterLetter) : sortedSites),
+    [sortedSites, filterLetter]
+  );
+
+  const sortedNotes = useMemo(() => {
+    return siteNotes
+      .map((n) => ({
+        ...n,
+        letter: (n.title || "").trim()[0]?.toUpperCase() || "#",
+      }))
+      .sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+  }, [siteNotes]);
+  const noteCounts = useMemo(() => {
+    return ALPHABET.reduce((acc, l) => {
+      acc[l] = sortedNotes.filter((n) => n.letter === l).length;
+      return acc;
+    }, {});
+  }, [sortedNotes]);
+  const visibleNotes = useMemo(
+    () => (noteFilterLetter ? sortedNotes.filter((n) => n.letter === noteFilterLetter) : sortedNotes),
+    [sortedNotes, noteFilterLetter]
+  );
+
+  useEffect(() => {
+    if (!selectedSite) {
+      setSiteNotes([]);
+      return;
+    }
+    setLoading(true);
+    setSelectedNote(null);
+    setAdding(false);
+    setEditing(null);
+    setDraft({ title: "", content: "" });
+    setErr("");
+    crm.listSiteNotes(selectedSite.id)
+      .then((notes) => setSiteNotes(notes || []))
+      .catch(() => setSiteNotes([]))
+      .finally(() => setLoading(false));
+  }, [selectedSite, crm]);
+
+  function backToSites() {
+    setSelectedSite(null);
+    setSelectedNote(null);
+    setAdding(false);
+    setEditing(null);
+    setNoteFilterLetter("");
+    setDraft({ title: "", content: "" });
+    setErr("");
+  }
+
+  function backToNotes() {
+    setSelectedNote(null);
+    setAdding(false);
+    setEditing(null);
+    setDraft({ title: "", content: "" });
+    setErr("");
+  }
+
+  function validate() {
+    if (!draft.title.trim()) return "Enter a title.";
+    if (!selectedSite) return "Select a site first.";
+    return "";
+  }
+
+  async function runSave(noteId, payload) {
+    setBusy(true);
+    setErr("");
+    try {
+      if (noteId) {
+        await crm.updateSiteNote(noteId, payload);
+      } else {
+        await crm.createSiteNote(payload);
+      }
+      const notes = await crm.listSiteNotes(selectedSite.id);
+      setSiteNotes(notes || []);
+      return true;
+    } catch (e) {
+      setErr(e.message || "Couldn’t save the note.");
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveNew() {
+    const problem = validate();
+    if (problem) {
+      setErr(problem);
+      return;
+    }
+    const now = new Date().toISOString();
+    const ok = await runSave(null, {
+      id: uid(),
+      site_id: selectedSite.id,
+      title: draft.title.trim(),
+      content: draft.content.trim(),
+      active: true,
+      created_at: now,
+      updated_at: now,
+    });
+    if (ok) {
+      setAdding(false);
+      setDraft({ title: "", content: "" });
+    }
+  }
+
+  async function saveEdit() {
+    const problem = validate();
+    if (problem) {
+      setErr(problem);
+      return;
+    }
+    const ok = await runSave(editing, { title: draft.title.trim(), content: draft.content.trim() });
+    if (ok) {
+      setEditing(null);
+      setSelectedNote((n) => (n ? { ...n, title: draft.title.trim(), content: draft.content.trim() } : null));
+      setDraft({ title: "", content: "" });
+    }
+  }
+
+  async function removeNote(id) {
+    if (!confirm("Delete this note?")) return;
+    setBusy(true);
+    setErr("");
+    try {
+      await crm.deleteSiteNote(id);
+      const notes = await crm.listSiteNotes(selectedSite.id);
+      setSiteNotes(notes || []);
+      setSelectedNote(null);
+    } catch (e) {
+      setErr(e.message || "Couldn’t delete the note.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function openNote(note) {
+    setSelectedNote(note);
+    setAdding(false);
+    setEditing(null);
+    setDraft({ title: "", content: "" });
+    setErr("");
+  }
+
+  function startEdit(note) {
+    setEditing(note.id);
+    setDraft({ title: note.title || "", content: note.content || "" });
+    setAdding(false);
+    setErr("");
+  }
+
+  const jumpBar = (value, onChange, counts) => (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 8, marginBottom: 8 }}>
+      {ALPHABET.map((l) => (
+        <button
+          key={l}
+          type="button"
+          className="lp-btn-ghost"
+          disabled={counts[l] === 0}
+          onClick={() => onChange(value === l ? "" : l)}
+          style={{
+            padding: "4px 8px",
+            fontSize: 12,
+            borderRadius: 6,
+            background: value === l ? "var(--text)" : "transparent",
+            color: value === l ? "var(--bg)" : undefined,
+          }}
+        >
+          {l}
+        </button>
+      ))}
+      {value && (
+        <button type="button" className="lp-btn-ghost" onClick={() => onChange("")} style={{ fontSize: 12 }}>
+          <X size={12} /> Clear
+        </button>
+      )}
+    </div>
+  );
+
+  const noteForm = (
+    <div className="lp-person-row" style={{ marginTop: 12 }}>
+      <Field label="Title">
+        <input
+          className="lp-input"
+          value={draft.title}
+          onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
+        />
+      </Field>
+      <Field label="Content">
+        <textarea
+          className="lp-textarea"
+          rows={6}
+          value={draft.content}
+          onChange={(e) => setDraft((d) => ({ ...d, content: e.target.value }))}
+        />
+      </Field>
+      <div className="lp-person-actions">
+        <button className="lp-btn-ghost" onClick={editing ? saveEdit : saveNew} disabled={busy}>
+          <Check size={13} /> {busy ? "Saving…" : editing ? "Save" : "Add note"}
+        </button>
+        <button
+          className="lp-btn-ghost"
+          onClick={() => {
+            setAdding(false);
+            setEditing(null);
+            setDraft({ title: "", content: "" });
+            setErr("");
+          }}
+          disabled={busy}
+        >
+          <X size={13} /> Cancel
+        </button>
+      </div>
+    </div>
+  );
+
+  if (selectedNote) {
+    if (editing) {
+      return (
+        <div className="lp-settings lp-settings--wide">
+          <button className="lp-btn-ghost" onClick={() => setEditing(null)} style={{ marginBottom: 8 }}>
+            <ArrowLeft size={14} /> Back to note
+          </button>
+          {err && <p className="lp-error">{err}</p>}
+          {noteForm}
+        </div>
+      );
+    }
+    return (
+      <div className="lp-settings lp-settings--wide">
+        <button className="lp-btn-ghost" onClick={backToNotes} style={{ marginBottom: 8 }}>
+          <ArrowLeft size={14} /> Back to notes
+        </button>
+        <h3>{selectedNote.title}</h3>
+        <p style={{ whiteSpace: "pre-wrap" }}>{selectedNote.content}</p>
+        <div className="lp-person-actions">
+          <button className="lp-btn-ghost" onClick={() => startEdit(selectedNote)}>
+            <Pencil size={13} /> Edit
+          </button>
+          <button className="lp-btn-ghost lp-btn-danger" onClick={() => removeNote(selectedNote.id)} disabled={busy}>
+            <Trash2 size={13} /> Delete
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (selectedSite) {
+    if (loading) {
+      return (
+        <div className="lp-settings lp-settings--wide">
+          <p className="lp-hint">Loading notes…</p>
+        </div>
+      );
+    }
+    return (
+      <div className="lp-settings lp-settings--wide">
+        <button className="lp-btn-ghost" onClick={backToSites} style={{ marginBottom: 8 }}>
+          <ArrowLeft size={14} /> Back to sites
+        </button>
+        <h3>
+          <Building2 size={16} /> {selectedSite.name}
+        </h3>
+        <p className="lp-hint">Select a note to view or edit.</p>
+        {err && <p className="lp-error">{err}</p>}
+
+        {adding || editing ? (
+          noteForm
+        ) : (
+          <button
+            className="lp-btn-ghost"
+            style={{ marginTop: 10 }}
+            onClick={() => {
+              setAdding(true);
+              setDraft({ title: "", content: "" });
+              setErr("");
+            }}
+          >
+            <Plus size={15} /> New notes page
+          </button>
+        )}
+
+        {jumpBar(noteFilterLetter, setNoteFilterLetter, noteCounts)}
+
+        <div className="lp-person-list" style={{ marginTop: 12 }}>
+          {visibleNotes.length === 0 ? (
+            <EmptyState icon={<Building2 size={32} />} text="No notes for this site." compact />
+          ) : (
+            <div>
+              {visibleNotes.map((n, i) => {
+                const showHead = i === 0 || visibleNotes[i - 1].letter !== n.letter;
+                return (
+                  <div key={n.id}>
+                    {showHead && <div className="lp-person-head">{n.letter}</div>}
+                    <div className="lp-person-row" onClick={() => openNote(n)} style={{ cursor: "pointer" }}>
+                      <span>{n.title}</span>
+                      <ChevronRight size={16} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="lp-settings lp-settings--wide">
+      <h3>
+        <Building2 size={16} /> Site Notes
+      </h3>
+      <p className="lp-hint">Select a site to view its notes pages.</p>
+      {err && <p className="lp-error">{err}</p>}
+
+      {jumpBar(filterLetter, setFilterLetter, siteCounts)}
+
+      <div className="lp-person-list" style={{ marginTop: 12 }}>
+        {visibleSites.length === 0 ? (
+          <EmptyState icon={<Building2 size={32} />} text="No sites found." compact />
+        ) : (
+          <div>
+            {visibleSites.map((s, i) => {
+              const showHead = i === 0 || visibleSites[i - 1].letter !== s.letter;
+              return (
+                <div key={s.id}>
+                  {showHead && <div className="lp-person-head">{s.letter}</div>}
+                  <div className="lp-person-row" onClick={() => setSelectedSite(s)} style={{ cursor: "pointer" }}>
+                    <span>{s.name}</span>
+                    <ChevronRight size={16} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

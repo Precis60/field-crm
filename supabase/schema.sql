@@ -337,6 +337,18 @@ create index if not exists site_tasks_site_idx on site_tasks (site_id);
 create index if not exists site_tasks_category_idx on site_tasks (category_id);
 create index if not exists site_tasks_status_idx on site_tasks (status);
 
+create table if not exists site_notes (
+  id text primary key,
+  site_id text not null references sites(id) on delete cascade,
+  title text not null,
+  content text,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists site_notes_site_idx on site_notes (site_id);
+
 -- Suppliers RLS: managers manage suppliers.
 alter table suppliers enable row level security;
 
@@ -377,6 +389,17 @@ create policy site_task_categories_manager_all on site_task_categories
 
 drop policy if exists site_tasks_manager_all on site_tasks;
 create policy site_tasks_manager_all on site_tasks
+  for all using (is_manager()) with check (is_manager());
+
+-- Site notes
+-- (See table definition in the "Other reference tables" section.)
+
+alter table site_notes enable row level security;
+
+grant select, insert, update, delete on site_notes to authenticated;
+
+drop policy if exists site_notes_manager_all on site_notes;
+create policy site_notes_manager_all on site_notes
   for all using (is_manager()) with check (is_manager());
 
 -- People RLS: users can access their own row by auth id or email fallback.
