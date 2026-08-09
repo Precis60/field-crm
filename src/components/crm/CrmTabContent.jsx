@@ -458,8 +458,9 @@ function ContactsPanel({ crm, uid }) {
 
   async function saveNew() {
     const problem = validate(); if (problem) { setErr(problem); return; }
+    const newId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36).slice(-4);
     const ok = await run(() => crm.createContact({
-      id: uid(), name: draft.name.trim(), company: draft.company.trim() || null,
+      id: newId, name: draft.name.trim(), company: draft.company.trim() || null,
       role: draft.role.trim() || null, email: draft.email.trim().toLowerCase() || null,
       phone: draft.phone.trim() || null, notes: draft.notes.trim() || null,
       active: true, sort_order: contacts.length + 1, created_at: new Date().toISOString(),
