@@ -3146,33 +3146,34 @@ function AdminPanel() {
                     </div>
                   </>
                 ) : (
-                  <div className="lp-person-head" style={{ alignItems: "flex-start" }}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                        <strong style={{ fontSize: "1.1rem" }}>{s.name}</strong>
-                        <code className="lp-site-code">{s.id.toUpperCase()}</code>
-                        {s.status && <span className="lp-tag">{s.status}</span>}
+                  <div className="lp-person-head" style={{ alignItems: "flex-start", gap: 16 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+                        <strong style={{ fontSize: "1.25rem" }}>{s.name}</strong>
+                        <code className="lp-site-code" style={{ fontSize: 11, padding: "2px 6px", borderRadius: 4, background: "var(--stone)", color: "var(--text)" }}>{s.id.toUpperCase()}</code>
+                        {s.status && <span className="lp-tag" style={{ textTransform: "capitalize" }}>{s.status}</span>}
                       </div>
-                      {s.address && <span className="lp-hint">{s.address}</span>}
-                      <span className="lp-worker-type">
-                        {s.contact_name ? <span>{s.contact_name}</span> : null}
-                        {s.contact_phone ? <span style={{ marginLeft: s.contact_name ? 10 : 0 }}>{s.contact_phone}</span> : null}
-                        {s.contact_email ? <span style={{ marginLeft: s.contact_name || s.contact_phone ? 10 : 0 }}>{s.contact_email}</span> : null}
-                        {!s.contact_name && !s.contact_phone && !s.contact_email && "No contact details"}
-                      </span>
+                      {s.address && <div style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.4 }}>{s.address}</div>}
+                      {(s.contact_name || s.contact_phone || s.contact_email) ? (
+                        <div style={{ display: "inline-flex", flexWrap: "wrap", gap: "6px 16px", alignItems: "center", background: "var(--stone)", padding: "8px 12px", borderRadius: 10, fontSize: 12.5, width: "fit-content" }}>
+                          {s.contact_name && <span><strong>Contact</strong> {s.contact_name}</span>}
+                          {s.contact_phone && <span style={{ color: "var(--muted)" }}>{s.contact_phone}</span>}
+                          {s.contact_email && <span style={{ color: "var(--muted)" }}>{s.contact_email}</span>}
+                        </div>
+                      ) : null}
                       {(() => {
                         const linked = customerSites
                           .filter((cs) => cs.site_id === s.id)
                           .map((cs) => customers.find((c) => c.id === cs.customer_id)?.name)
                           .filter(Boolean);
                         return linked.length ? (
-                          <div className="lp-hint" style={{ marginTop: 2 }}>
-                            <strong>Customers:</strong> {linked.join(" · ")}
+                          <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 2 }}>
+                            <strong>Customers</strong> {linked.join(" · ")}
                           </div>
                         ) : null;
                       })()}
                     </div>
-                    <div className="lp-person-actions" style={{ marginTop: 0, alignSelf: "flex-start" }}>
+                    <div className="lp-person-actions" style={{ marginTop: 0, alignSelf: "flex-start", flexDirection: "column", alignItems: "flex-start" }}>
                       <button className="lp-btn-ghost" onClick={() => { setErr(""); setEditingSite(s.id); setSiteDraft({ ...emptySite, name: s.name, address: s.address || "", contact_name: s.contact_name || "", contact_phone: s.contact_phone || "", contact_email: s.contact_email || "", status: s.status || "active" }); }}>
                         <Settings size={13} /> Edit
                       </button>
