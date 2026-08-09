@@ -1570,7 +1570,7 @@ function CalendarPanel({ crm, uid }) {
         )}
       </div>
 
-      <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6, paddingBottom: 4 }}>
+      <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6, paddingBottom: 4, maxHeight: 72, overflowY: "auto" }}>
         {EVENT_CATEGORIES.map((c) => {
           const hidden = hiddenCategories.includes(c.label);
           return (
