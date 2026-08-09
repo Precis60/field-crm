@@ -108,11 +108,20 @@ function CustomersPanel({ crm, uid, sites = [] }) {
   const [editingSitesFor, setEditingSitesFor] = useState(null);
   const [siteDraftIds, setSiteDraftIds] = useState([]);
   const [customerSites, setCustomerSites] = useState([]);
+  const [filterLetter, setFilterLetter] = useState("");
   const empty = () => ({
     name: "", position: "", company: "", email: "", phone: "", abn: "",
     billing_address: "", notes: "", status: "active",
   });
   const [draft, setDraft] = useState(empty);
+
+  const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+  const sortedCustomers = useMemo(() => {
+    return customers.map((c) => ({
+      ...c,
+      letter: (c.name || "").trim()[0]?.toUpperCase() || "#",
+    })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [customers]);
 
   async function refresh(query = q) {
     const [c, cs] = await Promise.all([crm.listCustomers({ q: query }), crm.listCustomerSitesAll()]);
@@ -257,6 +266,9 @@ function CustomersPanel({ crm, uid, sites = [] }) {
     </>
   );
 
+  const visible = filterLetter ? sortedCustomers.filter((c) => c.letter === filterLetter) : sortedCustomers;
+  const counts = ALPHABET.reduce((acc, l) => { acc[l] = sortedCustomers.filter((c) => c.letter === l).length; return acc; }, {});
+
   if (loading) return <div className="lp-settings lp-settings--wide"><p className="lp-hint">Loading customers…</p></div>;
 
   return (
@@ -280,6 +292,32 @@ function CustomersPanel({ crm, uid, sites = [] }) {
 
       {err && <p className="lp-error">{err}</p>}
 
+      <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
+        <span className="lp-hint">Jump:</span>
+        {ALPHABET.map((l) => (
+          <button
+            key={l}
+            className="lp-btn-ghost"
+            disabled={counts[l] === 0}
+            onClick={() => setFilterLetter(filterLetter === l ? "" : l)}
+            style={{
+              padding: "4px 8px",
+              fontSize: 12,
+              borderRadius: 6,
+              background: filterLetter === l ? "var(--text)" : "transparent",
+              color: filterLetter === l ? "var(--bg)" : undefined,
+            }}
+          >
+            {l}
+          </button>
+        ))}
+        {filterLetter && (
+          <button className="lp-btn-ghost" onClick={() => setFilterLetter("")} style={{ fontSize: 12 }}>
+            <X size={12} /> Clear
+          </button>
+        )}
+      </div>
+
       {adding ? (
         <div className="lp-person-row" style={{ marginTop: 12 }}>
           {form}
@@ -300,10 +338,10 @@ function CustomersPanel({ crm, uid, sites = [] }) {
       )}
 
       <div className="lp-person-list">
-        {customers.length === 0 ? (
+        {visible.length === 0 ? (
           <EmptyState compact icon={<Users size={16} />} text="No customers yet." />
         ) : (
-          customers.map((c) => (
+          visible.map((c) => (
             <div className={`lp-person-row ${c.active ? "" : "is-inactive"}`} key={c.id}>
               {editing === c.id ? (
                 <>
@@ -653,13 +691,23 @@ function ProjectList({ projects, customers, sites, crm, uid, onOpen, onChanged }
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [filterLetter, setFilterLetter] = useState("");
   const [draft, setDraft] = useState({
     name: "", customerId: "", siteId: "", status: "lead", description: "", budget: "",
   });
 
+  const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+  const sortedProjects = useMemo(() => {
+    return projects.map((p) => ({
+      ...p,
+      letter: (p.name || "").trim()[0]?.toUpperCase() || "#",
+    })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [projects]);
   const filtered = statusFilter
-    ? projects.filter((p) => p.status === statusFilter)
-    : projects;
+    ? sortedProjects.filter((p) => p.status === statusFilter)
+    : sortedProjects;
+  const visible = filterLetter ? filtered.filter((p) => p.letter === filterLetter) : filtered;
+  const counts = ALPHABET.reduce((acc, l) => { acc[l] = sortedProjects.filter((p) => p.letter === l).length; return acc; }, {});
 
   async function saveNew() {
     if (!draft.name.trim()) { setErr("Give the project a name."); return; }
@@ -702,6 +750,32 @@ function ProjectList({ projects, customers, sites, crm, uid, onOpen, onChanged }
             <option key={s.value} value={s.value}>{s.label}</option>
           ))}
         </select>
+      </div>
+
+      <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
+        <span className="lp-hint">Jump:</span>
+        {ALPHABET.map((l) => (
+          <button
+            key={l}
+            className="lp-btn-ghost"
+            disabled={counts[l] === 0}
+            onClick={() => setFilterLetter(filterLetter === l ? "" : l)}
+            style={{
+              padding: "4px 8px",
+              fontSize: 12,
+              borderRadius: 6,
+              background: filterLetter === l ? "var(--text)" : "transparent",
+              color: filterLetter === l ? "var(--bg)" : undefined,
+            }}
+          >
+            {l}
+          </button>
+        ))}
+        {filterLetter && (
+          <button className="lp-btn-ghost" onClick={() => setFilterLetter("")} style={{ fontSize: 12 }}>
+            <X size={12} /> Clear
+          </button>
+        )}
       </div>
 
       {err && <p className="lp-error">{err}</p>}
@@ -767,10 +841,10 @@ function ProjectList({ projects, customers, sites, crm, uid, onOpen, onChanged }
       )}
 
       <div className="lp-person-list">
-        {filtered.length === 0 ? (
+        {visible.length === 0 ? (
           <EmptyState compact icon={<Building2 size={16} />} text="No projects yet." />
         ) : (
-          filtered.map((p) => {
+          visible.map((p) => {
             const statusLabel = PROJECT_STATUSES.find((s) => s.value === p.status)?.label || p.status;
             return (
               <button
