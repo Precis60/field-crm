@@ -87,7 +87,7 @@ function EmptyState({ icon, text, compact }) {
 
 export default function CrmTabContent({ tab, crm, zoho, uid, sites = [], accessToken }) {
   if (tab === "customers") return <CustomersPanel crm={crm} uid={uid} sites={sites} />;
-  if (tab === "contacts") return <ContactsPanel crm={crm} uid={uid} />;
+  if (tab === "contacts") return <ContactsPanel crm={crm} />;
   if (tab === "projects") return <ProjectsPanel crm={crm} zoho={zoho} uid={uid} sites={sites} accessToken={accessToken} />;
   if (tab === "zoho") return <ZohoPanel crm={crm} zoho={zoho} accessToken={accessToken} />;
   if (tab === "calendar") return <CalendarPanel crm={crm} uid={uid} />;
@@ -427,7 +427,7 @@ function CustomersPanel({ crm, uid, sites = [] }) {
 /*  Projects                                                           */
 /* ================================================================== */
 
-function ContactsPanel({ crm }) {
+function ContactsPanel({ crm, uid }) {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
