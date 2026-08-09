@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Check, X, AlertTriangle, Plus, Trash2, Search, Building2, Users,
   Pencil, ChevronRight, ArrowLeft, Settings, Clock, CalendarDays,
@@ -2955,6 +2955,119 @@ function SiteTasksPanel({ crm, uid, sites = [] }) {
   );
 }
 
+const RICH_COLORS = [
+  { name: "Black", value: "#000000" },
+  { name: "White", value: "#ffffff" },
+  { name: "Red", value: "#ef4444" },
+  { name: "Orange", value: "#f97316" },
+  { name: "Amber", value: "#f59e0b" },
+  { name: "Lime", value: "#84cc16" },
+  { name: "Green", value: "#22c55e" },
+  { name: "Teal", value: "#14b8a6" },
+  { name: "Cyan", value: "#06b6d4" },
+  { name: "Blue", value: "#3b82f6" },
+  { name: "Violet", value: "#8b5cf6" },
+  { name: "Fuchsia", value: "#d946ef" },
+  { name: "Rose", value: "#f43f5e" },
+  { name: "Slate", value: "#64748b" },
+  { name: "Gray", value: "#94a3b8" },
+];
+
+function RichEditor({ value, onChange }) {
+  const ref = useRef(null);
+  const [format, setFormat] = useState({});
+
+  function update() {
+    if (ref.current) onChange(ref.current.innerHTML);
+    setFormat({
+      bold: document.queryCommandState("bold"),
+      italic: document.queryCommandState("italic"),
+      underline: document.queryCommandState("underline"),
+      justifyLeft: document.queryCommandState("justifyLeft"),
+      justifyCenter: document.queryCommandState("justifyCenter"),
+      justifyRight: document.queryCommandState("justifyRight"),
+      insertUnorderedList: document.queryCommandState("insertUnorderedList"),
+    });
+  }
+
+  function exec(cmd, arg) {
+    document.execCommand(cmd, false, arg);
+    update();
+  }
+
+  useEffect(() => {
+    if (ref.current && ref.current.innerHTML !== value) {
+      ref.current.innerHTML = value || "";
+    }
+  }, [value]);
+
+  useEffect(() => {
+    function onSelectionChange() { update(); }
+    document.addEventListener("selectionchange", onSelectionChange);
+    return () => document.removeEventListener("selectionchange", onSelectionChange);
+  }, []);
+
+  const btn = (label, cmd, isActive) => (
+    <button
+      type="button"
+      className="lp-btn-ghost"
+      onClick={() => exec(cmd)}
+      style={{ padding: "4px 10px", fontWeight: isActive ? "bold" : "normal", background: isActive ? "var(--stone)" : undefined, minWidth: 32 }}
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <div style={{ border: "1px solid var(--line)", borderRadius: 8, overflow: "hidden", background: "#fff" }}>
+      <div
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
+          background: "var(--panel)",
+          borderBottom: "1px solid var(--line)",
+          padding: "6px 10px",
+          display: "flex",
+          gap: 6,
+          flexWrap: "wrap",
+          alignItems: "center",
+        }}
+      >
+        {btn("B", "bold", format.bold)}
+        {btn("I", "italic", format.italic)}
+        {btn("U", "underline", format.underline)}
+        <span style={{ width: 1, height: 20, background: "var(--line)", margin: "0 4px" }} />
+        {btn("•", "insertUnorderedList", format.insertUnorderedList)}
+        <span style={{ width: 1, height: 20, background: "var(--line)", margin: "0 4px" }} />
+        {btn("L", "justifyLeft", format.justifyLeft)}
+        {btn("C", "justifyCenter", format.justifyCenter)}
+        {btn("R", "justifyRight", format.justifyRight)}
+        <span style={{ width: 1, height: 20, background: "var(--line)", margin: "0 4px" }} />
+        <select
+          className="lp-input"
+          style={{ minWidth: 80, padding: "4px 8px", fontSize: 12 }}
+          value=""
+          onChange={(e) => { exec("foreColor", e.target.value); e.target.value = ""; }}
+        >
+          <option value="" disabled>Colour</option>
+          {RICH_COLORS.map((c) => (
+            <option key={c.value} value={c.value} style={{ color: c.value }}>{c.name}</option>
+          ))}
+        </select>
+      </div>
+      <div
+        ref={ref}
+        contentEditable
+        onInput={update}
+        onMouseUp={update}
+        onKeyUp={update}
+        style={{ minHeight: 200, maxHeight: 400, padding: 12, overflowY: "auto", outline: "none", color: "#000" }}
+      />
+    </div>
+  );
+}
+
 function SiteNotesPanel({ crm, uid, sites = [] }) {
   const [siteNotes, setSiteNotes] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -3174,12 +3287,7 @@ function SiteNotesPanel({ crm, uid, sites = [] }) {
         />
       </Field>
       <Field label="Content">
-        <textarea
-          className="lp-textarea"
-          rows={6}
-          value={draft.content}
-          onChange={(e) => setDraft((d) => ({ ...d, content: e.target.value }))}
-        />
+        <RichEditor value={draft.content} onChange={(html) => setDraft((d) => ({ ...d, content: html }))} />
       </Field>
       <div className="lp-person-actions">
         <button className="lp-btn-ghost" onClick={editing ? saveEdit : saveNew} disabled={busy}>
@@ -3219,7 +3327,10 @@ function SiteNotesPanel({ crm, uid, sites = [] }) {
           <ArrowLeft size={14} /> Back to notes
         </button>
         <h3>{selectedNote.title}</h3>
-        <p style={{ whiteSpace: "pre-wrap" }}>{selectedNote.content}</p>
+        <div
+          style={{ color: "#000", background: "#fff", padding: 16, borderRadius: 8, border: "1px solid var(--line)", minHeight: 120, overflowY: "auto" }}
+          dangerouslySetInnerHTML={{ __html: selectedNote.content || "<p></p>" }}
+        />
         <div className="lp-person-actions">
           <button className="lp-btn-ghost" onClick={() => startEdit(selectedNote)}>
             <Pencil size={13} /> Edit
