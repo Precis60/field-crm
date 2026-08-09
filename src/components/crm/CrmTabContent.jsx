@@ -2117,8 +2117,14 @@ function InvoiceDetail({ id, crm, onBack }) {
             <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "bold" }}><span>Balance Due</span><span>{money(total)}</span></div>
           </div>
         </div>
+        {invoice.notes && (
+          <div style={{ borderTop: "1px solid #000", paddingTop: 12, marginBottom: 12 }}>
+            <div style={{ fontWeight: "bold", marginBottom: 4 }}>Notes & Conditions</div>
+            <div style={{ whiteSpace: "pre-wrap" }}>{invoice.notes}</div>
+          </div>
+        )}
         <div style={{ borderTop: "1px solid #000", paddingTop: 12 }}>
-          <div style={{ fontWeight: "bold", marginBottom: 4 }}>Terms & Conditions</div>
+          <div style={{ fontWeight: "bold", marginBottom: 4 }}>Payment Details</div>
           <div>Account Name: {get("business_account_name") || "—"}</div>
           <div>Address: {get("business_bank_address") || "—"}</div>
           <div>BSB: {get("business_bsb") || "—"}</div>
@@ -2129,6 +2135,15 @@ function InvoiceDetail({ id, crm, onBack }) {
     </div>
   );
 }
+
+const PAYMENT_TERMS = [
+  "Due On Receipt",
+  "7 Days",
+  "14 Days",
+  "30 Days",
+  "End of Calendar Month",
+  "Payment Upfront",
+];
 
 function InvoicesPanel({ crm, uid }) {
   const [invoices, setInvoices] = useState([]);
@@ -2149,9 +2164,10 @@ function InvoicesPanel({ crm, uid }) {
   const empty = () => ({
     customerId: "",
     invoiceNumber: "",
-    terms: "Due on Receipt",
+    terms: PAYMENT_TERMS[0],
     issuedAt: "",
     dueAt: "",
+    notes: "",
     labour: [{ description: "", quantity: "1", unit_rate: "" }],
     expenses: [{ description: "", quantity: "1", unit_rate: "", cost_type: "other" }],
   });
@@ -2222,6 +2238,7 @@ function InvoicesPanel({ crm, uid }) {
         total,
         issued_at: draft.issuedAt || null,
         due_at: draft.dueAt || null,
+        notes: draft.notes.trim() || null,
         active: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -2297,8 +2314,10 @@ function InvoicesPanel({ crm, uid }) {
             <Field label="Invoice number">
               <input className="lp-input" placeholder="e.g. INV-001" value={draft.invoiceNumber} onChange={(e) => setDraft((d) => ({ ...d, invoiceNumber: e.target.value }))} />
             </Field>
-            <Field label="Terms">
-              <input className="lp-input" value={draft.terms} onChange={(e) => setDraft((d) => ({ ...d, terms: e.target.value }))} />
+            <Field label="Payment terms">
+              <select className="lp-input" value={draft.terms} onChange={(e) => setDraft((d) => ({ ...d, terms: e.target.value }))}>
+                {PAYMENT_TERMS.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
             </Field>
           </div>
           <div className="lp-row2">
@@ -2338,6 +2357,10 @@ function InvoicesPanel({ crm, uid }) {
             ))}
             <button className="lp-btn-ghost" onClick={addExpenseLine} disabled={busy}><Plus size={15} /> Add expense line</button>
           </div>
+
+          <Field label="Terms & Conditions">
+            <textarea className="lp-textarea" rows={3} value={draft.notes} onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))} />
+          </Field>
 
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
             <div style={{ minWidth: 180 }}>
