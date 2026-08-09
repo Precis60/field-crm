@@ -2011,12 +2011,41 @@ function InvoiceDetail({ id, crm, onBack }) {
   if (loading || !invoice) return <div className="lp-settings lp-settings--wide"><p className="lp-hint">Loading invoice…</p></div>;
 
   const lines = invoice.invoice_lines || [];
-  const subtotal = Number(invoice.subtotal) || lines.reduce((sum, l) => sum + Number(l.amount || 0), 0);
-  const tax = Number(invoice.tax) || Math.round(subtotal * 0.1 * 100) / 100;
-  const total = Number(invoice.total) || Math.round((subtotal + tax) * 100) / 100;
+  const labour = lines.filter((l) => l.cost_type === "labour");
+  const expenses = lines.filter((l) => l.cost_type !== "labour");
+  const labourTotal = labour.reduce((sum, l) => sum + Number(l.amount || 0), 0);
+  const expensesTotal = expenses.reduce((sum, l) => sum + Number(l.amount || 0), 0);
+  const subtotal = labourTotal + expensesTotal;
+  const tax = Math.round(subtotal * 0.1 * 100) / 100;
+  const total = Math.round((subtotal + tax) * 100) / 100;
   const c = invoice.customers || {};
   const fmt = (d) => d ? new Date(d).toLocaleDateString("en-AU") : "—";
   const get = (k) => settings[k] || "";
+
+  const renderTable = (rows, isLabour) => (
+    <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 16 }}>
+      <thead>
+        <tr style={{ borderBottom: "2px solid #000" }}>
+          <th style={{ textAlign: "left", padding: "6px 0" }}>#</th>
+          <th style={{ textAlign: "left", padding: "6px 0" }}>{isLabour ? "Task & Description" : "Description"}</th>
+          <th style={{ textAlign: "right", padding: "6px 0" }}>{isLabour ? "Project Hours" : "Qty"}</th>
+          <th style={{ textAlign: "right", padding: "6px 0" }}>Rate</th>
+          <th style={{ textAlign: "right", padding: "6px 0" }}>Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((l, idx) => (
+          <tr key={l.id || idx} style={{ borderBottom: "1px solid #ddd" }}>
+            <td style={{ padding: "6px 0" }}>{idx + 1}</td>
+            <td style={{ padding: "6px 0" }}>{l.description || "—"}</td>
+            <td style={{ textAlign: "right", padding: "6px 0" }}>{l.quantity}</td>
+            <td style={{ textAlign: "right", padding: "6px 0" }}>{money(l.unit_rate)}</td>
+            <td style={{ textAlign: "right", padding: "6px 0" }}>{money(l.amount)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 
   return (
     <div className="lp-settings lp-settings--wide">
@@ -2053,33 +2082,38 @@ function InvoiceDetail({ id, crm, onBack }) {
             <div><strong>Due Date</strong> {fmt(invoice.due_at)}</div>
           </div>
         </div>
-        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 24 }}>
-          <thead>
-            <tr style={{ borderBottom: "2px solid #000" }}>
-              <th style={{ textAlign: "left", padding: "6px 0" }}>#</th>
-              <th style={{ textAlign: "left", padding: "6px 0" }}>Task & Description</th>
-              <th style={{ textAlign: "right", padding: "6px 0" }}>Project Hours</th>
-              <th style={{ textAlign: "right", padding: "6px 0" }}>Rate</th>
-              <th style={{ textAlign: "right", padding: "6px 0" }}>Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {lines.map((l, idx) => (
-              <tr key={l.id || idx} style={{ borderBottom: "1px solid #ddd" }}>
-                <td style={{ padding: "6px 0" }}>{idx + 1}</td>
-                <td style={{ padding: "6px 0" }}>{l.description || "—"}</td>
-                <td style={{ textAlign: "right", padding: "6px 0" }}>{l.quantity}</td>
-                <td style={{ textAlign: "right", padding: "6px 0" }}>{money(l.unit_rate)}</td>
-                <td style={{ textAlign: "right", padding: "6px 0" }}>{money(l.amount)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 24 }}>
+
+        {labour.length > 0 && (
+          <>
+            <div style={{ fontWeight: "bold", marginBottom: 8 }}>Labour</div>
+            {renderTable(labour, true)}
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 24 }}>
+              <div style={{ minWidth: 200 }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}><span>Labour total (excl. GST)</span><span>{money(labourTotal)}</span></div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {expenses.length > 0 && (
+          <>
+            <div style={{ fontWeight: "bold", marginBottom: 8 }}>Expenses</div>
+            {renderTable(expenses, false)}
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 24 }}>
+              <div style={{ minWidth: 200 }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}><span>Expenses total (excl. GST)</span><span>{money(expensesTotal)}</span></div>
+              </div>
+            </div>
+          </>
+        )}
+
+        <div style={{ borderTop: "1px solid #000", paddingTop: 12, display: "flex", justifyContent: "flex-end", marginBottom: 24 }}>
           <div style={{ minWidth: 200 }}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}><span>Sub Total</span><span>{money(subtotal)}</span></div>
+            {labour.length > 0 && <div style={{ display: "flex", justifyContent: "space-between" }}><span>Labour</span><span>{money(labourTotal)}</span></div>}
+            {expenses.length > 0 && <div style={{ display: "flex", justifyContent: "space-between" }}><span>Expenses</span><span>{money(expensesTotal)}</span></div>}
+            <div style={{ display: "flex", justifyContent: "space-between" }}><span>Subtotal (excl. GST)</span><span>{money(subtotal)}</span></div>
             <div style={{ display: "flex", justifyContent: "space-between" }}><span>GST (10%)</span><span>{money(tax)}</span></div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "bold" }}><span>Total</span><span>{money(total)}</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "bold" }}><span>Total (incl. GST)</span><span>{money(total)}</span></div>
             <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "bold" }}><span>Balance Due</span><span>{money(total)}</span></div>
           </div>
         </div>
