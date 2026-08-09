@@ -307,7 +307,7 @@ export function createCrmApi(supabaseFetch) {
   /**
    * Build a draft invoice from a project's cost lines.
    */
-  async function draftInvoiceFromProject(projectId, { uid, taxRate = 0.1, notes = "" } = {}) {
+  async function draftInvoiceFromProject(projectId, { uid, taxRate = 0.1, notes = "", invoiceNumber = "" } = {}) {
     const project = await getProject(projectId);
     if (!project) throw new Error("Project not found.");
     if (!project.customer_id) throw new Error("This project has no customer — link one first.");
@@ -324,6 +324,7 @@ export function createCrmApi(supabaseFetch) {
       id: invoiceId,
       project_id: projectId,
       customer_id: project.customer_id,
+      invoice_number: invoiceNumber || ('INV-' + Date.now()),
       status: "draft",
       currency: "AUD",
       subtotal,

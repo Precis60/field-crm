@@ -1001,11 +1001,13 @@ function ProjectDetail({ projectId, crm, uid, sites, customers, onBack }) {
   }
 
   async function draftInvoice() {
+    const invoiceNumber = prompt("Enter an invoice number:");
+    if (!invoiceNumber || !invoiceNumber.trim()) return;
     setBusy(true);
     setErr("");
     setMsg("");
     try {
-      const { invoice } = await crm.draftInvoiceFromProject(projectId, { uid });
+      const { invoice } = await crm.draftInvoiceFromProject(projectId, { uid, invoiceNumber: invoiceNumber.trim() });
       setMsg(`Draft invoice ${invoice.id.slice(0, 8)} created for ${money(invoice.total)} (incl. GST).`);
       await refresh();
     } catch (e) {
@@ -2096,14 +2098,107 @@ function InvoiceDetail({ id, crm, onBack }) {
 
 function InvoicesPanel({ crm, uid }) {
   const [invoices, setInvoices] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
   const [filterLetter, setFilterLetter] = useState("");
   const [selected, setSelected] = useState(null);
+  const [adding, setAdding] = useState(false);
   const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
+  const empty = () => ({
+    customerId: "",
+    invoiceNumber: "",
+    terms: "Due on Receipt",
+    issuedAt: "",
+    dueAt: "",
+    lines: [{ description: "", quantity: "1", unit_rate: "", cost_type: "labour" }],
+  });
+  const [draft, setDraft] = useState(empty);
+
+  async function refresh() {
+    const [inv, cust] = await Promise.all([
+      crm.listInvoices().catch(() => []),
+      crm.listCustomers().catch(() => []),
+    ]);
+    setInvoices(inv || []);
+    setCustomers(cust || []);
+  }
+
   useEffect(() => {
-    crm.listInvoices().then((d) => { setInvoices(d || []); setLoading(false); }).catch(() => setLoading(false));
+    refresh().finally(() => setLoading(false));
   }, [crm]);
+
+  const addLine = () =>
+    setDraft((d) => ({ ...d, lines: [...d.lines, { description: "", quantity: "1", unit_rate: "", cost_type: "labour" }] }));
+  const removeLine = (idx) =>
+    setDraft((d) => ({ ...d, lines: d.lines.filter((_, i) => i !== idx) }));
+  const updateLine = (idx, patch) =>
+    setDraft((d) => ({ ...d, lines: d.lines.map((l, i) => (i === idx ? { ...l, ...patch } : l)) }));
+
+  const { subtotal, tax, total } = useMemo(() => {
+    const raw = draft.lines.reduce((sum, l) => sum + (Number(l.quantity) || 0) * (Number(l.unit_rate) || 0), 0);
+    const sub = Math.round(raw * 100) / 100;
+    const t = Math.round(sub * 0.1 * 100) / 100;
+    const tot = Math.round((sub + t) * 100) / 100;
+    return { subtotal: sub, tax: t, total: tot };
+  }, [draft.lines]);
+
+  function validate() {
+    if (!draft.customerId) return "Choose a customer.";
+    if (!draft.invoiceNumber.trim()) return "Enter an invoice number.";
+    if (!draft.lines.length || !draft.lines.some((l) => l.description.trim())) return "Add at least one line with a description.";
+    return "";
+  }
+
+  async function saveNew() {
+    const problem = validate();
+    if (problem) { setErr(problem); return; }
+    setBusy(true);
+    setErr("");
+    try {
+      const invoiceId = uid();
+      const invoice = {
+        id: invoiceId,
+        customer_id: draft.customerId,
+        invoice_number: draft.invoiceNumber.trim(),
+        status: "draft",
+        terms: draft.terms.trim() || "Due on Receipt",
+        currency: "AUD",
+        subtotal,
+        tax,
+        total,
+        issued_at: draft.issuedAt || null,
+        due_at: draft.dueAt || null,
+        active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      const lines = draft.lines
+        .filter((l) => l.description.trim())
+        .map((l) => {
+          const qty = Number(l.quantity) || 1;
+          const rate = Number(l.unit_rate) || 0;
+          return {
+            id: uid(),
+            invoice_id: invoiceId,
+            description: l.description.trim(),
+            quantity: qty,
+            unit_rate: rate,
+            amount: Math.round(qty * rate * 100) / 100,
+            cost_type: l.cost_type || "other",
+          };
+        });
+      await crm.createInvoice(invoice, lines);
+      setAdding(false);
+      setDraft(empty());
+      await refresh();
+    } catch (e) {
+      setErr(e.message || "Couldn't create invoice.");
+    }
+    setBusy(false);
+  }
 
   const sorted = useMemo(() => invoices.map((i) => {
     const customerName = (i.customers?.name || i.customer_name || "").trim();
@@ -2121,47 +2216,114 @@ function InvoicesPanel({ crm, uid }) {
       <h3><Building2 size={16} /> Invoices</h3>
       <p className="lp-hint">All invoices by customer.</p>
 
-      <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
-        <span className="lp-hint">Jump:</span>
-        {ALPHABET.map((l) => (
-          <button
-            key={l}
-            className="lp-btn-ghost"
-            disabled={counts[l] === 0}
-            onClick={() => setFilterLetter(filterLetter === l ? "" : l)}
-            style={{ padding: "4px 8px", fontSize: 12, borderRadius: 6, background: filterLetter === l ? "var(--text)" : "transparent", color: filterLetter === l ? "var(--bg)" : undefined }}
-          >
-            {l}
-          </button>
-        ))}
-        {filterLetter && (
-          <button className="lp-btn-ghost" onClick={() => setFilterLetter("")} style={{ fontSize: 12 }}>
-            <X size={12} /> Clear
-          </button>
-        )}
-      </div>
+      {err && <p className="lp-error">{err}</p>}
 
-      <div className="lp-person-list">
-        {visible.length === 0 ? (
-          <EmptyState compact icon={<Building2 size={16} />} text="No invoices found." />
-        ) : (
-          visible.map((i) => (
-            <div key={i.id} className="lp-person-row" onClick={() => setSelected(i.id)} style={{ cursor: "pointer" }}>
-              <div className="lp-person-head" style={{ alignItems: "center" }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <strong style={{ fontSize: "1.1rem" }}>{i.invoice_number || "—"}</strong>
-                    <span className="lp-tag">{i.status}</span>
-                    <span className="lp-hint">{money(i.total)}</span>
-                  </div>
-                  <div className="lp-hint">{i.customerName} · {i.issued_at ? new Date(i.issued_at).toLocaleDateString("en-AU") : "—"}</div>
-                </div>
-                <ChevronRight size={15} />
+      {adding ? (
+        <div className="lp-person-row" style={{ marginTop: 12 }}>
+          <Field label="Customer">
+            <select className="lp-input" value={draft.customerId} onChange={(e) => setDraft((d) => ({ ...d, customerId: e.target.value }))}>
+              <option value="">Select customer</option>
+              {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </Field>
+          <div className="lp-row2">
+            <Field label="Invoice number">
+              <input className="lp-input" placeholder="e.g. INV-001" value={draft.invoiceNumber} onChange={(e) => setDraft((d) => ({ ...d, invoiceNumber: e.target.value }))} />
+            </Field>
+            <Field label="Terms">
+              <input className="lp-input" value={draft.terms} onChange={(e) => setDraft((d) => ({ ...d, terms: e.target.value }))} />
+            </Field>
+          </div>
+          <div className="lp-row2">
+            <Field label="Invoice date">
+              <input className="lp-input" type="date" value={draft.issuedAt} onChange={(e) => setDraft((d) => ({ ...d, issuedAt: e.target.value }))} />
+            </Field>
+            <Field label="Due date">
+              <input className="lp-input" type="date" value={draft.dueAt} onChange={(e) => setDraft((d) => ({ ...d, dueAt: e.target.value }))} />
+            </Field>
+          </div>
+
+          <div style={{ marginTop: 16 }}>
+            <div style={{ fontWeight: "bold", marginBottom: 8 }}>Line items</div>
+            {draft.lines.map((l, idx) => (
+              <div key={idx} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
+                <input className="lp-input" style={{ flex: "2 1 180px" }} placeholder="Description" value={l.description} onChange={(e) => updateLine(idx, { description: e.target.value })} />
+                <input className="lp-input" style={{ flex: "0 1 80px" }} type="number" min="0" step="any" placeholder="Qty" value={l.quantity} onChange={(e) => updateLine(idx, { quantity: e.target.value })} />
+                <input className="lp-input" style={{ flex: "0 1 100px" }} type="number" min="0" step="0.01" placeholder="Rate" value={l.unit_rate} onChange={(e) => updateLine(idx, { unit_rate: e.target.value })} />
+                <select className="lp-input" style={{ flex: "0 1 150px" }} value={l.cost_type} onChange={(e) => updateLine(idx, { cost_type: e.target.value })}>
+                  {COST_TYPES.map((ct) => <option key={ct.value} value={ct.value}>{ct.label}</option>)}
+                </select>
+                <span className="lp-hint" style={{ minWidth: 80, textAlign: "right" }}>{money((Number(l.quantity) || 0) * (Number(l.unit_rate) || 0))}</span>
+                <button className="lp-btn-ghost lp-btn-danger" onClick={() => removeLine(idx)} disabled={draft.lines.length === 1 || busy}><Trash2 size={13} /></button>
               </div>
+            ))}
+            <button className="lp-btn-ghost" onClick={addLine} disabled={busy}><Plus size={15} /> Add line</button>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
+            <div style={{ minWidth: 180 }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}><span>Subtotal</span><span>{money(subtotal)}</span></div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}><span>GST (10%)</span><span>{money(tax)}</span></div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "bold" }}><span>Total</span><span>{money(total)}</span></div>
             </div>
-          ))
-        )}
-      </div>
+          </div>
+
+          <div className="lp-person-actions">
+            <button className="lp-btn-ghost" onClick={saveNew} disabled={busy}><Check size={13} /> {busy ? "Saving…" : "Save invoice"}</button>
+            <button className="lp-btn-ghost" onClick={() => { setAdding(false); setErr(""); setDraft(empty()); }}><X size={13} /> Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <button className="lp-btn-ghost" style={{ marginTop: 10 }} onClick={() => { setAdding(true); setErr(""); }}>
+          <Plus size={15} /> New invoice
+        </button>
+      )}
+
+      {!adding && (
+        <>
+          <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
+            <span className="lp-hint">Jump:</span>
+            {ALPHABET.map((l) => (
+              <button
+                key={l}
+                className="lp-btn-ghost"
+                disabled={counts[l] === 0}
+                onClick={() => setFilterLetter(filterLetter === l ? "" : l)}
+                style={{ padding: "4px 8px", fontSize: 12, borderRadius: 6, background: filterLetter === l ? "var(--text)" : "transparent", color: filterLetter === l ? "var(--bg)" : undefined }}
+              >
+                {l}
+              </button>
+            ))}
+            {filterLetter && (
+              <button className="lp-btn-ghost" onClick={() => setFilterLetter("")} style={{ fontSize: 12 }}>
+                <X size={12} /> Clear
+              </button>
+            )}
+          </div>
+
+          <div className="lp-person-list">
+            {visible.length === 0 ? (
+              <EmptyState compact icon={<Building2 size={16} />} text="No invoices found." />
+            ) : (
+              visible.map((i) => (
+                <div key={i.id} className="lp-person-row" onClick={() => setSelected(i.id)} style={{ cursor: "pointer" }}>
+                  <div className="lp-person-head" style={{ alignItems: "center" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <strong style={{ fontSize: "1.1rem" }}>{i.invoice_number || "—"}</strong>
+                        <span className="lp-tag">{i.status}</span>
+                        <span className="lp-hint">{money(i.total)}</span>
+                      </div>
+                      <div className="lp-hint">{i.customerName} · {i.issued_at ? new Date(i.issued_at).toLocaleDateString("en-AU") : "—"}</div>
+                    </div>
+                    <ChevronRight size={15} />
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
