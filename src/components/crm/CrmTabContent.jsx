@@ -693,7 +693,7 @@ function ProjectList({ projects, customers, sites, crm, uid, onOpen, onChanged }
   const [statusFilter, setStatusFilter] = useState("");
   const [filterLetter, setFilterLetter] = useState("");
   const [draft, setDraft] = useState({
-    name: "", customerId: "", siteId: "", status: "lead", description: "", budget: "",
+    name: "", customerId: "", siteId: "", status: "lead", state: "active", description: "", budget: "",
   });
 
   const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -721,6 +721,7 @@ function ProjectList({ projects, customers, sites, crm, uid, onOpen, onChanged }
         customer_id: draft.customerId,
         site_id: draft.siteId || null,
         status: draft.status,
+        state: draft.state || "active",
         description: draft.description.trim() || null,
         budget: draft.budget ? Number(draft.budget) : null,
         active: true,
@@ -728,7 +729,7 @@ function ProjectList({ projects, customers, sites, crm, uid, onOpen, onChanged }
         updated_at: new Date().toISOString(),
       });
       setAdding(false);
-      setDraft({ name: "", customerId: "", siteId: "", status: "lead", description: "", budget: "" });
+      setDraft({ name: "", customerId: "", siteId: "", status: "lead", state: "active", description: "", budget: "" });
       await onChanged();
     } catch (e) {
       setErr(e.message || "Couldn't create that project.");
@@ -815,9 +816,13 @@ function ProjectList({ projects, customers, sites, crm, uid, onOpen, onChanged }
                 ))}
               </select>
             </Field>
-            <Field label="Budget (optional)">
-              <input className="lp-input" type="number" min="0" step="0.01" value={draft.budget}
-                onChange={(e) => setDraft((d) => ({ ...d, budget: e.target.value }))} />
+            <Field label="State">
+              <select className="lp-input" value={draft.state}
+                onChange={(e) => setDraft((d) => ({ ...d, state: e.target.value }))}>
+                <option value="active">Active</option>
+                <option value="archived">Archived</option>
+                <option value="completed">Completed</option>
+              </select>
             </Field>
           </div>
           <Field label="Description">
@@ -928,6 +933,7 @@ function ProjectDetail({ projectId, crm, uid, sites, customers, onBack }) {
         customer_id: draft.customerId,
         site_id: draft.siteId || null,
         status: draft.status,
+        state: draft.state || "active",
         description: draft.description.trim() || null,
         budget: draft.budget ? Number(draft.budget) : null,
         ...(draft.contactId ? { contact_id: draft.contactId } : {}),
@@ -1065,6 +1071,16 @@ function ProjectDetail({ projectId, crm, uid, sites, customers, onBack }) {
                 ))}
               </select>
             </Field>
+            <Field label="State">
+              <select className="lp-input" value={draft.state}
+                onChange={(e) => setDraft((d) => ({ ...d, state: e.target.value }))}>
+                <option value="active">Active</option>
+                <option value="archived">Archived</option>
+                <option value="completed">Completed</option>
+              </select>
+            </Field>
+          </div>
+          <div className="lp-row2">
             <Field label="Budget">
               <input className="lp-input" type="number" value={draft.budget}
                 onChange={(e) => setDraft((d) => ({ ...d, budget: e.target.value }))} />
@@ -1097,6 +1113,7 @@ function ProjectDetail({ projectId, crm, uid, sites, customers, onBack }) {
                 siteId: project.site_id || "",
                 contactId: project.contact_id || "",
                 status: project.status,
+                state: project.state || "active",
                 description: project.description || "",
                 budget: project.budget != null ? String(project.budget) : "",
               });

@@ -160,6 +160,8 @@ create table if not exists projects (
   site_id text references sites(id),
   status text not null default 'lead'
     check (status in ('lead', 'quoted', 'approved', 'in_progress', 'on_hold', 'complete', 'cancelled')),
+  state text not null default 'active'
+    check (state in ('active', 'archived', 'completed')),
   description text,
   budget numeric,
   contact_id text references contacts(id) on delete set null,
