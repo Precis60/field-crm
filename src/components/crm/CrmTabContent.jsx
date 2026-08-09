@@ -2168,6 +2168,7 @@ function InvoicesPanel({ crm, uid }) {
     issuedAt: "",
     dueAt: "",
     notes: "",
+    labourDiscount: "",
     labour: [{ description: "", quantity: "1", unit_rate: "" }],
     expenses: [{ description: "", quantity: "1", unit_rate: "", cost_type: "other" }],
   });
@@ -2200,14 +2201,17 @@ function InvoicesPanel({ crm, uid }) {
   const updateExpenseLine = (idx, patch) =>
     setDraft((d) => ({ ...d, expenses: d.expenses.map((l, i) => (i === idx ? { ...l, ...patch } : l)) }));
 
-  const { labourSubtotal, expensesSubtotal, subtotal, tax, total } = useMemo(() => {
-    const labourSubtotal = round(draft.labour.reduce((sum, l) => sum + (Number(l.quantity) || 0) * (Number(l.unit_rate) || 0), 0), 2);
+  const { rawLabourSubtotal, discountAmount, labourSubtotal, expensesSubtotal, subtotal, tax, total } = useMemo(() => {
+    const rawLabourSubtotal = round(draft.labour.reduce((sum, l) => sum + (Number(l.quantity) || 0) * (Number(l.unit_rate) || 0), 0), 2);
+    const discountPercent = Math.max(0, Math.min(100, Number(draft.labourDiscount) || 0));
+    const discountAmount = round(rawLabourSubtotal * (discountPercent / 100), 2);
+    const labourSubtotal = round(rawLabourSubtotal - discountAmount, 2);
     const expensesSubtotal = round(draft.expenses.reduce((sum, l) => sum + (Number(l.quantity) || 0) * (Number(l.unit_rate) || 0), 0), 2);
     const subtotal = round(labourSubtotal + expensesSubtotal, 2);
     const tax = round(subtotal * 0.1, 2);
     const total = round(subtotal + tax, 2);
-    return { labourSubtotal, expensesSubtotal, subtotal, tax, total };
-  }, [draft.labour, draft.expenses]);
+    return { rawLabourSubtotal, discountAmount, labourSubtotal, expensesSubtotal, subtotal, tax, total };
+  }, [draft.labour, draft.expenses, draft.labourDiscount]);
 
   function validate() {
     if (!draft.customerId) return "Choose a customer.";
@@ -2273,6 +2277,18 @@ function InvoicesPanel({ crm, uid }) {
             cost_type: l.cost_type || "other",
           };
         });
+      const discountPercent = Math.max(0, Math.min(100, Number(draft.labourDiscount) || 0));
+      if (discountPercent > 0 && rawLabourSubtotal > 0) {
+        labourLines.push({
+          id: uid(),
+          invoice_id: invoiceId,
+          description: `Labour discount (${discountPercent}%)`,
+          quantity: 1,
+          unit_rate: -discountAmount,
+          amount: -discountAmount,
+          cost_type: "labour",
+        });
+      }
       const lines = [...labourLines, ...expenseLines];
       await crm.createInvoice(invoice, lines);
       setAdding(false);
@@ -2342,6 +2358,19 @@ function InvoicesPanel({ crm, uid }) {
             ))}
             <button className="lp-btn-ghost" onClick={addLabourLine} disabled={busy}><Plus size={15} /> Add labour line</button>
 
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12 }}>
+              <div style={{ flex: "0 1 140px" }}>
+                <Field label="Labour discount %">
+                  <input className="lp-input" type="number" min="0" max="100" step="0.01" value={draft.labourDiscount} onChange={(e) => setDraft((d) => ({ ...d, labourDiscount: e.target.value }))} />
+                </Field>
+              </div>
+              {Number(draft.labourDiscount) > 0 && (
+                <span className="lp-hint" style={{ marginLeft: "auto" }}>
+                  -{money(discountAmount)} ({money(rawLabourSubtotal)} before discount)
+                </span>
+              )}
+            </div>
+
             <div style={{ fontWeight: "bold", marginBottom: 8, marginTop: 16 }}>Expenses</div>
             {draft.expenses.map((l, idx) => (
               <div key={idx} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
@@ -2363,7 +2392,13 @@ function InvoicesPanel({ crm, uid }) {
           </Field>
 
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
-            <div style={{ minWidth: 180 }}>
+            <div style={{ minWidth: 200 }}>
+              {Number(draft.labourDiscount) > 0 ? (
+                <>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}><span>Labour (before discount)</span><span>{money(rawLabourSubtotal)}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}><span>Labour discount ({draft.labourDiscount}%)</span><span>-{money(discountAmount)}</span></div>
+                </>
+              ) : null}
               <div style={{ display: "flex", justifyContent: "space-between" }}><span>Labour</span><span>{money(labourSubtotal)}</span></div>
               <div style={{ display: "flex", justifyContent: "space-between" }}><span>Expenses</span><span>{money(expensesSubtotal)}</span></div>
               <div style={{ display: "flex", justifyContent: "space-between" }}><span>Subtotal</span><span>{money(subtotal)}</span></div>
