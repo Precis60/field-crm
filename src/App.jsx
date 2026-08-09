@@ -1707,21 +1707,21 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
     <div className="lp-page lp-page--manager">
       <TopBar title="Manager dashboard" onBack={onExit} right={<button className="lp-signout" onClick={onExit}><LogOut size={15} /> Sign out</button>} />
       <div className="lp-tabs">
-        <button className={`lp-tab ${tab === "brief" ? "is-active" : ""}`} onClick={() => setTab("brief")}>Morning brief</button>
-        <button className={`lp-tab ${tab === "tasks" ? "is-active" : ""}`} onClick={() => setTab("tasks")}>Tasks</button>
-        <button className={`lp-tab ${tab === "assign" ? "is-active" : ""}`} onClick={() => setTab("assign")}>Assign tasks</button>
-        <button className={`lp-tab ${tab === "myreport" ? "is-active" : ""}`} onClick={() => { setReportSaved(false); setTab("myreport"); }}>Daily Work Report</button>
-        <button className={`lp-tab ${tab === "schedule" ? "is-active" : ""}`} onClick={() => setTab("schedule")}>Manager schedule</button>
-        <button className={`lp-tab ${tab === "log" ? "is-active" : ""}`} onClick={() => setTab("log")}>Full log</button>
         <button className={`lp-tab ${tab === "sites" ? "is-active" : ""}`} onClick={() => setTab("sites")}>Admin</button>
-        <button className={`lp-tab ${tab === "customers" ? "is-active" : ""}`} onClick={() => setTab("customers")}>Customers</button>
-        <button className={`lp-tab ${tab === "contacts" ? "is-active" : ""}`} onClick={() => setTab("contacts")}>Contacts</button>
-        <button className={`lp-tab ${tab === "projects" ? "is-active" : ""}`} onClick={() => setTab("projects")}>Projects</button>
+        <button className={`lp-tab ${tab === "assign" ? "is-active" : ""}`} onClick={() => setTab("assign")}>Assign tasks</button>
         <button className={`lp-tab ${tab === "calendar" ? "is-active" : ""}`} onClick={() => setTab("calendar")}>Calendar</button>
-        <button className={`lp-tab ${tab === "suppliers" ? "is-active" : ""}`} onClick={() => setTab("suppliers")}>Suppliers</button>
-        <button className={`lp-tab ${tab === "site_tasks" ? "is-active" : ""}`} onClick={() => setTab("site_tasks")}>Site Tasks</button>
+        <button className={`lp-tab ${tab === "contacts" ? "is-active" : ""}`} onClick={() => setTab("contacts")}>Contacts</button>
+        <button className={`lp-tab ${tab === "customers" ? "is-active" : ""}`} onClick={() => setTab("customers")}>Customers</button>
+        <button className={`lp-tab ${tab === "myreport" ? "is-active" : ""}`} onClick={() => { setReportSaved(false); setTab("myreport"); }}>Daily Work Report</button>
+        <button className={`lp-tab ${tab === "log" ? "is-active" : ""}`} onClick={() => setTab("log")}>Full log</button>
         <button className={`lp-tab ${tab === "invoices" ? "is-active" : ""}`} onClick={() => setTab("invoices")}>Invoices</button>
+        <button className={`lp-tab ${tab === "schedule" ? "is-active" : ""}`} onClick={() => setTab("schedule")}>Manager schedule</button>
+        <button className={`lp-tab ${tab === "brief" ? "is-active" : ""}`} onClick={() => setTab("brief")}>Morning brief</button>
+        <button className={`lp-tab ${tab === "projects" ? "is-active" : ""}`} onClick={() => setTab("projects")}>Projects</button>
         <button className={`lp-tab ${tab === "settings" ? "is-active" : ""}`} onClick={() => setTab("settings")}>Settings</button>
+        <button className={`lp-tab ${tab === "site_tasks" ? "is-active" : ""}`} onClick={() => setTab("site_tasks")}>Site Tasks</button>
+        <button className={`lp-tab ${tab === "suppliers" ? "is-active" : ""}`} onClick={() => setTab("suppliers")}>Suppliers</button>
+        <button className={`lp-tab ${tab === "tasks" ? "is-active" : ""}`} onClick={() => setTab("tasks")}>Tasks</button>
       </div>
       {tab === "brief" && <MorningBrief getMonths={getMonths} refreshMonths={refreshMonths} cacheVersion={cacheVersion} assignedTasks={assignedTasks} />}
       {tab === "tasks" && <TasksPanel currentManager={currentManager} />}
