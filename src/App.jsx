@@ -3660,7 +3660,7 @@ body{margin:0;}
 .lp-subtabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:12px;}
 .lp-subtabs .lp-tab{display:flex;align-items:center;gap:6px;padding:8px 12px;}
 
-.lp-tabs{position:sticky;top:49px;z-index:99;background:var(--bg);display:flex;gap:6px;padding:12px 16px 0;border-bottom:1px solid var(--line);overflow-x:auto;}
+.lp-tabs{position:sticky;top:49px;z-index:99;background:var(--paper);display:flex;gap:6px;padding:12px 16px 0;border-bottom:1px solid var(--line);overflow-x:auto;}
 .lp-tab{background:none;border:none;padding:10px 14px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;}
 .lp-tab.is-active{color:var(--ink);border-color:var(--brass);}
 
