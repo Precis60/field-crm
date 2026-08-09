@@ -2141,13 +2141,19 @@ function InvoicesPanel({ crm, uid }) {
   const [adding, setAdding] = useState(false);
   const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
+  const round = (n, d = 2) => {
+    const f = Math.pow(10, d);
+    return Math.round(Number(n) * f) / f;
+  };
+
   const empty = () => ({
     customerId: "",
     invoiceNumber: "",
     terms: "Due on Receipt",
     issuedAt: "",
     dueAt: "",
-    lines: [{ description: "", quantity: "1", unit_rate: "", cost_type: "labour" }],
+    labour: [{ description: "", quantity: "1", unit_rate: "" }],
+    expenses: [{ description: "", quantity: "1", unit_rate: "", cost_type: "other" }],
   });
   const [draft, setDraft] = useState(empty);
 
@@ -2164,25 +2170,36 @@ function InvoicesPanel({ crm, uid }) {
     refresh().finally(() => setLoading(false));
   }, [crm]);
 
-  const addLine = () =>
-    setDraft((d) => ({ ...d, lines: [...d.lines, { description: "", quantity: "1", unit_rate: "", cost_type: "labour" }] }));
-  const removeLine = (idx) =>
-    setDraft((d) => ({ ...d, lines: d.lines.filter((_, i) => i !== idx) }));
-  const updateLine = (idx, patch) =>
-    setDraft((d) => ({ ...d, lines: d.lines.map((l, i) => (i === idx ? { ...l, ...patch } : l)) }));
+  const addLabourLine = () =>
+    setDraft((d) => ({ ...d, labour: [...d.labour, { description: "", quantity: "1", unit_rate: "" }] }));
+  const removeLabourLine = (idx) =>
+    setDraft((d) => ({ ...d, labour: d.labour.filter((_, i) => i !== idx) }));
+  const updateLabourLine = (idx, patch) =>
+    setDraft((d) => ({ ...d, labour: d.labour.map((l, i) => (i === idx ? { ...l, ...patch } : l)) }));
 
-  const { subtotal, tax, total } = useMemo(() => {
-    const raw = draft.lines.reduce((sum, l) => sum + (Number(l.quantity) || 0) * (Number(l.unit_rate) || 0), 0);
-    const sub = Math.round(raw * 100) / 100;
-    const t = Math.round(sub * 0.1 * 100) / 100;
-    const tot = Math.round((sub + t) * 100) / 100;
-    return { subtotal: sub, tax: t, total: tot };
-  }, [draft.lines]);
+  const addExpenseLine = () =>
+    setDraft((d) => ({ ...d, expenses: [...d.expenses, { description: "", quantity: "1", unit_rate: "", cost_type: "other" }] }));
+  const removeExpenseLine = (idx) =>
+    setDraft((d) => ({ ...d, expenses: d.expenses.filter((_, i) => i !== idx) }));
+  const updateExpenseLine = (idx, patch) =>
+    setDraft((d) => ({ ...d, expenses: d.expenses.map((l, i) => (i === idx ? { ...l, ...patch } : l)) }));
+
+  const { labourSubtotal, expensesSubtotal, subtotal, tax, total } = useMemo(() => {
+    const labourSubtotal = round(draft.labour.reduce((sum, l) => sum + (Number(l.quantity) || 0) * (Number(l.unit_rate) || 0), 0), 2);
+    const expensesSubtotal = round(draft.expenses.reduce((sum, l) => sum + (Number(l.quantity) || 0) * (Number(l.unit_rate) || 0), 0), 2);
+    const subtotal = round(labourSubtotal + expensesSubtotal, 2);
+    const tax = round(subtotal * 0.1, 2);
+    const total = round(subtotal + tax, 2);
+    return { labourSubtotal, expensesSubtotal, subtotal, tax, total };
+  }, [draft.labour, draft.expenses]);
 
   function validate() {
     if (!draft.customerId) return "Choose a customer.";
     if (!draft.invoiceNumber.trim()) return "Enter an invoice number.";
-    if (!draft.lines.length || !draft.lines.some((l) => l.description.trim())) return "Add at least one line with a description.";
+    if (
+      !draft.labour.some((l) => l.description.trim()) &&
+      !draft.expenses.some((l) => l.description.trim())
+    ) return "Add at least one line with a description.";
     return "";
   }
 
@@ -2209,7 +2226,7 @@ function InvoicesPanel({ crm, uid }) {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      const lines = draft.lines
+      const labourLines = draft.labour
         .filter((l) => l.description.trim())
         .map((l) => {
           const qty = Number(l.quantity) || 1;
@@ -2220,10 +2237,26 @@ function InvoicesPanel({ crm, uid }) {
             description: l.description.trim(),
             quantity: qty,
             unit_rate: rate,
-            amount: Math.round(qty * rate * 100) / 100,
+            amount: round(qty * rate, 2),
+            cost_type: "labour",
+          };
+        });
+      const expenseLines = draft.expenses
+        .filter((l) => l.description.trim())
+        .map((l) => {
+          const qty = Number(l.quantity) || 1;
+          const rate = Number(l.unit_rate) || 0;
+          return {
+            id: uid(),
+            invoice_id: invoiceId,
+            description: l.description.trim(),
+            quantity: qty,
+            unit_rate: rate,
+            amount: round(qty * rate, 2),
             cost_type: l.cost_type || "other",
           };
         });
+      const lines = [...labourLines, ...expenseLines];
       await crm.createInvoice(invoice, lines);
       setAdding(false);
       setDraft(empty());
@@ -2278,24 +2311,38 @@ function InvoicesPanel({ crm, uid }) {
           </div>
 
           <div style={{ marginTop: 16 }}>
-            <div style={{ fontWeight: "bold", marginBottom: 8 }}>Line items</div>
-            {draft.lines.map((l, idx) => (
+            <div style={{ fontWeight: "bold", marginBottom: 8 }}>Labour</div>
+            {draft.labour.map((l, idx) => (
               <div key={idx} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
-                <input className="lp-input" style={{ flex: "2 1 180px" }} placeholder="Description" value={l.description} onChange={(e) => updateLine(idx, { description: e.target.value })} />
-                <input className="lp-input" style={{ flex: "0 1 80px" }} type="number" min="0" step="any" placeholder="Qty" value={l.quantity} onChange={(e) => updateLine(idx, { quantity: e.target.value })} />
-                <input className="lp-input" style={{ flex: "0 1 100px" }} type="number" min="0" step="0.01" placeholder="Rate" value={l.unit_rate} onChange={(e) => updateLine(idx, { unit_rate: e.target.value })} />
-                <select className="lp-input" style={{ flex: "0 1 150px" }} value={l.cost_type} onChange={(e) => updateLine(idx, { cost_type: e.target.value })}>
-                  {COST_TYPES.map((ct) => <option key={ct.value} value={ct.value}>{ct.label}</option>)}
-                </select>
+                <input className="lp-input" style={{ flex: "2 1 180px" }} placeholder="Description" value={l.description} onChange={(e) => updateLabourLine(idx, { description: e.target.value })} />
+                <input className="lp-input" style={{ flex: "0 1 80px" }} type="number" min="0" step="any" placeholder="Qty" value={l.quantity} onChange={(e) => updateLabourLine(idx, { quantity: e.target.value })} />
+                <input className="lp-input" style={{ flex: "0 1 100px" }} type="number" min="0" step="0.01" placeholder="Rate" value={l.unit_rate} onChange={(e) => updateLabourLine(idx, { unit_rate: e.target.value })} />
                 <span className="lp-hint" style={{ minWidth: 80, textAlign: "right" }}>{money((Number(l.quantity) || 0) * (Number(l.unit_rate) || 0))}</span>
-                <button className="lp-btn-ghost lp-btn-danger" onClick={() => removeLine(idx)} disabled={draft.lines.length === 1 || busy}><Trash2 size={13} /></button>
+                <button className="lp-btn-ghost lp-btn-danger" onClick={() => removeLabourLine(idx)} disabled={draft.labour.length === 1 || busy}><Trash2 size={13} /></button>
               </div>
             ))}
-            <button className="lp-btn-ghost" onClick={addLine} disabled={busy}><Plus size={15} /> Add line</button>
+            <button className="lp-btn-ghost" onClick={addLabourLine} disabled={busy}><Plus size={15} /> Add labour line</button>
+
+            <div style={{ fontWeight: "bold", marginBottom: 8, marginTop: 16 }}>Expenses</div>
+            {draft.expenses.map((l, idx) => (
+              <div key={idx} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
+                <input className="lp-input" style={{ flex: "2 1 180px" }} placeholder="Description" value={l.description} onChange={(e) => updateExpenseLine(idx, { description: e.target.value })} />
+                <input className="lp-input" style={{ flex: "0 1 80px" }} type="number" min="0" step="any" placeholder="Qty" value={l.quantity} onChange={(e) => updateExpenseLine(idx, { quantity: e.target.value })} />
+                <input className="lp-input" style={{ flex: "0 1 100px" }} type="number" min="0" step="0.01" placeholder="Rate" value={l.unit_rate} onChange={(e) => updateExpenseLine(idx, { unit_rate: e.target.value })} />
+                <select className="lp-input" style={{ flex: "0 1 150px" }} value={l.cost_type} onChange={(e) => updateExpenseLine(idx, { cost_type: e.target.value })}>
+                  {COST_TYPES.filter((ct) => ct.value !== "labour").map((ct) => <option key={ct.value} value={ct.value}>{ct.label}</option>)}
+                </select>
+                <span className="lp-hint" style={{ minWidth: 80, textAlign: "right" }}>{money((Number(l.quantity) || 0) * (Number(l.unit_rate) || 0))}</span>
+                <button className="lp-btn-ghost lp-btn-danger" onClick={() => removeExpenseLine(idx)} disabled={draft.expenses.length === 1 || busy}><Trash2 size={13} /></button>
+              </div>
+            ))}
+            <button className="lp-btn-ghost" onClick={addExpenseLine} disabled={busy}><Plus size={15} /> Add expense line</button>
           </div>
 
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
             <div style={{ minWidth: 180 }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}><span>Labour</span><span>{money(labourSubtotal)}</span></div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}><span>Expenses</span><span>{money(expensesSubtotal)}</span></div>
               <div style={{ display: "flex", justifyContent: "space-between" }}><span>Subtotal</span><span>{money(subtotal)}</span></div>
               <div style={{ display: "flex", justifyContent: "space-between" }}><span>GST (10%)</span><span>{money(tax)}</span></div>
               <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "bold" }}><span>Total</span><span>{money(total)}</span></div>
