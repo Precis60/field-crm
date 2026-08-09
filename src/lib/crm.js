@@ -79,6 +79,46 @@ export function createCrmApi(supabaseFetch) {
     await supabaseFetch(`/suppliers?id=eq.${id}`, { method: "DELETE" });
   }
 
+  async function listSiteTaskCategories() {
+    return (await supabaseFetch("/site_task_categories?select=*,sites(*)&active=eq.true&order=name").catch(() => [])) || [];
+  }
+
+  async function createSiteTaskCategory(category) {
+    await supabaseFetch("/site_task_categories", { method: "POST", body: [category] });
+    return category;
+  }
+
+  async function updateSiteTaskCategory(id, patch) {
+    await supabaseFetch(`/site_task_categories?id=eq.${id}`, {
+      method: "PATCH",
+      body: { ...patch, updated_at: new Date().toISOString() },
+    });
+  }
+
+  async function deleteSiteTaskCategory(id) {
+    await supabaseFetch(`/site_task_categories?id=eq.${id}`, { method: "DELETE" });
+  }
+
+  async function listSiteTasks() {
+    return (await supabaseFetch("/site_tasks?select=*,site_task_categories(*),sites(*)&active=eq.true&order=due_date.nullsfirst,name").catch(() => [])) || [];
+  }
+
+  async function createSiteTask(task) {
+    await supabaseFetch("/site_tasks", { method: "POST", body: [task] });
+    return task;
+  }
+
+  async function updateSiteTask(id, patch) {
+    await supabaseFetch(`/site_tasks?id=eq.${id}`, {
+      method: "PATCH",
+      body: { ...patch, updated_at: new Date().toISOString() },
+    });
+  }
+
+  async function deleteSiteTask(id) {
+    await supabaseFetch(`/site_tasks?id=eq.${id}`, { method: "DELETE" });
+  }
+
   async function listContacts() {
     return (await supabaseFetch("/contacts?select=*&active=eq.true&order=sort_order,name").catch(() => [])) || [];
   }
@@ -380,6 +420,14 @@ export function createCrmApi(supabaseFetch) {
     createSupplier,
     updateSupplier,
     deleteSupplier,
+    listSiteTaskCategories,
+    createSiteTaskCategory,
+    updateSiteTaskCategory,
+    deleteSiteTaskCategory,
+    listSiteTasks,
+    createSiteTask,
+    updateSiteTask,
+    deleteSiteTask,
     listContacts,
     createContact,
     updateContact,

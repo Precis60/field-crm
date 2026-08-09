@@ -306,6 +306,37 @@ create policy invoice_lines_manager_all on invoice_lines
   for all using (is_manager()) with check (is_manager());
 
 
+create table if not exists site_task_categories (
+  id text primary key,
+  site_id text not null references sites(id) on delete cascade,
+  name text not null,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists site_task_categories_site_idx on site_task_categories (site_id);
+
+create table if not exists site_tasks (
+  id text primary key,
+  site_id text not null references sites(id) on delete cascade,
+  category_id text references site_task_categories(id) on delete set null,
+  name text not null,
+  description text,
+  due_date date,
+  start_date date,
+  end_date date,
+  status text not null default 'not_started'
+    check (status in ('not_started', 'in_progress', 'on_hold', 'complete', 'cancelled')),
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists site_tasks_site_idx on site_tasks (site_id);
+create index if not exists site_tasks_category_idx on site_tasks (category_id);
+create index if not exists site_tasks_status_idx on site_tasks (status);
+
 -- Suppliers RLS: managers manage suppliers.
 alter table suppliers enable row level security;
 
@@ -331,6 +362,21 @@ grant select, insert, update, delete on settings to authenticated;
 
 drop policy if exists settings_manager_all on settings;
 create policy settings_manager_all on settings
+  for all using (is_manager()) with check (is_manager());
+
+-- Site tasks RLS: managers manage site tasks and categories.
+alter table site_task_categories enable row level security;
+alter table site_tasks enable row level security;
+
+grant select, insert, update, delete on site_task_categories to authenticated;
+grant select, insert, update, delete on site_tasks to authenticated;
+
+drop policy if exists site_task_categories_manager_all on site_task_categories;
+create policy site_task_categories_manager_all on site_task_categories
+  for all using (is_manager()) with check (is_manager());
+
+drop policy if exists site_tasks_manager_all on site_tasks;
+create policy site_tasks_manager_all on site_tasks
   for all using (is_manager()) with check (is_manager());
 
 -- People RLS: users can access their own row by auth id or email fallback.

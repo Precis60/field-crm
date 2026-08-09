@@ -91,6 +91,7 @@ export default function CrmTabContent({ tab, crm, uid, sites = [] }) {
   if (tab === "suppliers") return <SuppliersPanel crm={crm} uid={uid} />;
   if (tab === "projects") return <ProjectsPanel crm={crm} uid={uid} sites={sites} />;
   if (tab === "calendar") return <CalendarPanel crm={crm} uid={uid} />;
+  if (tab === "site_tasks") return <SiteTasksPanel crm={crm} uid={uid} sites={sites} />;
   if (tab === "invoices") return <InvoicesPanel crm={crm} uid={uid} />;
   return null;
 }
@@ -2365,6 +2366,287 @@ function SuppliersPanel({ crm, uid }) {
             )}
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================== */
+/*  Site Tasks                                                         */
+/* ================================================================== */
+
+const SITE_TASK_STATUSES = [
+  { value: "not_started", label: "Not Started" },
+  { value: "in_progress", label: "In Progress" },
+  { value: "on_hold", label: "On Hold" },
+  { value: "complete", label: "Complete" },
+  { value: "cancelled", label: "Cancelled" },
+];
+
+function statusLabel(v) {
+  return SITE_TASK_STATUSES.find((s) => s.value === v)?.label || v;
+}
+
+function SiteTasksPanel({ crm, uid, sites = [] }) {
+  const [tasks, setTasks] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [filterSite, setFilterSite] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
+  const [categoryDraft, setCategoryDraft] = useState({ site_id: "", name: "" });
+  const emptyTask = () => ({ site_id: "", category_id: "", name: "", description: "", due_date: "", start_date: "", end_date: "", status: "not_started" });
+  const [draft, setDraft] = useState(emptyTask());
+
+  async function refresh() {
+    const [t, c] = await Promise.all([
+      crm.listSiteTasks().catch(() => []),
+      crm.listSiteTaskCategories().catch(() => []),
+    ]);
+    setTasks(t || []);
+    setCategories(c || []);
+  }
+
+  useEffect(() => { refresh().finally(() => setLoading(false)); }, []);
+
+  async function run(fn, fallback) {
+    setBusy(true); setErr("");
+    try { await fn(); await refresh(); return true; } catch (e) { setErr(e.message || fallback); return false; }
+    finally { setBusy(false); }
+  }
+
+  function validateTask() {
+    if (!draft.site_id) return "Choose a site.";
+    if (!draft.category_id) return "Choose a category.";
+    if (!draft.name.trim()) return "Enter a task name.";
+    return "";
+  }
+
+  async function saveNewTask() {
+    const problem = validateTask(); if (problem) { setErr(problem); return; }
+    const ok = await run(() => crm.createSiteTask({
+      id: uid(),
+      site_id: draft.site_id,
+      category_id: draft.category_id,
+      name: draft.name.trim(),
+      description: draft.description.trim() || null,
+      due_date: draft.due_date || null,
+      start_date: draft.start_date || null,
+      end_date: draft.end_date || null,
+      status: draft.status,
+      active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }), "Couldn't add that task.");
+    if (ok) { setAdding(false); setDraft(emptyTask()); }
+  }
+
+  async function saveEditTask(id) {
+    const problem = validateTask(); if (problem) { setErr(problem); return; }
+    const ok = await run(() => crm.updateSiteTask(id, {
+      site_id: draft.site_id,
+      category_id: draft.category_id,
+      name: draft.name.trim(),
+      description: draft.description.trim() || null,
+      due_date: draft.due_date || null,
+      start_date: draft.start_date || null,
+      end_date: draft.end_date || null,
+      status: draft.status,
+    }), "Couldn't save that task.");
+    if (ok) { setEditing(null); setDraft(emptyTask()); }
+  }
+
+  async function removeTask(id) {
+    if (!confirm("Delete this task?")) return;
+    await run(() => crm.deleteSiteTask(id), "Couldn't delete that task.");
+  }
+
+  function validateCategory() {
+    if (!categoryDraft.site_id) return "Choose a site.";
+    if (!categoryDraft.name.trim()) return "Enter a category name.";
+    return "";
+  }
+
+  async function saveCategory() {
+    const problem = validateCategory(); if (problem) { setErr(problem); return; }
+    const ok = await run(() => crm.createSiteTaskCategory({
+      id: uid(),
+      site_id: categoryDraft.site_id,
+      name: categoryDraft.name.trim(),
+      active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }), "Couldn't add that category.");
+    if (ok) { setShowCategoryForm(false); setCategoryDraft({ site_id: "", name: "" }); }
+  }
+
+  const visible = useMemo(() => {
+    return (tasks || []).filter((t) => {
+      if (filterSite && t.site_id !== filterSite) return false;
+      if (filterCategory && t.category_id !== filterCategory) return false;
+      return true;
+    });
+  }, [tasks, filterSite, filterCategory]);
+
+  const availableCategories = useMemo(() => {
+    if (!draft.site_id) return [];
+    return categories.filter((c) => c.site_id === draft.site_id);
+  }, [categories, draft.site_id]);
+
+  const filteredCategories = useMemo(() => {
+    if (!filterSite) return categories;
+    return categories.filter((c) => c.site_id === filterSite);
+  }, [categories, filterSite]);
+
+  const taskForm = (
+    <>
+      <div className="lp-row2">
+        <Field label="Site *">
+          <select className="lp-input" value={draft.site_id} onChange={(e) => setDraft((d) => ({ ...d, site_id: e.target.value, category_id: "" }))}>
+            <option value="">Select site…</option>
+            {sites.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
+          </select>
+        </Field>
+        <Field label="Category *">
+          <select className="lp-input" value={draft.category_id} onChange={(e) => setDraft((d) => ({ ...d, category_id: e.target.value }))} disabled={!draft.site_id}>
+            <option value="">Select category…</option>
+            {availableCategories.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+          </select>
+        </Field>
+      </div>
+      <Field label="Task name *">
+        <input className="lp-input" value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} />
+      </Field>
+      <Field label="Task description">
+        <textarea className="lp-textarea" rows={2} value={draft.description} onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))} />
+      </Field>
+      <div className="lp-row3">
+        <Field label="Due date">
+          <input className="lp-input" type="date" value={draft.due_date} onChange={(e) => setDraft((d) => ({ ...d, due_date: e.target.value }))} />
+        </Field>
+        <Field label="Start date">
+          <input className="lp-input" type="date" value={draft.start_date} onChange={(e) => setDraft((d) => ({ ...d, start_date: e.target.value }))} />
+        </Field>
+        <Field label="End date">
+          <input className="lp-input" type="date" value={draft.end_date} onChange={(e) => setDraft((d) => ({ ...d, end_date: e.target.value }))} />
+        </Field>
+      </div>
+      <Field label="Status">
+        <select className="lp-input" value={draft.status} onChange={(e) => setDraft((d) => ({ ...d, status: e.target.value }))}>
+          {SITE_TASK_STATUSES.map((s) => (<option key={s.value} value={s.value}>{s.label}</option>))}
+        </select>
+      </Field>
+    </>
+  );
+
+  if (loading) return <div className="lp-settings lp-settings--wide"><p className="lp-hint">Loading site tasks…</p></div>;
+
+  return (
+    <div className="lp-settings lp-settings--wide">
+      <h3><Building2 size={16} /> Site Tasks</h3>
+      <p className="lp-hint">Tasks by site and category.</p>
+
+      {err && <p className="lp-error">{err}</p>}
+
+      {showCategoryForm ? (
+        <div className="lp-person-row" style={{ marginTop: 12 }}>
+          <div className="lp-row2">
+            <Field label="Site *">
+              <select className="lp-input" value={categoryDraft.site_id} onChange={(e) => setCategoryDraft((d) => ({ ...d, site_id: e.target.value }))}>
+                <option value="">Select site…</option>
+                {sites.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
+              </select>
+            </Field>
+            <Field label="Category name *">
+              <input className="lp-input" value={categoryDraft.name} onChange={(e) => setCategoryDraft((d) => ({ ...d, name: e.target.value }))} />
+            </Field>
+          </div>
+          <div className="lp-person-actions">
+            <button className="lp-btn-ghost" onClick={saveCategory} disabled={busy}><Check size={13} /> {busy ? "Saving…" : "Add category"}</button>
+            <button className="lp-btn-ghost" onClick={() => { setShowCategoryForm(false); setErr(""); }}><X size={13} /> Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <button className="lp-btn-ghost" style={{ marginTop: 10 }} onClick={() => { setShowCategoryForm(true); setErr(""); }}>
+          <Plus size={15} /> Add a category
+        </button>
+      )}
+
+      {adding || editing ? (
+        <div className="lp-person-row" style={{ marginTop: 12 }}>
+          {taskForm}
+          <div className="lp-person-actions">
+            <button className="lp-btn-ghost" onClick={editing ? () => saveEditTask(editing) : saveNewTask} disabled={busy}><Check size={13} /> {busy ? "Saving…" : editing ? "Save" : "Add task"}</button>
+            <button className="lp-btn-ghost" onClick={() => { setAdding(false); setEditing(null); setErr(""); setDraft(emptyTask()); }}><X size={13} /> Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <button className="lp-btn-ghost" style={{ marginTop: 10 }} onClick={() => { setAdding(true); setEditing(null); setDraft(emptyTask()); setErr(""); }}>
+          <Plus size={15} /> Add a task
+        </button>
+      )}
+
+      <div style={{ marginTop: 16, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "end" }}>
+        <Field label="Filter by site">
+          <select className="lp-input" value={filterSite} onChange={(e) => { setFilterSite(e.target.value); setFilterCategory(""); }}>
+            <option value="">All sites</option>
+            {sites.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
+          </select>
+        </Field>
+        <Field label="Filter by category">
+          <select className="lp-input" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
+            <option value="">All categories</option>
+            {filteredCategories.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+          </select>
+        </Field>
+      </div>
+
+      <div className="lp-person-list" style={{ marginTop: 12 }}>
+        {visible.length === 0 ? (
+          <div className="lp-person-row" style={{ justifyContent: "center" }}>
+            <span className="lp-hint">No site tasks found.</span>
+          </div>
+        ) : (
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ textAlign: "left", borderBottom: "1px solid var(--border)" }}>
+                <th style={{ padding: 8 }}>Site Name</th>
+                <th style={{ padding: 8 }}>Task Name</th>
+                <th style={{ padding: 8 }}>Task Description</th>
+                <th style={{ padding: 8 }}>Task Due Date</th>
+                <th style={{ padding: 8 }}>Task Start Date</th>
+                <th style={{ padding: 8 }}>Task End Date</th>
+                <th style={{ padding: 8 }}>Task Status</th>
+                <th style={{ padding: 8 }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((t) => (
+                <tr key={t.id} style={{ borderBottom: "1px solid var(--border)" }}>
+                  <td style={{ padding: 8 }}>{t.sites?.name || sites.find((s) => s.id === t.site_id)?.name || "—"}</td>
+                  <td style={{ padding: 8 }}>{t.name}</td>
+                  <td style={{ padding: 8 }}>{t.description}</td>
+                  <td style={{ padding: 8 }}>{t.due_date || "—"}</td>
+                  <td style={{ padding: 8 }}>{t.start_date || "—"}</td>
+                  <td style={{ padding: 8 }}>{t.end_date || "—"}</td>
+                  <td style={{ padding: 8 }}>{statusLabel(t.status)}</td>
+                  <td style={{ padding: 8, whiteSpace: "nowrap" }}>
+                    <button className="lp-btn-ghost" onClick={() => { setEditing(t.id); setDraft({ site_id: t.site_id || "", category_id: t.category_id || "", name: t.name || "", description: t.description || "", due_date: t.due_date || "", start_date: t.start_date || "", end_date: t.end_date || "", status: t.status || "not_started" }); }}>
+                      <Pencil size={13} /> Edit
+                    </button>
+                    <button className="lp-btn-ghost lp-btn-danger" onClick={() => removeTask(t.id)} disabled={busy}>
+                      <Trash2 size={13} /> Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
