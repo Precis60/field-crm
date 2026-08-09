@@ -536,12 +536,19 @@ function ContactsPanel({ crm, uid }) {
                 </div>
               </>
             ) : (
-              <div className="lp-person-head">
-                <div>
+              <div className="lp-person-head" style={{ alignItems: "flex-start", gap: 12 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                   <strong>{c.name}</strong>
-                  {[c.role, c.company, c.phone, c.email].filter(Boolean).join(" · ")}
+                  <span className="lp-hint" style={{ lineHeight: 1.4 }}>
+                    {[c.role, c.company].filter(Boolean).join(" · ")}
+                  </span>
+                  {(c.phone || c.email) && (
+                    <span className="lp-hint" style={{ lineHeight: 1.4 }}>
+                      {[c.phone, c.email].filter(Boolean).join(" · ")}
+                    </span>
+                  )}
                 </div>
-                <div className="lp-person-actions">
+                <div className="lp-person-actions" style={{ flexShrink: 0 }}>
                   <button className="lp-btn-ghost" onClick={() => { setEditing(c.id); setDraft({ name: c.name || "", company: c.company || "", role: c.role || "", email: c.email || "", phone: c.phone || "", notes: c.notes || "" }); }}>
                     <Settings size={13} /> Edit
                   </button>
