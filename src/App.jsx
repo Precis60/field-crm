@@ -3350,6 +3350,27 @@ function AdminPanel() {
   );
 }
 
+const BUSINESS_SETTINGS = [
+  { key: "business_name", label: "Business name" },
+  { key: "business_address", label: "Street address" },
+  { key: "business_suburb", label: "Suburb" },
+  { key: "business_state", label: "State" },
+  { key: "business_postcode", label: "Postcode" },
+  { key: "business_country", label: "Country" },
+  { key: "business_phone", label: "Phone" },
+  { key: "business_email", label: "Email" },
+  { key: "business_abn", label: "ABN" },
+  { key: "business_acn", label: "ACN" },
+  { key: "business_logo_url", label: "Logo URL" },
+  { key: "business_bank_name", label: "Bank name" },
+  { key: "business_account_name", label: "Account name" },
+  { key: "business_bank_address", label: "Bank branch address" },
+  { key: "business_bsb", label: "BSB" },
+  { key: "business_account_number", label: "Account number" },
+  { key: "business_terms", label: "Default invoice terms" },
+  { key: "business_invoice_footer", label: "Invoice footer" },
+];
+
 function ManagerSettings({ onRestored }) {
   const [exporting, setExporting] = useState(false);
   const [exportErr, setExportErr] = useState("");
@@ -3357,6 +3378,29 @@ function ManagerSettings({ onRestored }) {
   const [restoreMsg, setRestoreMsg] = useState("");
   const [restoreErr, setRestoreErr] = useState("");
   const [confirmRestore, setConfirmRestore] = useState(false);
+  const [business, setBusiness] = useState(() => Object.fromEntries(BUSINESS_SETTINGS.map((f) => [f.key, ""])));
+  const [businessLoading, setBusinessLoading] = useState(true);
+  const [businessSaving, setBusinessSaving] = useState(false);
+  const [businessMsg, setBusinessMsg] = useState("");
+  const [businessErr, setBusinessErr] = useState("");
+
+  useEffect(() => {
+    crm.listSettings().then((rows) => {
+      const map = Object.fromEntries((rows || []).map((r) => [r.key, r.value]));
+      setBusiness((b) => ({ ...b, ...map }));
+    }).catch(() => {}).finally(() => setBusinessLoading(false));
+  }, []);
+
+  async function saveBusiness() {
+    setBusinessSaving(true); setBusinessErr(""); setBusinessMsg("");
+    try {
+      await Promise.all(BUSINESS_SETTINGS.map((f) => crm.setSetting(f.key, (business[f.key] || "").trim())));
+      setBusinessMsg("Business details saved.");
+    } catch (e) {
+      setBusinessErr(e.message || "Couldn't save business details.");
+    }
+    setBusinessSaving(false);
+  }
 
   async function handleExport() {
     setExporting(true); setExportErr("");
@@ -3377,6 +3421,44 @@ function ManagerSettings({ onRestored }) {
     <div className="lp-settings">
       <AccountPanel />
       <p className="lp-hint lp-settings-note">Data is stored centrally and shared between everyone using this app link — staff only ever see the submission form and their own tasks, never this dashboard.</p>
+
+      <hr className="lp-settings-divider" />
+
+      <h3><Building2 size={16} /> Business details</h3>
+      <p className="lp-hint">These details appear on invoices and printed quotes.</p>
+
+      {businessLoading ? (
+        <p className="lp-hint">Loading business details…</p>
+      ) : (
+        <>
+          {BUSINESS_SETTINGS.map((f) => (
+            <label className="lp-field" key={f.key}>
+              <span className="lp-field-label">{f.label}</span>
+              {f.key === "business_terms" || f.key === "business_invoice_footer" ? (
+                <textarea
+                  className="lp-textarea"
+                  rows={3}
+                  value={business[f.key] || ""}
+                  onChange={(e) => setBusiness((b) => ({ ...b, [f.key]: e.target.value }))}
+                />
+              ) : (
+                <input
+                  className="lp-input"
+                  value={business[f.key] || ""}
+                  onChange={(e) => setBusiness((b) => ({ ...b, [f.key]: e.target.value }))}
+                />
+              )}
+            </label>
+          ))}
+          <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+            <button className="lp-btn-ghost" onClick={saveBusiness} disabled={businessSaving}>
+              {businessSaving ? "Saving…" : "Save business details"}
+            </button>
+          </div>
+          {businessErr && <p className="lp-error">{businessErr}</p>}
+          {businessMsg && <p className="lp-saved"><Check size={13} /> {businessMsg}</p>}
+        </>
+      )}
 
       <hr className="lp-settings-divider" />
 
