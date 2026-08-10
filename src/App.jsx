@@ -3711,6 +3711,12 @@ body{margin:0;}
 .lp-site-code{font-family:'IBM Plex Mono',monospace;font-size:9.5px;opacity:.65;margin-left:3px;}
 .lp-person-list{display:flex;flex-direction:column;gap:10px;margin-top:10px;}
 .lp-person-row{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--panel);}
+.lp-event-form{padding:18px;}
+.lp-event-section{padding:14px 0;border-bottom:1px solid var(--line);}
+.lp-event-section:last-of-type{border-bottom:none;padding-bottom:0;}
+.lp-event-section:first-of-type{padding-top:0;}
+.lp-event-section-title{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 12px;font-weight:700;}
+.lp-event-task-row{display:flex;gap:8px;align-items:center;cursor:pointer;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff;}
 .lp-person-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
 .lp-person-head strong{font-family:'Fraunces',serif;font-size:14px;margin-right:8px;}
 .lp-person-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}

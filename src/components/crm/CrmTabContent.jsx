@@ -2084,62 +2084,66 @@ function CalendarPanel({ crm, uid }) {
       </div>
 
       {adding && (
-        <div className="lp-person-row" style={{ marginTop: 12 }}>
-          <Field label="Event title">
-            <input className="lp-input" value={draft.title} placeholder="e.g. Site walkthrough" onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))} />
-          </Field>
-          <div className="lp-row2">
-            <Field label="Site ID">
-              <input className="lp-input" value={draft.siteId} onChange={(e) => setDraft((d) => ({ ...d, siteId: e.target.value }))} />
-            </Field>
-            <Field label="Site name">
-              <input className="lp-input" value={draft.siteName} onChange={(e) => setDraft((d) => ({ ...d, siteName: e.target.value }))} />
+        <div className="lp-person-row lp-event-form" style={{ marginTop: 12 }}>
+          <div className="lp-event-section">
+            <Field label="Event title">
+              <input className="lp-input" value={draft.title} placeholder="e.g. Site walkthrough" onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))} />
             </Field>
           </div>
-          <Field label="Project">
-            <select
-              className="lp-input"
-              value={draft.projectId}
-              onChange={(e) => {
-                const pid = e.target.value;
-                const p = projects.find((pr) => pr.id === pid);
-                setDraft((d) => ({
-                  ...d,
-                  projectId: pid,
-                  projectName: p ? p.name : d.projectName,
-                  siteId: p ? p.site_id || "" : d.siteId,
-                  siteName: p ? (p.sites?.name || "") : d.siteName,
-                }));
-              }}
-            >
-              <option value="">Manual / other…</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </Field>
-          {!draft.projectId && (
-            <Field label="Project name (manual)">
-              <input className="lp-input" value={draft.projectName} onChange={(e) => setDraft((d) => ({ ...d, projectName: e.target.value }))} />
+
+          <div className="lp-event-section">
+            <h4 className="lp-event-section-title">Site & project</h4>
+            <div className="lp-row2">
+              <Field label="Site ID">
+                <input className="lp-input" value={draft.siteId} onChange={(e) => setDraft((d) => ({ ...d, siteId: e.target.value }))} />
+              </Field>
+              <Field label="Site name">
+                <input className="lp-input" value={draft.siteName} onChange={(e) => setDraft((d) => ({ ...d, siteName: e.target.value }))} />
+              </Field>
+            </div>
+            <Field label="Project">
+              <select
+                className="lp-input"
+                value={draft.projectId}
+                onChange={(e) => {
+                  const pid = e.target.value;
+                  const p = projects.find((pr) => pr.id === pid);
+                  setDraft((d) => ({
+                    ...d,
+                    projectId: pid,
+                    projectName: p ? p.name : d.projectName,
+                    siteId: p ? p.site_id || "" : d.siteId,
+                    siteName: p ? (p.sites?.name || "") : d.siteName,
+                  }));
+                }}
+              >
+                <option value="">Manual / other…</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
             </Field>
-          )}
-          {draft.projectId && draft.projectName && (
-            <p className="lp-hint" style={{ marginTop: -6 }}>{draft.projectName}</p>
-          )}
+            {!draft.projectId && (
+              <Field label="Project name (manual)">
+                <input className="lp-input" value={draft.projectName} onChange={(e) => setDraft((d) => ({ ...d, projectName: e.target.value }))} />
+              </Field>
+            )}
+          </div>
+
           {draft.siteId && (
-            <div style={{ marginTop: -4, marginBottom: 8 }}>
-              <span className="lp-field-label">Outstanding site tasks</span>
+            <div className="lp-event-section">
+              <h4 className="lp-event-section-title">Outstanding site tasks</h4>
               {(() => {
                 const siteTasks = tasks.filter((t) => t.site_id === draft.siteId && t.status !== "complete");
                 if (!siteTasks.length) {
-                  return <p className="lp-hint" style={{ marginTop: 6 }}>No outstanding tasks for this site.</p>;
+                  return <p className="lp-hint">No outstanding tasks for this site.</p>;
                 }
                 return (
-                  <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     {siteTasks.map((t) => (
                       <label
                         key={t.id}
-                        style={{ display: "flex", gap: 8, alignItems: "center", cursor: "pointer", fontSize: 13 }}
+                        className="lp-event-task-row"
                       >
                         <input
                           type="checkbox"
@@ -2158,56 +2162,66 @@ function CalendarPanel({ crm, uid }) {
               })()}
             </div>
           )}
-          <div className="lp-row2">
-            <Field label="Site address">
-              <AddressInput value={draft.siteAddress} onChange={(v) => setDraft((d) => ({ ...d, siteAddress: v }))} />
-            </Field>
-            <Field label="Site contact">
-              <select className="lp-input" value={draft.contactId}
-                onChange={(e) => {
-                  const id = e.target.value;
-                  const contact = contacts.find((c) => c.id === id);
-                  setDraft((d) => ({ ...d, contactId: id, siteContact: contact ? contact.name : d.siteContact }));
-                }}>
-                <option value="">Other / manual</option>
-                {contacts.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
+
+          <div className="lp-event-section">
+            <h4 className="lp-event-section-title">Location & contact</h4>
+            <div className="lp-row2">
+              <Field label="Site address">
+                <AddressInput value={draft.siteAddress} onChange={(v) => setDraft((d) => ({ ...d, siteAddress: v }))} />
+              </Field>
+              <Field label="Site contact">
+                <select className="lp-input" value={draft.contactId}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    const contact = contacts.find((c) => c.id === id);
+                    setDraft((d) => ({ ...d, contactId: id, siteContact: contact ? contact.name : d.siteContact }));
+                  }}>
+                  <option value="">Other / manual</option>
+                  {contacts.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+            {draft.contactId === "" && (
+              <Field label="Contact name">
+                <input className="lp-input" value={draft.siteContact} onChange={(e) => setDraft((d) => ({ ...d, siteContact: e.target.value }))} />
+              </Field>
+            )}
+          </div>
+
+          <div className="lp-event-section">
+            <h4 className="lp-event-section-title">Schedule</h4>
+            <div className="lp-row2">
+              <Field label="Start">
+                <input className="lp-input" type="datetime-local" value={draft.startAt} onChange={(e) => setDraft((d) => ({ ...d, startAt: e.target.value }))} />
+              </Field>
+              <Field label="End">
+                <input className="lp-input" type="datetime-local" value={draft.endAt} onChange={(e) => setDraft((d) => ({ ...d, endAt: e.target.value }))} />
+              </Field>
+            </div>
+            <Field label="Category">
+              <select className="lp-input" value={draft.category} onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value }))}>
+                {EVENT_CATEGORIES.map((c) => (
+                  <option key={c.label} value={c.label}>{c.label}</option>
                 ))}
               </select>
             </Field>
           </div>
-          {draft.contactId === "" && (
-            <Field label="Contact name">
-              <input className="lp-input" value={draft.siteContact} onChange={(e) => setDraft((d) => ({ ...d, siteContact: e.target.value }))} />
+
+          <div className="lp-event-section">
+            <h4 className="lp-event-section-title">Work details</h4>
+            <Field label="Planned works">
+              <textarea className="lp-textarea" rows={2} value={draft.plannedWorks} onChange={(e) => setDraft((d) => ({ ...d, plannedWorks: e.target.value }))} />
             </Field>
-          )}
-          <div className="lp-row2">
-            <Field label="Start">
-              <input className="lp-input" type="datetime-local" value={draft.startAt} onChange={(e) => setDraft((d) => ({ ...d, startAt: e.target.value }))} />
+            <Field label="Works completed">
+              <textarea className="lp-textarea" rows={2} value={draft.worksCompleted} onChange={(e) => setDraft((d) => ({ ...d, worksCompleted: e.target.value }))} />
             </Field>
-            <Field label="End">
-              <input className="lp-input" type="datetime-local" value={draft.endAt} onChange={(e) => setDraft((d) => ({ ...d, endAt: e.target.value }))} />
+            <Field label="Follow up">
+              <textarea className="lp-textarea" rows={2} value={draft.followUp} onChange={(e) => setDraft((d) => ({ ...d, followUp: e.target.value }))} />
             </Field>
           </div>
-          <Field label="Category">
-            <select className="lp-input" value={draft.category} onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value }))}>
-              {EVENT_CATEGORIES.map((c) => (
-                <option key={c.label} value={c.label}>{c.label}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Notes">
-            <textarea className="lp-textarea" rows={2} value={draft.notes} onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))} />
-          </Field>
-          <Field label="Planned works">
-            <textarea className="lp-textarea" rows={2} value={draft.plannedWorks} onChange={(e) => setDraft((d) => ({ ...d, plannedWorks: e.target.value }))} />
-          </Field>
-          <Field label="Works completed">
-            <textarea className="lp-textarea" rows={2} value={draft.worksCompleted} onChange={(e) => setDraft((d) => ({ ...d, worksCompleted: e.target.value }))} />
-          </Field>
-          <Field label="Follow up">
-            <textarea className="lp-textarea" rows={2} value={draft.followUp} onChange={(e) => setDraft((d) => ({ ...d, followUp: e.target.value }))} />
-          </Field>
+
           <div className="lp-person-actions">
             <button className="lp-btn-ghost" onClick={save} disabled={busy}><Check size={13} /> {busy ? "Saving…" : editing ? "Update event" : "Add event"}</button>
             {editing && (
@@ -2231,7 +2245,7 @@ function CalendarPanel({ crm, uid }) {
             </div>
           )}
           {creatingSiteTask && (
-            <div style={{ marginTop: 16 }}>
+            <div className="lp-event-section" style={{ marginTop: 12 }}>
               <Field label="Task category">
                 <select className="lp-input" value={taskCategoryId} onChange={(e) => setTaskCategoryId(e.target.value)}>
                   <option value="">Select category…</option>
