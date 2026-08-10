@@ -318,10 +318,7 @@ export function createCrmApi(supabaseFetch) {
   }
 
   async function updateInvoiceLine(id, patch) {
-    await supabaseFetch(`/invoice_lines?id=eq.${id}`, {
-      method: "PATCH",
-      body: { ...patch, updated_at: new Date().toISOString() },
-    });
+    await supabaseFetch(`/invoice_lines?id=eq.${id}`, { method: "PATCH", body: patch });
   }
 
   async function updateInvoice(id, patch) {
