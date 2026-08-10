@@ -1462,6 +1462,7 @@ function TimesheetsSection({ projectId, customerId, crm, uid }) {
   const [selected, setSelected] = useState([]);
   const [invoicing, setInvoicing] = useState(false);
   const [rate, setRate] = useState("");
+  const [discount, setDiscount] = useState("");
   const [invoiceTarget, setInvoiceTarget] = useState("new");
   const [draftInvoices, setDraftInvoices] = useState([]);
   const empty = () => ({
@@ -1589,7 +1590,8 @@ function TimesheetsSection({ projectId, customerId, crm, uid }) {
     setBusy(true); setErr("");
     try {
       const unitRate = Number(rate);
-      const lines = selected.map((sid) => {
+      const discountPercent = Math.max(0, Math.min(100, Number(discount) || 0));
+      const labourLines = selected.map((sid) => {
         const t = timesheets.find((x) => x.id === sid);
         const qty = Math.round(hoursBetween(t.start_at, t.end_at) * 100) / 100;
         const amount = Math.round(qty * unitRate * 100) / 100;
@@ -1602,7 +1604,22 @@ function TimesheetsSection({ projectId, customerId, crm, uid }) {
           cost_type: "labour",
         };
       });
-      const subtotal = lines.reduce((sum, l) => sum + Number(l.amount), 0);
+      const rawSubtotal = labourLines.reduce((sum, l) => sum + Number(l.amount), 0);
+      const discountAmount = discountPercent > 0 && rawSubtotal > 0
+        ? Math.round(rawSubtotal * (discountPercent / 100) * 100) / 100
+        : 0;
+      const lines = [...labourLines];
+      if (discountAmount > 0) {
+        lines.push({
+          id: uid(),
+          description: `Labour discount (${discountPercent}%)`,
+          quantity: 1,
+          unit_rate: -discountAmount,
+          amount: -discountAmount,
+          cost_type: "labour",
+        });
+      }
+      const subtotal = Math.round((rawSubtotal - discountAmount) * 100) / 100;
       const tax = Math.round(subtotal * 0.1 * 100) / 100;
       const total = Math.round((subtotal + tax) * 100) / 100;
 
@@ -1638,6 +1655,7 @@ function TimesheetsSection({ projectId, customerId, crm, uid }) {
       await Promise.all(selected.map((sid) => crm.setTimesheetInvoiced(sid, true)));
       setSelected([]);
       setRate("");
+      setDiscount("");
       setInvoiceTarget("new");
       setInvoicing(false);
       await refresh();
@@ -1694,6 +1712,10 @@ function TimesheetsSection({ projectId, customerId, crm, uid }) {
             <Field label="Hourly rate ($)">
               <input className="lp-input" type="number" min="0" step="0.01" value={rate}
                 onChange={(e) => setRate(e.target.value)} />
+            </Field>
+            <Field label="Labour discount %">
+              <input className="lp-input" type="number" min="0" max="100" step="0.01" value={discount}
+                onChange={(e) => setDiscount(e.target.value)} />
             </Field>
             <Field label="Add to invoice">
               <select className="lp-input" value={invoiceTarget}
