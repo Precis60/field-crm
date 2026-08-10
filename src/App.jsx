@@ -2692,11 +2692,19 @@ function MorningBrief({ crm }) {
 
   return (
     <div className="lp-brief">
+      <div className="lp-brief-header">
+        <span className="lp-eyebrow"><Sun size={13} /> Morning brief</span>
+        <h2>{fmtDateLong(selectedDate)}</h2>
+      </div>
+
       {DateBar}
 
       <div className="lp-brief-grid">
         <div className="lp-panel">
-          <h4><CalendarDays size={15} /> Calendar today</h4>
+          <div className="lp-panel-head">
+            <h4><CalendarDays size={15} /> Calendar today</h4>
+            <span className="lp-panel-count">{todaysEvents.length}</span>
+          </div>
           <p className="lp-hint lp-panel-sub">{fmtDateLong(selectedDate)}</p>
           {todaysEvents.length === 0 ? (
             <EmptyState compact icon={<CalendarDays size={16} />} text="No events today." />
@@ -2708,10 +2716,10 @@ function MorningBrief({ crm }) {
                   : null;
                 return (
                   <li key={e.id || `${e.start_at}-${e.project_name || e.site_name || ''}`}>
-                    <span className="lp-out-dot" />
+                    <span className="lp-out-dot lp-out-dot--blue" />
                     <div>
-                      <strong>{time ? `${time} · ` : ''}{e.category}</strong>
-                      <p>{e.project_name || e.site_name}</p>
+                      <strong>{e.title || e.category}</strong>
+                      <p>{time ? `${time} · ` : ''}{e.title ? e.category : (e.project_name || e.site_name)}</p>
                     </div>
                   </li>
                 );
@@ -2721,7 +2729,10 @@ function MorningBrief({ crm }) {
         </div>
 
         <div className="lp-panel">
-          <h4><AlertTriangle size={15} /> Outstanding invoices</h4>
+          <div className="lp-panel-head">
+            <h4><AlertTriangle size={15} /> Outstanding invoices</h4>
+            <span className="lp-panel-count lp-panel-count--warn">{outstandingInvoices.length}</span>
+          </div>
           <p className="lp-hint lp-panel-sub">Unpaid / open</p>
           {outstandingInvoices.length === 0 ? (
             <EmptyState compact icon={<Check size={16} />} text="No outstanding invoices." />
@@ -2744,7 +2755,10 @@ function MorningBrief({ crm }) {
         </div>
 
         <div className="lp-panel">
-          <h4><Clock size={15} /> Tasks due today</h4>
+          <div className="lp-panel-head">
+            <h4><Clock size={15} /> Tasks due today</h4>
+            <span className="lp-panel-count">{todaysTasks.length}</span>
+          </div>
           <p className="lp-hint lp-panel-sub">{fmtDateLong(selectedDate)}</p>
           {todaysTasks.length === 0 ? (
             <EmptyState compact icon={<Clock size={16} />} text="No tasks due today." />
@@ -2752,7 +2766,7 @@ function MorningBrief({ crm }) {
             <ul className="lp-outstanding">
               {todaysTasks.map((t) => (
                 <li key={t.id || t.name}>
-                  <span className="lp-out-dot" />
+                  <span className="lp-out-dot lp-out-dot--amber" />
                   <div>
                     <strong>{t.name}</strong>
                     <p>
@@ -2766,8 +2780,11 @@ function MorningBrief({ crm }) {
         </div>
 
         <div className="lp-panel">
-          <h4><ClipboardList size={15} /> Tasks due this week</h4>
-          <p className="lp-hint lp-panel-sub">{weekStart} → {weekEnd}</p>
+          <div className="lp-panel-head">
+            <h4><ClipboardList size={15} /> Tasks due this week</h4>
+            <span className="lp-panel-count">{weeksTasks.length}</span>
+          </div>
+          <p className="lp-hint lp-panel-sub">{fmtDateLong(weekStart)} → {fmtDateLong(weekEnd)}</p>
           {dateGroups.length === 0 ? (
             <EmptyState compact icon={<ClipboardList size={16} />} text="No tasks due this week." />
           ) : (
@@ -2777,7 +2794,7 @@ function MorningBrief({ crm }) {
                 <ul className="lp-outstanding">
                   {byDate[d].map((t) => (
                     <li key={t.id || t.name}>
-                      <span className="lp-out-dot" />
+                      <span className="lp-out-dot lp-out-dot--amber" />
                       <div>
                         <strong>{t.name}</strong>
                         <p>
@@ -3746,7 +3763,7 @@ body{margin:0;}
 .lp-tab.is-active{color:var(--ink);border-color:var(--brass);}
 
 .lp-brief{padding:20px 16px 0;}
-.lp-datebar{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.lp-datebar{display:flex;align-items:center;gap:8px;margin-bottom:20px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;}
 .lp-nav-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--panel);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink);flex:none;}
 .lp-datebar-input{width:auto;flex:none;font-weight:600;}
 .lp-today-btn{margin-left:2px;}
@@ -3773,12 +3790,15 @@ body{margin:0;}
 .lp-status-dot{width:9px;height:9px;border-radius:50%;flex:none;}
 .lp-worker-delay{margin-top:10px;display:flex;gap:6px;font-size:12px;color:var(--rust);background:#FBEAE7;padding:8px 10px;border-radius:8px;}
 
-.lp-brief-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:14px;margin-bottom:20px;}
+.lp-brief-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:24px;}
 @media(max-width:640px){.lp-brief-grid{grid-template-columns:1fr;}}
-.lp-panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;}
-.lp-panel h4{display:flex;align-items:center;gap:7px;font-family:'Fraunces',serif;font-size:14.5px;margin:0 0 2px;}
-.lp-panel-sub{margin-bottom:12px;}
-.lp-outstanding{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px;}
+.lp-panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:0 1px 2px rgba(0,0,0,0.03);}
+.lp-panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.lp-panel h4{display:flex;align-items:center;gap:7px;font-family:'Fraunces',serif;font-size:14.5px;margin:0;}
+.lp-panel-count{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--stone);color:var(--ink);font-size:11.5px;font-weight:700;}
+.lp-panel-count--warn{background:rgba(180,72,58,0.12);color:var(--rust);}
+.lp-panel-sub{margin-top:2px;margin-bottom:14px;}
+.lp-outstanding{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;}
 .lp-assign{padding:18px 16px 0;display:flex;flex-direction:column;gap:14px;}
 .lp-assign-form h4{display:flex;align-items:center;gap:7px;font-family:'Fraunces',serif;font-size:14.5px;margin:0 0 6px;}
 .lp-assign-form .lp-hint{margin-bottom:12px;}
@@ -3787,8 +3807,10 @@ body{margin:0;}
 .lp-assigned-list li:first-child{border-top:none;padding-top:0;}
 .lp-assigned-meta{display:flex;gap:6px;margin-bottom:6px;}
 .lp-assigned-list p{font-size:13px;margin:0 0 8px;}
-.lp-outstanding li{display:flex;gap:9px;}
+.lp-outstanding li{display:flex;gap:9px;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:9px 11px;}
 .lp-out-dot{width:7px;height:7px;border-radius:50%;background:var(--rust);margin-top:6px;flex:none;}
+.lp-out-dot--blue{background:#3b82f6;}
+.lp-out-dot--amber{background:var(--amber);}
 .lp-outstanding strong{font-size:12.5px;}
 .lp-outstanding p{font-size:12px;color:var(--muted);margin:2px 0;}
 .lp-out-meta{font-size:10.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
