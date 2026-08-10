@@ -681,6 +681,8 @@ function ContactsPanel({ crm, uid }) {
 function ProjectsPanel({ crm, uid, sites }) {
   const [projects, setProjects] = useState([]);
   const [customers, setCustomers] = useState([]);
+  const [contacts, setContacts] = useState([]);
+  const [siteTaskCategories, setSiteTaskCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState(null);
 
@@ -692,6 +694,8 @@ function ProjectsPanel({ crm, uid, sites }) {
 
   useEffect(() => {
     refresh().finally(() => setLoading(false));
+    crm.listContacts().then((rows) => setContacts(rows || [])).catch(() => setContacts([]));
+    crm.listSiteTaskCategories().then((rows) => setSiteTaskCategories(rows || [])).catch(() => setSiteTaskCategories([]));
   }, []);
 
   if (loading) return <div className="lp-settings lp-settings--wide"><p className="lp-hint">Loading projects…</p></div>;
@@ -716,13 +720,15 @@ function ProjectsPanel({ crm, uid, sites }) {
       sites={sites}
       crm={crm}
       uid={uid}
+      contacts={contacts}
+      siteTaskCategories={siteTaskCategories}
       onOpen={setSelectedId}
       onChanged={refresh}
     />
   );
 }
 
-function ProjectList({ projects, customers, sites, crm, uid, onOpen, onChanged }) {
+function ProjectList({ projects, customers, sites, crm, uid, onOpen, onChanged, contacts, siteTaskCategories }) {
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -731,6 +737,15 @@ function ProjectList({ projects, customers, sites, crm, uid, onOpen, onChanged }
   const [draft, setDraft] = useState({
     name: "", customerId: "", siteId: "", status: "lead", description: "", budget: "",
   });
+  const [creatingTaskFor, setCreatingTaskFor] = useState(null);
+  const [creatingEventFor, setCreatingEventFor] = useState(null);
+  const [taskName, setTaskName] = useState("");
+  const [taskCategoryId, setTaskCategoryId] = useState("");
+  const [taskDue, setTaskDue] = useState("");
+  const [eventDate, setEventDate] = useState("");
+  const [eventStart, setEventStart] = useState("08:00");
+  const [eventEnd, setEventEnd] = useState("09:00");
+  const [eventNotes, setEventNotes] = useState("");
 
   const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
   const sortedProjects = useMemo(() => {
@@ -768,6 +783,65 @@ function ProjectList({ projects, customers, sites, crm, uid, onOpen, onChanged }
       await onChanged();
     } catch (e) {
       setErr(e.message || "Couldn't create that project.");
+    }
+    setBusy(false);
+  }
+
+  async function createSiteTask(project) {
+    setBusy(true);
+    setErr("");
+    try {
+      await crm.createSiteTask({
+        id: uid(),
+        site_id: project.site_id,
+        category_id: taskCategoryId,
+        name: taskName.trim(),
+        description: null,
+        due_date: taskDue || null,
+        start_date: null,
+        end_date: null,
+        status: "not_started",
+        active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+      setCreatingTaskFor(null);
+      setTaskName("");
+      setTaskCategoryId("");
+      setTaskDue("");
+      await onChanged();
+    } catch (e) {
+      setErr(e.message || "Couldn't create site task.");
+    }
+    setBusy(false);
+  }
+
+  async function createCalendarEvent(project) {
+    setBusy(true);
+    setErr("");
+    try {
+      await crm.createEvent({
+        id: uid(),
+        site_id: project.site_id,
+        site_name: sites.find((s) => s.id === project.site_id)?.name || "",
+        project_name: project.name,
+        site_address: project.sites?.address || "",
+        site_contact: customers.find((c) => c.id === project.customer_id)?.name || "",
+        notes: eventNotes.trim() || null,
+        category: project.name,
+        start_at: new Date(eventDate + "T" + eventStart).toISOString(),
+        end_at: eventEnd ? new Date(eventDate + "T" + eventEnd).toISOString() : null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+      setCreatingEventFor(null);
+      setEventDate("");
+      setEventStart("08:00");
+      setEventEnd("09:00");
+      setEventNotes("");
+      await onChanged();
+    } catch (e) {
+      setErr(e.message || "Couldn't create calendar event.");
     }
     setBusy(false);
   }
@@ -882,14 +956,15 @@ function ProjectList({ projects, customers, sites, crm, uid, onOpen, onChanged }
         ) : (
           visible.map((p) => {
             const statusLabel = PROJECT_STATUSES.find((s) => s.value === p.status)?.label || p.status;
+            const isTask = creatingTaskFor?.id === p.id;
+            const isEvent = creatingEventFor?.id === p.id;
             return (
-              <button
-                type="button"
-                className="lp-person-row lp-project-row"
-                key={p.id}
-                onClick={() => onOpen(p.id)}
-              >
-                <div className="lp-person-head" style={{ alignItems: "flex-start" }}>
+              <div key={p.id} className="lp-person-row lp-project-row">
+                <div
+                  className="lp-person-head"
+                  style={{ alignItems: "flex-start", cursor: "pointer" }}
+                  onClick={() => onOpen(p.id)}
+                >
                   <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 0, textAlign: "left" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                       <strong style={{ fontSize: "1.1rem", lineHeight: 1.3 }}>{p.name}</strong>
@@ -905,7 +980,89 @@ function ProjectList({ projects, customers, sites, crm, uid, onOpen, onChanged }
                   </div>
                   <ChevronRight size={16} style={{ alignSelf: "flex-start", marginTop: 4, flexShrink: 0 }} />
                 </div>
-              </button>
+                <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                  <button
+                    className="lp-btn-ghost"
+                    onClick={() => { setCreatingTaskFor(p); setTaskName(""); setTaskCategoryId(""); setTaskDue(""); }}
+                  >
+                    <Plus size={14} /> Site task
+                  </button>
+                  <button
+                    className="lp-btn-ghost"
+                    onClick={() => { setCreatingEventFor(p); setEventDate(""); setEventStart("08:00"); setEventEnd("09:00"); setEventNotes(""); }}
+                  >
+                    <CalendarDays size={14} /> Event
+                  </button>
+                </div>
+                {isTask && (
+                  <div style={{ marginTop: 12 }}>
+                    <Field label="Category">
+                      <select
+                        className="lp-input"
+                        value={taskCategoryId}
+                        onChange={(e) => setTaskCategoryId(e.target.value)}
+                      >
+                        <option value="">Choose…</option>
+                        {siteTaskCategories
+                          .filter((c) => !c.site_id || c.site_id === p.site_id)
+                          .map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                      </select>
+                    </Field>
+                    <Field label="Task name">
+                      <input
+                        className="lp-input"
+                        value={taskName}
+                        onChange={(e) => setTaskName(e.target.value)}
+                        placeholder="e.g. Prepare quote"
+                      />
+                    </Field>
+                    <Field label="Due date">
+                      <input
+                        className="lp-input"
+                        type="date"
+                        value={taskDue}
+                        onChange={(e) => setTaskDue(e.target.value)}
+                      />
+                    </Field>
+                    <div className="lp-person-actions">
+                      <button className="lp-btn-ghost" onClick={() => createSiteTask(creatingTaskFor)} disabled={busy || !taskName.trim() || !taskCategoryId}>
+                        <Check size={13} /> {busy ? "Saving…" : "Save"}
+                      </button>
+                      <button className="lp-btn-ghost" onClick={() => setCreatingTaskFor(null)}>
+                        <X size={13} /> Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {isEvent && (
+                  <div style={{ marginTop: 12 }}>
+                    <div className="lp-row2">
+                      <Field label="Date">
+                        <input className="lp-input" type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
+                      </Field>
+                      <Field label="Start">
+                        <input className="lp-input" type="time" value={eventStart} onChange={(e) => setEventStart(e.target.value)} />
+                      </Field>
+                      <Field label="End">
+                        <input className="lp-input" type="time" value={eventEnd} onChange={(e) => setEventEnd(e.target.value)} />
+                      </Field>
+                    </div>
+                    <Field label="Notes">
+                      <textarea className="lp-textarea" rows={2} value={eventNotes} onChange={(e) => setEventNotes(e.target.value)} />
+                    </Field>
+                    <div className="lp-person-actions">
+                      <button className="lp-btn-ghost" onClick={() => createCalendarEvent(creatingEventFor)} disabled={busy || !eventDate}>
+                        <Check size={13} /> {busy ? "Saving…" : "Save"}
+                      </button>
+                      <button className="lp-btn-ghost" onClick={() => setCreatingEventFor(null)}>
+                        <X size={13} /> Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             );
           })
         )}
