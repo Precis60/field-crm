@@ -2332,14 +2332,14 @@ function CalendarPanel({ crm, uid }) {
         <p className="lp-hint">Loading calendar…</p>
       ) : view === "month" ? (
         <div style={{ marginTop: 12, border: "1px solid var(--line)", borderRadius: 12, overflow: "auto", flex: "1 1 auto" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderBottom: "1px solid var(--line)", position: "sticky", top: 0, background: "var(--panel)", zIndex: 2, minWidth: 720 }}>
-            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((label) => (
-              <div key={label} style={{ padding: "10px 4px", textAlign: "center", fontWeight: "bold", fontSize: 12.5, borderLeft: "1px solid var(--line)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", borderBottom: "1px solid var(--line)", position: "sticky", top: 0, background: "var(--panel)", zIndex: 2, minWidth: 720 }}>
+            {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((label) => (
+              <div key={label} title={label} style={{ padding: "8px 4px", textAlign: "center", fontWeight: "bold", fontSize: 12.5, borderLeft: "1px solid var(--line)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", boxSizing: "border-box" }}>
                 {label}
               </div>
             ))}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", minWidth: 720 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", minWidth: 720 }}>
             {monthDays.map((day) => {
               const dayStart = day;
               const dayEnd = addDays(day, 1);
@@ -2361,6 +2361,7 @@ function CalendarPanel({ crm, uid }) {
                     borderTop: "1px solid var(--line)",
                     minHeight: 110,
                     padding: 6,
+                    boxSizing: "border-box",
                     background: inCurrentMonth ? "#fff" : "rgba(0,0,0,0.02)",
                     display: "flex",
                     flexDirection: "column",
