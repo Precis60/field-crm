@@ -1684,11 +1684,14 @@ function CalendarPanel({ crm, uid }) {
   const [hiddenCategories, setHiddenCategories] = useState([]);
   const [projects, setProjects] = useState([]);
   const [contacts, setContacts] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [selectedTaskIds, setSelectedTaskIds] = useState([]);
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
     crm.listProjects({ activeOnly: true }).then((rows) => setProjects(rows || [])).catch(() => setProjects([]));
     crm.listContacts().then((rows) => setContacts(rows || [])).catch(() => setContacts([]));
+    crm.listSiteTasks().then((rows) => setTasks(rows || [])).catch(() => setTasks([]));
   }, [crm]);
 
   async function refresh() {
@@ -1725,6 +1728,12 @@ function CalendarPanel({ crm, uid }) {
         updated_at: new Date().toISOString(),
         ...(draft.contactId ? { contact_id: draft.contactId } : {}),
       };
+      if (selectedTaskIds.length > 0) {
+        const linked = selectedTaskIds.map((id) => tasks.find((t) => t.id === id)).filter(Boolean);
+        const taskNames = linked.map((t) => t.name).join("\n- ");
+        const taskNotes = linked.length ? `\n\nLinked tasks:\n- ${taskNames}` : "";
+        payload.notes = (payload.notes || "") + taskNotes;
+      }
       if (editing) {
         await crm.updateEvent(editing, payload);
         setEditing(null);
@@ -1733,6 +1742,7 @@ function CalendarPanel({ crm, uid }) {
       }
       setDraft(empty());
       setAdding(false);
+      setSelectedTaskIds([]);
       await refresh();
     } catch (e) {
       setErr(e.message || "Couldn't save event.");
@@ -1909,6 +1919,38 @@ function CalendarPanel({ crm, uid }) {
           )}
           {draft.projectId && draft.projectName && (
             <p className="lp-hint" style={{ marginTop: -6 }}>{draft.projectName}</p>
+          )}
+          {draft.siteId && (
+            <div style={{ marginTop: -4, marginBottom: 8 }}>
+              <span className="lp-field-label">Outstanding site tasks</span>
+              {(() => {
+                const siteTasks = tasks.filter((t) => t.site_id === draft.siteId && t.status !== "complete");
+                if (!siteTasks.length) {
+                  return <p className="lp-hint" style={{ marginTop: 6 }}>No outstanding tasks for this site.</p>;
+                }
+                return (
+                  <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 6 }}>
+                    {siteTasks.map((t) => (
+                      <label
+                        key={t.id}
+                        style={{ display: "flex", gap: 8, alignItems: "center", cursor: "pointer", fontSize: 13 }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedTaskIds.includes(t.id)}
+                          onChange={() => {
+                            setSelectedTaskIds((prev) =>
+                              prev.includes(t.id) ? prev.filter((id) => id !== t.id) : [...prev, t.id]
+                            );
+                          }}
+                        />
+                        {t.name}
+                      </label>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
           )}
           <div className="lp-row2">
             <Field label="Site address">
