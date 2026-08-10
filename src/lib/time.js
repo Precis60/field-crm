@@ -41,16 +41,50 @@ export function zonedISODate(date = new Date(), timeZone = APP_TIME_ZONE) {
   return `${p.year}-${pad(p.month)}-${pad(p.day)}`;
 }
 
+// How far `timeZone` is ahead of UTC (in ms) at the instant `utcMs`.
+function timeZoneOffsetMs(utcMs, timeZone) {
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+  const parts = fmt.formatToParts(new Date(utcMs));
+  const get = (t) => Number(parts.find((p) => p.type === t)?.value || 0);
+  let hour = get("hour");
+  if (hour === 24) hour = 0;
+  const asUTC = Date.UTC(get("year"), get("month") - 1, get("day"), hour, get("minute"), get("second"));
+  return asUTC - utcMs;
+}
+
 /**
  * Convert a wall-clock date/time in `timeZone` into the real UTC instant it
- * represents, correctly handling daylight saving.
+ * represents, correctly handling daylight saving. Uses only Intl
+ * formatToParts + Date.UTC math (no locale-string round-tripping), so it
+ * behaves consistently across browsers.
  */
 export function zonedDateToUTC(dateStr, timeStr = "00:00:00", timeZone = APP_TIME_ZONE) {
-  const naive = new Date(`${dateStr}T${timeStr}`);
-  const asUTC = new Date(naive.toLocaleString("en-US", { timeZone: "UTC" }));
-  const asZone = new Date(naive.toLocaleString("en-US", { timeZone }));
-  const diff = asUTC.getTime() - asZone.getTime();
-  return new Date(naive.getTime() + diff);
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const [h = "0", m = "0", s = "0"] = timeStr.split(":");
+  const hour = Number(h);
+  const minute = Number(m);
+  const second = Number(s) || 0;
+
+  // First guess: treat the wall-clock values as if they were UTC.
+  const guessMs = Date.UTC(year, month - 1, day, hour, minute, Math.floor(second));
+  let offsetMs = timeZoneOffsetMs(guessMs, timeZone);
+  let utcMs = guessMs - offsetMs;
+
+  // Re-check the offset at the corrected instant in case of a DST boundary.
+  const offsetMs2 = timeZoneOffsetMs(utcMs, timeZone);
+  if (offsetMs2 !== offsetMs) {
+    utcMs = guessMs - offsetMs2;
+  }
+  return new Date(utcMs);
 }
 
 /**
@@ -60,10 +94,11 @@ export function zonedDateToUTC(dateStr, timeStr = "00:00:00", timeZone = APP_TIM
  * wall-clock values, not real elapsed time.
  */
 export function zonedNow(timeZone = APP_TIME_ZONE) {
-  return new Date(new Date().toLocaleString("en-US", { timeZone }));
+  return toZonedLocal(new Date(), timeZone);
 }
 
 /** Same trick as `zonedNow`, but for an arbitrary instant. */
 export function toZonedLocal(date, timeZone = APP_TIME_ZONE) {
-  return new Date(date.toLocaleString("en-US", { timeZone }));
+  const p = zonedParts(date, timeZone);
+  return new Date(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
 }
