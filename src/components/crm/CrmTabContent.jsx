@@ -2059,19 +2059,131 @@ function CalendarPanel({ crm, uid }) {
 
 function InvoiceDetail({ id, crm, onBack }) {
   const [invoice, setInvoice] = useState(null);
+  const [customers, setCustomers] = useState([]);
   const [settings, setSettings] = useState({});
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [editDraft, setEditDraft] = useState(null);
+
+  const datePart = (d) => d ? new Date(d).toISOString().split('T')[0] : '';
 
   useEffect(() => {
     (async () => {
-      const [inv, s] = await Promise.all([crm.getInvoice(id), crm.listSettings()]);
+      const [inv, s, custs] = await Promise.all([crm.getInvoice(id), crm.listSettings(), crm.listCustomers()]);
       setInvoice(inv);
+      setCustomers(custs || []);
       setSettings(Object.fromEntries((s || []).map((x) => [x.key, x.value])));
       setLoading(false);
     })();
   }, [id, crm]);
 
+  async function reload() {
+    const inv = await crm.getInvoice(id);
+    setInvoice(inv);
+  }
+
+  async function handleDelete() {
+    if (!confirm('Delete this invoice?')) return;
+    setBusy(true);
+    setErr('');
+    try {
+      await crm.deleteInvoice(id);
+      onBack();
+    } catch (e) {
+      setErr(e.message || 'Delete failed.');
+      setBusy(false);
+    }
+  }
+
+  function startEdit() {
+    setErr('');
+    setEditDraft({
+      customer_id: invoice.customer_id || '',
+      invoice_number: invoice.invoice_number || '',
+      terms: invoice.terms || PAYMENT_TERMS[0],
+      status: invoice.status || 'draft',
+      issued_at: datePart(invoice.issued_at),
+      due_at: datePart(invoice.due_at),
+      notes: invoice.notes || '',
+    });
+    setEditing(true);
+  }
+
+  async function saveEdit(e) {
+    if (e) e.preventDefault();
+    setErr('');
+    if (!editDraft.customer_id || !editDraft.invoice_number.trim()) {
+      setErr('Customer and invoice number are required.');
+      return;
+    }
+    setBusy(true);
+    try {
+      await crm.updateInvoice(id, { ...editDraft, updated_at: new Date().toISOString() });
+      await reload();
+      setEditing(false);
+      setEditDraft(null);
+    } catch (e) {
+      setErr(e.message || 'Save failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (loading || !invoice) return <div className="lp-settings lp-settings--wide"><p className="lp-hint">Loading invoice…</p></div>;
+
+  if (editing) {
+    return (
+      <div className='lp-settings lp-settings--wide'>
+        <style>{'@media print { .no-print { display: none !important; } }'}</style>
+        <div className='no-print' style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+          <button className='lp-btn-ghost' onClick={onBack}><ArrowLeft size={13} /> Back</button>
+        </div>
+        {err && <p className='lp-error'>{err}</p>}
+        <div style={{ background: '#fff', color: '#000', padding: 32, maxWidth: 800, margin: '0 auto', border: '1px solid var(--line)', borderRadius: 8 }}>
+          <h2 style={{ marginBottom: 16 }}>Edit Invoice</h2>
+          <form
+            onSubmit={saveEdit}
+            style={{ display: 'grid', gap: 16, marginBottom: 16 }}
+          >
+            <Field label='Customer *'>
+              <select className='lp-input' required value={editDraft.customer_id} onChange={(e) => setEditDraft((d) => ({ ...d, customer_id: e.target.value }))}>
+                <option value=''>Select customer</option>
+                {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </Field>
+            <Field label='Invoice number *'>
+              <input className='lp-input' type='text' required value={editDraft.invoice_number} onChange={(e) => setEditDraft((d) => ({ ...d, invoice_number: e.target.value }))} />
+            </Field>
+            <Field label='Payment terms'>
+              <select className='lp-input' value={editDraft.terms} onChange={(e) => setEditDraft((d) => ({ ...d, terms: e.target.value }))}>
+                {PAYMENT_TERMS.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </Field>
+            <Field label='Status'>
+              <select className='lp-input' value={editDraft.status} onChange={(e) => setEditDraft((d) => ({ ...d, status: e.target.value }))}>
+                {['draft', 'sent', 'paid', 'void', 'overdue'].map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </Field>
+            <Field label='Invoice date'>
+              <input className='lp-input' type='date' value={editDraft.issued_at} onChange={(e) => setEditDraft((d) => ({ ...d, issued_at: e.target.value }))} />
+            </Field>
+            <Field label='Due date'>
+              <input className='lp-input' type='date' value={editDraft.due_at} onChange={(e) => setEditDraft((d) => ({ ...d, due_at: e.target.value }))} />
+            </Field>
+            <Field label='Terms & Conditions'>
+              <textarea className='lp-textarea' rows={4} value={editDraft.notes} onChange={(e) => setEditDraft((d) => ({ ...d, notes: e.target.value }))} />
+            </Field>
+            <div className='no-print' style={{ display: 'flex', gap: 10 }}>
+              <button className='lp-btn-ghost' type='button' onClick={() => setEditing(false)} disabled={busy}><X size={13} /> Cancel</button>
+              <button className='lp-btn-ghost' type='submit' disabled={busy}><Check size={13} /> Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   const lines = invoice.invoice_lines || [];
   const labour = lines.filter((l) => l.cost_type === "labour");
@@ -2113,9 +2225,12 @@ function InvoiceDetail({ id, crm, onBack }) {
   return (
     <div className="lp-settings lp-settings--wide">
       <style>{`@media print { .no-print { display: none !important; } }`}</style>
-      <div className="no-print" style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-        <button className="lp-btn-ghost" onClick={onBack}><ArrowLeft size={13} /> Back</button>
-        <button className="lp-btn-ghost" onClick={() => window.print()}>Print</button>
+      {err && <p className='lp-error'>{err}</p>}
+      <div className='no-print' style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+        <button className='lp-btn-ghost' onClick={onBack}><ArrowLeft size={13} /> Back</button>
+        <button className='lp-btn-ghost' onClick={() => window.print()}>Print</button>
+        <button className='lp-btn-ghost' onClick={startEdit} disabled={busy}><Pencil size={13} /> Edit</button>
+        <button className='lp-btn-danger' onClick={handleDelete} disabled={busy}><Trash2 size={13} /> Delete</button>
       </div>
       <div style={{ background: "#fff", color: "#000", padding: 32, maxWidth: 800, margin: "0 auto", border: "1px solid var(--line)", borderRadius: 8 }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24 }}>

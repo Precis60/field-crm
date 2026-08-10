@@ -324,6 +324,10 @@ export function createCrmApi(supabaseFetch) {
     });
   }
 
+  async function deleteInvoice(id) {
+    await supabaseFetch(`/invoices?id=eq.${id}`, { method: "DELETE" });
+  }
+
   /**
    * Build a draft invoice from a project's cost lines.
    */
@@ -476,6 +480,7 @@ export function createCrmApi(supabaseFetch) {
     createInvoice,
     createInvoiceLines,
     updateInvoice,
+    deleteInvoice,
     draftInvoiceFromProject,
     listTimesheets,
     createTimesheet,
