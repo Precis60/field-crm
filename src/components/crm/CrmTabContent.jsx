@@ -2325,19 +2325,63 @@ function CalendarPanel({ crm, uid }) {
                 </div>
               );
             })}
-            {events.filter((e) => !hiddenCategories.includes(e.category)).map((e) => {
-              const start = new Date(e.start_at);
-              const end = e.end_at ? new Date(e.end_at) : addMinutes(start, 60);
-              const color = EVENT_CATEGORIES.find((c) => c.label === e.category)?.color || "#64748b";
-              return days.map((day, dayIndex) => {
-                // `day` is a real Date at true Melbourne midnight for that
-                // calendar day, so comparing against the event's real start/end
-                // instants here is timezone-safe.
-                const dayStart = day;
-                const dayEnd = addDays(day, 1);
-                if (end <= dayStart || start >= dayEnd) return null;
-                const portionStart = start > dayStart ? start : dayStart;
-                const portionEnd = end < dayEnd ? end : dayEnd;
+            {days.map((day, dayIndex) => {
+              // `day` is a real Date at true Melbourne midnight for that
+              // calendar day, so comparing against events' real start/end
+              // instants here is timezone-safe.
+              const dayStart = day;
+              const dayEnd = addDays(day, 1);
+              const dayItems = events
+                .filter((e) => !hiddenCategories.includes(e.category))
+                .map((e) => {
+                  const start = new Date(e.start_at);
+                  const end = e.end_at ? new Date(e.end_at) : addMinutes(start, 60);
+                  return { e, start, end };
+                })
+                .filter(({ start, end }) => !(end <= dayStart || start >= dayEnd))
+                .map(({ e, start, end }) => ({
+                  e,
+                  portionStart: start > dayStart ? start : dayStart,
+                  portionEnd: end < dayEnd ? end : dayEnd,
+                }))
+                .sort((a, b) => a.portionStart - b.portionStart);
+
+              // Lay overlapping events out side-by-side (like Google Calendar)
+              // instead of stacking them directly on top of one another.
+              const laidOut = [];
+              let cluster = [];
+              let clusterEnd = null;
+              const flushCluster = () => {
+                if (!cluster.length) return;
+                const colEnds = [];
+                cluster.forEach((item) => {
+                  let col = colEnds.findIndex((end) => end <= item.portionStart);
+                  if (col === -1) { col = colEnds.length; colEnds.push(item.portionEnd); }
+                  else { colEnds[col] = item.portionEnd; }
+                  item.col = col;
+                });
+                const cols = colEnds.length;
+                cluster.forEach((item) => { item.cols = cols; laidOut.push(item); });
+                cluster = [];
+                clusterEnd = null;
+              };
+              dayItems.forEach((item) => {
+                if (cluster.length === 0) {
+                  cluster.push(item);
+                  clusterEnd = item.portionEnd;
+                } else if (item.portionStart < clusterEnd) {
+                  cluster.push(item);
+                  if (item.portionEnd > clusterEnd) clusterEnd = item.portionEnd;
+                } else {
+                  flushCluster();
+                  cluster.push(item);
+                  clusterEnd = item.portionEnd;
+                }
+              });
+              flushCluster();
+
+              return laidOut.map(({ e, portionStart, portionEnd, col, cols }) => {
+                const color = EVENT_CATEGORIES.find((c) => c.label === e.category)?.color || "#64748b";
                 // Hour-of-day must be Melbourne's wall-clock hour, not the
                 // viewing device's — otherwise the block renders at the
                 // wrong time for anyone outside Melbourne.
@@ -2348,23 +2392,27 @@ function CalendarPanel({ crm, uid }) {
                 if (endH === 0 && portionEnd.getTime() !== portionStart.getTime()) endH = 24;
                 const top = (startH / 24) * 100;
                 const height = Math.max(((endH - startH) / 24) * 100, 1.8);
+                const title = [e.title ? e.category : null, e.project_name, e.site_name].filter(Boolean).join(" · ");
                 return (
                   <button
-                    key={`${e.id}-${dayIndex}`}
+                    key={`${e.id}-${dayIndex}-${col}`}
                     type="button"
                     onClick={() => editEvent(e)}
                     disabled={busy}
+                    title={`${e.title || e.category}${title ? " · " + title : ""}`}
                     style={{
                       position: "absolute",
-                      left: `calc(60px + (100% - 60px) * ${dayIndex} / ${days.length})`,
-                      width: `calc((100% - 60px) / ${days.length} - 6px)`,
+                      left: `calc(60px + (100% - 60px) * (${dayIndex} / ${days.length} + ${col} / (${days.length} * ${cols})))`,
+                      width: `calc((100% - 60px) / (${days.length} * ${cols}) - 3px)`,
                       top: `${top}%`,
                       height: `${height}%`,
                       backgroundColor: color + "33",
                       borderLeft: `3px solid ${color}`,
+                      borderRight: cols > 1 ? "1px solid #fff" : undefined,
+                      boxShadow: cols > 1 ? "0 0 0 1px rgba(255,255,255,0.9)" : undefined,
                       borderRadius: 4,
-                      padding: "3px 6px",
-                      fontSize: 10.5,
+                      padding: "3px 5px",
+                      fontSize: cols > 1 ? 9.5 : 10.5,
                       color: "#333",
                       overflow: "hidden",
                       textAlign: "left",
@@ -2377,7 +2425,7 @@ function CalendarPanel({ crm, uid }) {
                   >
                     <strong style={{ lineHeight: 1.2 }}>{e.title || e.category}</strong>
                     <span>{portionStart.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", timeZone: APP_TIME_ZONE })} – {portionEnd.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", timeZone: APP_TIME_ZONE })}</span>
-                    <span>{[e.title ? e.category : null, e.project_name, e.site_name].filter(Boolean).join(" · ")}</span>
+                    {cols === 1 && <span>{title}</span>}
                   </button>
                 );
               });
