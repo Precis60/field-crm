@@ -1724,7 +1724,7 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
         <button className={`lp-tab ${tab === "suppliers" ? "is-active" : ""}`} onClick={() => setTab("suppliers")}>Suppliers</button>
         <button className={`lp-tab ${tab === "tasks" ? "is-active" : ""}`} onClick={() => setTab("tasks")}>Tasks</button>
       </div>
-      {tab === "brief" && <MorningBrief getMonths={getMonths} refreshMonths={refreshMonths} cacheVersion={cacheVersion} assignedTasks={assignedTasks} />}
+      {tab === "brief" && <MorningBrief crm={crm} />}
       {tab === "tasks" && <TasksPanel currentManager={currentManager} />}
       {tab === "assign" && <AssignTasksPanel workers={workers} assignedTasks={assignedTasks} onAdd={onAddAssignedTask} onRemove={onRemoveAssignedTask} onUpdate={onUpdateAssignedTask} />}
       {tab === "myreport" && (
@@ -2592,127 +2592,177 @@ function BriefTasksPanel({ date, assignedTasks }) {
   );
 }
 
-function MorningBrief({ getMonths, refreshMonths, cacheVersion, assignedTasks }) {
+function MorningBrief({ crm }) {
   const [selectedDate, setSelectedDate] = useState(todayISO());
-  const [rangeReports, setRangeReports] = useState([]);
-  const [outstandingReports, setOutstandingReports] = useState([]);
-  const [busy, setBusy] = useState(true);
-  const [siteFilter, setSiteFilter] = useState("");
-  const sites = useSites();
+  const [events, setEvents] = useState([]);
+  const [invoices, setInvoices] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refresh, setRefresh] = useState(0);
 
   const weekStart = startOfWeek(selectedDate);
+  const weekEnd = addDays(weekStart, 6);
 
   useEffect(() => {
     let cancelled = false;
-    setBusy(true);
+    setLoading(true);
     (async () => {
-      const weekYms = monthsBetween(weekStart, selectedDate);
-      const outstandingStart = addDays(selectedDate, -OUTSTANDING_LOOKBACK_DAYS);
-      const outstandingYms = monthsBetween(outstandingStart, selectedDate);
-      const [week, outstanding] = await Promise.all([getMonths(weekYms), getMonths(outstandingYms)]);
+      const startOfDayISO = new Date(selectedDate + 'T00:00:00.000Z').toISOString();
+      const endOfWeekISO = new Date(addDays(startOfWeek(selectedDate), 6) + 'T23:59:59.999Z').toISOString();
+      const [e, i, t] = await Promise.all([
+        crm.listEvents({ from: startOfDayISO, to: endOfWeekISO }),
+        crm.listInvoices(),
+        crm.listSiteTasks(),
+      ]);
       if (cancelled) return;
-      setRangeReports(week);
-      setOutstandingReports(outstanding.filter((r) => r.date >= outstandingStart && r.date <= selectedDate));
-      setBusy(false);
+      setEvents(e || []);
+      setInvoices(i || []);
+      setTasks(t || []);
+      setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [selectedDate, cacheVersion]);
+  }, [selectedDate, refresh]);
 
-  const todays = rangeReports.filter((r) => r.date === selectedDate && matchesSite(r, siteFilter));
-  const weekReports = rangeReports.filter((r) => r.date >= weekStart && r.date <= selectedDate && matchesSite(r, siteFilter));
+  const todaysEvents = events
+    .filter((e) => e.start_at && new Date(e.start_at).toISOString().slice(0, 10) === selectedDate)
+    .sort((a, b) => new Date(a.start_at) - new Date(b.start_at));
 
-  const byWorker = {};
-  todays.forEach((r) => {
-    const key = r.workerName || r.workerType;
-    if (!byWorker[key]) byWorker[key] = { type: r.workerType, hours: 0, complete: 0, jointHours: 0, delays: [], checkMissing: false };
-    byWorker[key].hours += r.hours;
-    r.tasks.forEach((t) => {
-      if (t.status === "Complete") byWorker[key].complete += 1;
-      if (t.mode === "Jointly") byWorker[key].jointHours += (t.minutes || 0) / 60;
-    });
-    if (r.delays === "Yes") byWorker[key].delays.push(r.delayExplain);
-    if (r.fullCheck === "No") byWorker[key].checkMissing = true;
-  });
+  const outstandingInvoices = invoices.filter((i) => i.status !== 'paid' && i.status !== 'void');
 
-  const outstanding = [];
-  outstandingReports.filter((r) => matchesSite(r, siteFilter)).forEach((r) => {
-    r.tasks.forEach((t) => { if (t.status !== "Complete") outstanding.push({ ...t, date: r.date, worker: r.workerName || r.workerType }); });
-  });
-  outstanding.sort((a, b) => (a.date < b.date ? 1 : -1));
+  const todaysTasks = tasks.filter((t) => t.due_date === selectedDate);
 
-  const weekTasksComplete = weekReports.reduce((sum, r) => sum + r.tasks.filter((t) => t.status === "Complete").length, 0);
-  const weekPhotos = weekReports.reduce((sum, r) => sum + (r.photoCount || 0), 0);
-  const weekHours = weekReports.reduce((sum, r) => sum + r.hours, 0);
-  const workerKeys = Object.keys(byWorker);
+  const weeksTasks = tasks
+    .filter((t) => t.due_date >= weekStart && t.due_date <= weekEnd)
+    .sort((a, b) => (a.due_date || '').localeCompare(b.due_date || '') || (a.name || '').localeCompare(b.name || ''));
+
+  const byDate = weeksTasks.reduce((acc, t) => {
+    const d = t.due_date || 'Unknown';
+    if (!acc[d]) acc[d] = [];
+    acc[d].push(t);
+    return acc;
+  }, {});
+
+  const dateGroups = Object.keys(byDate).sort();
+
+  const DateBar = (
+    <div className="lp-datebar">
+      <button className="lp-nav-btn" onClick={() => setSelectedDate(addDays(selectedDate, -1))} aria-label="Previous day"><ChevronLeft size={16} /></button>
+      <input type="date" className="lp-input lp-datebar-input" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+      <button className="lp-nav-btn" onClick={() => setSelectedDate(addDays(selectedDate, 1))} aria-label="Next day"><ChevronRight size={16} /></button>
+      <button className="lp-btn-ghost lp-today-btn" onClick={() => setSelectedDate(todayISO())}>Today</button>
+      <button className="lp-btn-ghost" onClick={() => setRefresh((n) => n + 1)}>Refresh</button>
+    </div>
+  );
+
+  if (loading) {
+    return (
+      <div className="lp-brief">
+        {DateBar}
+        <EmptyState icon={<ClipboardList size={22} />} text="Loading…" />
+      </div>
+    );
+  }
 
   return (
     <div className="lp-brief">
-      <div className="lp-datebar">
-        <button className="lp-nav-btn" onClick={() => setSelectedDate(addDays(selectedDate, -1))} aria-label="Previous day"><ChevronLeft size={16} /></button>
-        <input type="date" className="lp-input lp-datebar-input" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
-        <button className="lp-nav-btn" onClick={() => setSelectedDate(addDays(selectedDate, 1))} aria-label="Next day"><ChevronRight size={16} /></button>
-        <button className="lp-btn-ghost lp-today-btn" onClick={() => setSelectedDate(todayISO())}>Today</button>
-        <button className="lp-btn-ghost" onClick={() => refreshMonths(monthsBetween(weekStart, selectedDate))}>Refresh</button>
-        <SiteFilter sites={sites} value={siteFilter} onChange={setSiteFilter} />
-      </div>
-
-      <div className="lp-brief-header">
-        <div><span className="lp-eyebrow"><Sun size={13} /> Morning brief</span><h2>{fmtDateLong(selectedDate)}</h2></div>
-      </div>
-
-      {busy ? (
-        <EmptyState icon={<ClipboardList size={22} />} text="Loading…" />
-      ) : workerKeys.length === 0 ? (
-        <EmptyState icon={<ClipboardList size={22} />} text={siteFilter ? "No reports for this site on this date." : "No reports submitted for this date yet."} />
-      ) : (
-        <>
-          <div className="lp-worker-cards">
-            {workerKeys.map((k) => {
-              const w = byWorker[k];
-              return (
-                <div className="lp-worker-card" key={k}>
-                  <div className="lp-worker-card-head"><span className="lp-worker-dot" /><h3>{k}</h3><span className="lp-worker-type">{w.type}</span></div>
-                  <ul className="lp-stat-list">
-                    <li><StatusDot ok={w.hours >= 7} /> {fmtHours(w.hours)}</li>
-                    <li><StatusDot ok={w.complete > 0} /> {w.complete} completed task{w.complete === 1 ? "" : "s"}</li>
-                    <li><StatusDot ok tone="amber" /> {w.jointHours.toFixed(1)} hrs joint work</li>
-                  </ul>
-                  {w.delays.length > 0 && <div className="lp-worker-delay"><AlertTriangle size={13} /> {w.delays[0]}</div>}
-                  {w.checkMissing && <div className="lp-worker-delay"><AlertTriangle size={13} /> No end-of-day property check</div>}
-                </div>
-              );
-            })}
-          </div>
-
-          <DailySummaryPanel reports={todays} date={selectedDate} />
-        </>
-      )}
+      {DateBar}
 
       <div className="lp-brief-grid">
-        <BriefTasksPanel date={selectedDate} assignedTasks={assignedTasks} />
         <div className="lp-panel">
-          <h4><AlertTriangle size={15} /> Outstanding jobs</h4>
-          <p className="lp-hint lp-panel-sub">From the last {OUTSTANDING_LOOKBACK_DAYS} days</p>
-          {outstanding.length === 0 ? (
-            <EmptyState compact icon={<Check size={16} />} text="Nothing outstanding right now." />
+          <h4><CalendarDays size={15} /> Calendar today</h4>
+          <p className="lp-hint lp-panel-sub">{fmtDateLong(selectedDate)}</p>
+          {todaysEvents.length === 0 ? (
+            <EmptyState compact icon={<CalendarDays size={16} />} text="No events today." />
           ) : (
             <ul className="lp-outstanding">
-              {outstanding.slice(0, 12).map((o, i) => (
-                <li key={i}>
+              {todaysEvents.map((e) => {
+                const time = e.start_at
+                  ? new Date(e.start_at).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
+                  : null;
+                return (
+                  <li key={e.id || `${e.start_at}-${e.project_name || e.site_name || ''}`}>
+                    <span className="lp-out-dot" />
+                    <div>
+                      <strong>{time ? `${time} · ` : ''}{e.category}</strong>
+                      <p>{e.project_name || e.site_name}</p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        <div className="lp-panel">
+          <h4><AlertTriangle size={15} /> Outstanding invoices</h4>
+          <p className="lp-hint lp-panel-sub">Unpaid / open</p>
+          {outstandingInvoices.length === 0 ? (
+            <EmptyState compact icon={<Check size={16} />} text="No outstanding invoices." />
+          ) : (
+            <ul className="lp-outstanding">
+              {outstandingInvoices.map((i) => (
+                <li key={i.id || i.invoice_number}>
                   <span className="lp-out-dot" />
-                  <div><strong>{o.workType} — {o.area}</strong><p>{o.description}</p><span className="lp-out-meta">{o.worker} · {o.status} · {o.date}</span></div>
+                  <div>
+                    <strong>{i.customers?.name || i.customer_id} · {i.invoice_number}</strong>
+                    <p>
+                      {i.status} · ${Number(i.total || 0).toFixed(2)}
+                      {i.due_date ? ` · Due ${new Date(i.due_date).toLocaleDateString('en-AU')}` : ''}
+                    </p>
+                  </div>
                 </li>
               ))}
             </ul>
           )}
         </div>
+
         <div className="lp-panel">
-          <h4><CalendarDays size={15} /> This week ({weekStart} → {selectedDate})</h4>
-          <ul className="lp-week-stats">
-            <li><Check size={14} /> {weekTasksComplete} tasks completed</li>
-            <li><Camera size={14} /> {weekPhotos} photos</li>
-            <li><Clock size={14} /> {weekHours.toFixed(1)} labour hours</li>
-          </ul>
+          <h4><Clock size={15} /> Tasks due today</h4>
+          <p className="lp-hint lp-panel-sub">{fmtDateLong(selectedDate)}</p>
+          {todaysTasks.length === 0 ? (
+            <EmptyState compact icon={<Clock size={16} />} text="No tasks due today." />
+          ) : (
+            <ul className="lp-outstanding">
+              {todaysTasks.map((t) => (
+                <li key={t.id || t.name}>
+                  <span className="lp-out-dot" />
+                  <div>
+                    <strong>{t.name}</strong>
+                    <p>
+                      {t.sites?.name || 'Unknown site'} · {t.site_task_categories?.name || 'Uncategorised'} · {t.status}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="lp-panel">
+          <h4><ClipboardList size={15} /> Tasks due this week</h4>
+          <p className="lp-hint lp-panel-sub">{weekStart} → {weekEnd}</p>
+          {dateGroups.length === 0 ? (
+            <EmptyState compact icon={<ClipboardList size={16} />} text="No tasks due this week." />
+          ) : (
+            dateGroups.map((d) => (
+              <div key={d} className="lp-summary-item">
+                <strong>{fmtDateLong(d)}</strong>
+                <ul className="lp-outstanding">
+                  {byDate[d].map((t) => (
+                    <li key={t.id || t.name}>
+                      <span className="lp-out-dot" />
+                      <div>
+                        <strong>{t.name}</strong>
+                        <p>
+                          {t.sites?.name || 'Unknown site'} · {t.site_task_categories?.name || 'Uncategorised'} · {t.status}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
