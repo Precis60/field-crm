@@ -2878,6 +2878,7 @@ function SiteTasksPanel({ crm, uid, sites = [] }) {
   const [filterSite, setFilterSite] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
   const [showCategoryForm, setShowCategoryForm] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
   const [categoryDraft, setCategoryDraft] = useState({ site_id: "", name: "" });
   const emptyTask = () => ({ site_id: "", category_id: "", name: "", description: "", due_date: "", start_date: "", end_date: "", status: "not_started" });
   const [draft, setDraft] = useState(emptyTask());
@@ -2964,6 +2965,21 @@ function SiteTasksPanel({ crm, uid, sites = [] }) {
     if (ok) { setShowCategoryForm(false); setCategoryDraft({ site_id: "", name: "" }); }
   }
 
+  async function saveEditCategory(id) {
+    const problem = validateCategory(); if (problem) { setErr(problem); return; }
+    const ok = await run(() => crm.updateSiteTaskCategory(id, {
+      site_id: categoryDraft.site_id,
+      name: categoryDraft.name.trim(),
+      updated_at: new Date().toISOString(),
+    }), "Couldn't save that category.");
+    if (ok) { setEditingCategory(null); setCategoryDraft({ site_id: "", name: "" }); setShowCategoryForm(false); }
+  }
+
+  async function removeCategory(id) {
+    if (!confirm("Delete this category?")) return;
+    await run(() => crm.deleteSiteTaskCategory(id), "Couldn't delete that category.");
+  }
+
   const visible = useMemo(() => {
     return (tasks || []).filter((t) => {
       if (filterSite && t.site_id !== filterSite) return false;
@@ -3046,12 +3062,12 @@ function SiteTasksPanel({ crm, uid, sites = [] }) {
             </Field>
           </div>
           <div className="lp-person-actions">
-            <button className="lp-btn-ghost" onClick={saveCategory} disabled={busy}><Check size={13} /> {busy ? "Saving…" : "Add category"}</button>
-            <button className="lp-btn-ghost" onClick={() => { setShowCategoryForm(false); setErr(""); }}><X size={13} /> Cancel</button>
+            <button className="lp-btn-ghost" onClick={editingCategory ? () => saveEditCategory(editingCategory) : saveCategory} disabled={busy}><Check size={13} /> {busy ? "Saving…" : editingCategory ? "Save category" : "Add category"}</button>
+            <button className="lp-btn-ghost" onClick={() => { setShowCategoryForm(false); setEditingCategory(null); setCategoryDraft({ site_id: "", name: "" }); setErr(""); }}><X size={13} /> Cancel</button>
           </div>
         </div>
       ) : (
-        <button className="lp-btn-ghost" style={{ marginTop: 10 }} onClick={() => { setShowCategoryForm(true); setErr(""); }}>
+        <button className="lp-btn-ghost" style={{ marginTop: 10 }} onClick={() => { setEditingCategory(null); setCategoryDraft({ site_id: "", name: "" }); setShowCategoryForm(true); setErr(""); }}>
           <Plus size={15} /> Add a category
         </button>
       )}
@@ -3083,6 +3099,39 @@ function SiteTasksPanel({ crm, uid, sites = [] }) {
             {filteredCategories.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
           </select>
         </Field>
+      </div>
+
+      <div style={{ marginTop: 12 }}>
+        <h4 style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Categories</h4>
+        {filteredCategories.length === 0 ? (
+          <p className="lp-hint">No categories.</p>
+        ) : (
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ textAlign: "left", borderBottom: "1px solid var(--border)" }}>
+                <th style={{ padding: 8 }}>Site Name</th>
+                <th style={{ padding: 8 }}>Category Name</th>
+                <th style={{ padding: 8 }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredCategories.map((c) => (
+                <tr key={c.id} style={{ borderBottom: "1px solid var(--border)" }}>
+                  <td style={{ padding: 8 }}>{sites.find((s) => s.id === c.site_id)?.name || "—"}</td>
+                  <td style={{ padding: 8 }}>{c.name}</td>
+                  <td style={{ padding: 8, whiteSpace: "nowrap" }}>
+                    <button className="lp-btn-ghost" onClick={() => { setEditingCategory(c.id); setCategoryDraft({ site_id: c.site_id || "", name: c.name || "" }); setShowCategoryForm(true); }} disabled={busy}>
+                      <Pencil size={13} /> Edit
+                    </button>
+                    <button className="lp-btn-ghost lp-btn-danger" onClick={() => removeCategory(c.id)} disabled={busy}>
+                      <Trash2 size={13} /> Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <div className="lp-person-list" style={{ marginTop: 12 }}>
