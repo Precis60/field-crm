@@ -2870,6 +2870,7 @@ function statusLabel(v) {
 function SiteTasksPanel({ crm, uid, sites = [] }) {
   const [tasks, setTasks] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -2884,12 +2885,14 @@ function SiteTasksPanel({ crm, uid, sites = [] }) {
   const [draft, setDraft] = useState(emptyTask());
 
   async function refresh() {
-    const [t, c] = await Promise.all([
+    const [t, c, p] = await Promise.all([
       crm.listSiteTasks().catch(() => []),
       crm.listSiteTaskCategories().catch(() => []),
+      crm.listProjects({ activeOnly: true }).catch(() => []),
     ]);
     setTasks(t || []);
     setCategories(c || []);
+    setProjects(p || []);
   }
 
   useEffect(() => { refresh().finally(() => setLoading(false)); }, []);
@@ -2944,6 +2947,44 @@ function SiteTasksPanel({ crm, uid, sites = [] }) {
   async function removeTask(id) {
     if (!confirm("Delete this task?")) return;
     await run(() => crm.deleteSiteTask(id), "Couldn't delete that task.");
+  }
+
+  async function handleAddToCalendar(task) {
+    const site = sites.find((s) => s.id === task.site_id);
+    const matching = projects.filter((p) => p.site_id === task.site_id);
+    if (matching.length === 0) {
+      alert("No active project is linked to this task's site.");
+      return;
+    }
+    const start = task.due_date ? new Date(task.due_date + "T08:00:00") : new Date();
+    const end = task.due_date ? new Date(task.due_date + "T09:00:00") : new Date(Date.now() + 3600000);
+    try {
+      await Promise.all(
+        matching.map((p) =>
+          crm.createEvent({
+            id: uid(),
+            site_id: task.site_id,
+            site_name: site?.name || "",
+            project_name: p.name,
+            site_address: site?.address || "",
+            site_contact: p.customers?.name || "",
+            notes: `Task: ${task.name}${task.description ? " - " + task.description : ""}`,
+            category: task.site_task_categories?.name || "Site task",
+            start_at: new Date(start).toISOString(),
+            end_at: new Date(end).toISOString(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+        )
+      );
+      if (matching.length > 1) {
+        alert(`Created ${matching.length} calendar events for this task.`);
+      } else {
+        alert("Task added to the project calendar.");
+      }
+    } catch (e) {
+      alert("Could not add to calendar.");
+    }
   }
 
   function validateCategory() {
@@ -3164,6 +3205,9 @@ function SiteTasksPanel({ crm, uid, sites = [] }) {
                   <td style={{ padding: 8 }}>{t.end_date || "—"}</td>
                   <td style={{ padding: 8 }}>{statusLabel(t.status)}</td>
                   <td style={{ padding: 8, whiteSpace: "nowrap" }}>
+                    <button className="lp-btn-ghost" onClick={() => handleAddToCalendar(t)} title="Add to calendar" disabled={busy}>
+                      <CalendarDays size={13} />
+                    </button>
                     <button className="lp-btn-ghost" onClick={() => { setEditing(t.id); setDraft({ site_id: t.site_id || "", category_id: t.category_id || "", name: t.name || "", description: t.description || "", due_date: t.due_date || "", start_date: t.start_date || "", end_date: t.end_date || "", status: t.status || "not_started" }); }}>
                       <Pencil size={13} /> Edit
                     </button>
