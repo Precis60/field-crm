@@ -2022,15 +2022,22 @@ function CalendarPanel({ crm, uid }) {
     if (!p) { setErr("No matching active project found for this event."); return; }
     setBusy(true); setErr(""); setMsg("");
     try {
+      const noteParts = [
+        draft.notes.trim() || null,
+        draft.plannedWorks.trim() ? `Planned works:\n${draft.plannedWorks.trim()}` : null,
+        draft.worksCompleted.trim() ? `Works completed:\n${draft.worksCompleted.trim()}` : null,
+        draft.followUp.trim() ? `Follow up:\n${draft.followUp.trim()}` : null,
+      ].filter(Boolean);
       await crm.createTimesheet({
         id: uid(),
         project_id: p.id,
         person_id: uid,
         start_at: fromLocalInputMelbourne(draft.startAt).toISOString(),
         end_at: draft.endAt ? fromLocalInputMelbourne(draft.endAt).toISOString() : null,
-        notes: draft.notes.trim() || null,
+        notes: noteParts.join("\n\n") || null,
         expenses: [],
         follow_ups: [],
+        billable: true,
         invoiced: false,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
