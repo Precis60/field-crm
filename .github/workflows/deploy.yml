@@ -32,6 +32,7 @@ jobs:
         env:
           VITE_SUPABASE_URL: "https://zbmktdoivzlapmaccwvh.supabase.co/rest/v1"
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_GOOGLE_PLACES_API_KEY: ${{ secrets.VITE_GOOGLE_PLACES_API_KEY }}
         run: npm run build
 
       - name: Upload artifact
