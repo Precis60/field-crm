@@ -1880,11 +1880,17 @@ function CalendarPanel({ crm, uid }) {
   async function refresh() {
     const from = view === "week" ? weekStart : startOfDay(selectedDay);
     const to = addDays(from, view === "week" ? 7 : 1);
-    const rows = await crm.listEvents({
-      from: addDays(from, -90).toISOString(),
-      to: addDays(to, 90).toISOString(),
-    }).catch(() => []);
-    setEvents(rows || []);
+    try {
+      const rows = await crm.listEvents({
+        from: addDays(from, -90).toISOString(),
+        to: addDays(to, 90).toISOString(),
+      });
+      setEvents(rows || []);
+      setErr("");
+    } catch (e) {
+      setEvents([]);
+      setErr(e.message || "Couldn't load calendar events.");
+    }
   }
 
   useEffect(() => {
