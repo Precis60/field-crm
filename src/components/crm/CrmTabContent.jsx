@@ -1830,6 +1830,20 @@ function isSameDay(a, b) {
   return zonedISODate(a) === zonedISODate(b);
 }
 
+// Real Date at true Melbourne midnight for the 1st of the month containing `d`.
+function startOfMonth(d) {
+  const p = zonedParts(d);
+  return zonedDateToUTC(`${p.year}-${String(p.month).padStart(2, "0")}-01`, "00:00:00");
+}
+
+function addMonthsToDate(d, n) {
+  const p = zonedParts(d);
+  let month = p.month - 1 + n;
+  let year = p.year + Math.floor(month / 12);
+  month = ((month % 12) + 12) % 12;
+  return zonedDateToUTC(`${year}-${String(month + 1).padStart(2, "0")}-01`, "00:00:00");
+}
+
 function CalendarPanel({ crm, uid }) {
   const [selectedDay, setSelectedDay] = useState(new Date());
   const [view, setView] = useState("week");
@@ -1878,8 +1892,8 @@ function CalendarPanel({ crm, uid }) {
   }, [crm]);
 
   async function refresh() {
-    const from = view === "week" ? weekStart : startOfDay(selectedDay);
-    const to = addDays(from, view === "week" ? 7 : 1);
+    const from = view === "week" ? startOfWeek(selectedDay) : view === "month" ? startOfMonth(selectedDay) : startOfDay(selectedDay);
+    const to = view === "week" ? addDays(from, 7) : view === "month" ? addMonthsToDate(from, 1) : addDays(from, 1);
     try {
       const rows = await crm.listEvents({
         from: addDays(from, -90).toISOString(),
@@ -2039,8 +2053,17 @@ function CalendarPanel({ crm, uid }) {
   }
 
   const weekStart = startOfWeek(selectedDay);
+  const monthStart = startOfMonth(selectedDay);
+  const monthGridStart = startOfWeek(monthStart);
+  const monthEnd = addMonthsToDate(monthStart, 1); // exclusive, first day of next month
+  const monthWeekCount = Math.ceil((Math.round((monthEnd - monthGridStart) / (24 * 60 * 60 * 1000))) / 7);
+  const monthDays = view === "month"
+    ? Array.from({ length: monthWeekCount * 7 }, (_, i) => addDays(monthGridStart, i))
+    : [];
   const days = view === "week"
     ? Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+    : view === "month"
+    ? []
     : [startOfDay(selectedDay)];
   const slots = Array.from({ length: 96 }, (_, i) => i);
 
@@ -2049,10 +2072,10 @@ function CalendarPanel({ crm, uid }) {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginTop: 4 }}>
         <div>
           <h3 style={{ marginBottom: 0 }}><CalendarDays size={16} /> Calendar</h3>
-          <p className="lp-hint" style={{ marginTop: 4 }}>{view === "week" ? "Weekly" : "Daily"} view of events by category.</p>
+          <p className="lp-hint" style={{ marginTop: 4 }}>{view === "week" ? "Weekly" : view === "month" ? "Monthly" : "Daily"} view of events by category.</p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <ChoiceRow options={["Day", "Week"]} value={view === "day" ? "Day" : "Week"} onChange={(v) => setView(v.toLowerCase())} />
+          <ChoiceRow options={["Day", "Week", "Month"]} value={view === "day" ? "Day" : view === "month" ? "Month" : "Week"} onChange={(v) => setView(v.toLowerCase())} />
           {!adding && (
             <button className="lp-btn-ghost" onClick={() => setAdding(true)}><Plus size={15} /> New event</button>
           )}
@@ -2070,6 +2093,14 @@ function CalendarPanel({ crm, uid }) {
               {weekStart.toLocaleDateString("en-AU", { timeZone: APP_TIME_ZONE })} – {addDays(weekStart, 6).toLocaleDateString("en-AU", { timeZone: APP_TIME_ZONE })}
             </span>
             <button className="lp-btn-ghost" onClick={() => setSelectedDay((d) => addDays(startOfWeek(d), 7))}>Next week →</button>
+          </>
+        ) : view === "month" ? (
+          <>
+            <button className="lp-btn-ghost" onClick={() => setSelectedDay((d) => addMonthsToDate(d, -1))}>← Prev month</button>
+            <span className="lp-hint" style={{ alignSelf: "center", fontWeight: 600 }}>
+              {monthStart.toLocaleDateString("en-AU", { month: "long", year: "numeric", timeZone: APP_TIME_ZONE })}
+            </span>
+            <button className="lp-btn-ghost" onClick={() => setSelectedDay((d) => addMonthsToDate(d, 1))}>Next month →</button>
           </>
         ) : (
           <>
@@ -2299,6 +2330,105 @@ function CalendarPanel({ crm, uid }) {
 
       {loading ? (
         <p className="lp-hint">Loading calendar…</p>
+      ) : view === "month" ? (
+        <div style={{ marginTop: 12, border: "1px solid var(--line)", borderRadius: 12, overflow: "auto", flex: "1 1 auto" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderBottom: "1px solid var(--line)", position: "sticky", top: 0, background: "var(--panel)", zIndex: 2, minWidth: 720 }}>
+            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((label) => (
+              <div key={label} style={{ padding: "10px 4px", textAlign: "center", fontWeight: "bold", fontSize: 12.5, borderLeft: "1px solid var(--line)" }}>
+                {label}
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", minWidth: 720 }}>
+            {monthDays.map((day) => {
+              const dayStart = day;
+              const dayEnd = addDays(day, 1);
+              const dayEvents = events
+                .filter((e) => !hiddenCategories.includes(e.category))
+                .map((e) => ({ e, start: new Date(e.start_at), end: e.end_at ? new Date(e.end_at) : addMinutes(new Date(e.start_at), 60) }))
+                .filter(({ start, end }) => !(end <= dayStart || start >= dayEnd))
+                .sort((a, b) => a.start - b.start);
+              const inCurrentMonth = zonedParts(day).month === zonedParts(monthStart).month;
+              const isToday = isSameDay(day, new Date());
+              const MAX_CHIPS = 3;
+              const visible = dayEvents.slice(0, MAX_CHIPS);
+              const extra = dayEvents.length - visible.length;
+              return (
+                <div
+                  key={day.toISOString()}
+                  style={{
+                    borderLeft: "1px solid var(--line)",
+                    borderTop: "1px solid var(--line)",
+                    minHeight: 110,
+                    padding: 6,
+                    background: inCurrentMonth ? "#fff" : "rgba(0,0,0,0.02)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 4,
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedDay(day); setView("day"); }}
+                    style={{
+                      alignSelf: "flex-start",
+                      background: isToday ? "var(--brass)" : "none",
+                      color: isToday ? "#fff" : inCurrentMonth ? "var(--ink)" : "var(--muted)",
+                      border: "none",
+                      borderRadius: 999,
+                      width: 24,
+                      height: 24,
+                      fontSize: 12.5,
+                      fontWeight: isToday ? 700 : 500,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {zonedParts(day).day}
+                  </button>
+                  {visible.map(({ e, start, end }) => {
+                    const color = EVENT_CATEGORIES.find((c) => c.label === e.category)?.color || "#64748b";
+                    const time = start.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", timeZone: APP_TIME_ZONE });
+                    return (
+                      <button
+                        key={e.id}
+                        type="button"
+                        onClick={() => editEvent(e)}
+                        title={`${e.title || e.category} · ${time}`}
+                        disabled={busy}
+                        style={{
+                          textAlign: "left",
+                          fontSize: 10.5,
+                          padding: "2px 5px",
+                          borderRadius: 4,
+                          border: "none",
+                          borderLeft: `3px solid ${color}`,
+                          background: color + "26",
+                          color: "#333",
+                          cursor: "pointer",
+                          overflow: "hidden",
+                          whiteSpace: "nowrap",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        <strong>{time}</strong> {e.title || e.category}
+                      </button>
+                    );
+                  })}
+                  {extra > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => { setSelectedDay(day); setView("day"); }}
+                      className="lp-hint"
+                      style={{ textAlign: "left", fontSize: 10.5, background: "none", border: "none", cursor: "pointer", padding: "2px 5px" }}
+                    >
+                      +{extra} more
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
       ) : (
         <div style={{ marginTop: 12, border: "1px solid var(--line)", borderRadius: 12, overflow: "auto", flex: "1 1 auto" }}>
           <div style={{ display: "grid", gridTemplateColumns: `60px repeat(${days.length}, 1fr)`, borderBottom: "1px solid var(--line)", position: "sticky", top: 0, background: "var(--panel)", zIndex: 2, minWidth: view === "week" ? 760 : 360 }}>
