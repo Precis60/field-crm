@@ -1825,6 +1825,7 @@ function CalendarPanel({ crm, uid }) {
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(null);
   const empty = () => ({
+    title: "",
     siteId: "",
     siteName: "",
     projectId: "",
@@ -1882,6 +1883,7 @@ function CalendarPanel({ crm, uid }) {
     try {
       const payload = {
         id: uid(),
+        title: draft.title.trim() || null,
         site_id: draft.siteId.trim() || null,
         site_name: draft.siteName.trim() || null,
         project_name: draft.projectName.trim() || null,
@@ -1995,6 +1997,7 @@ function CalendarPanel({ crm, uid }) {
     setEditing(e.id);
     setAdding(true);
     setDraft({
+      title: e.title || "",
       siteId: e.site_id || "",
       siteName: e.site_name || "",
       projectId: matched ? matched.id : "",
@@ -2082,6 +2085,9 @@ function CalendarPanel({ crm, uid }) {
 
       {adding && (
         <div className="lp-person-row" style={{ marginTop: 12 }}>
+          <Field label="Event title">
+            <input className="lp-input" value={draft.title} placeholder="e.g. Site walkthrough" onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))} />
+          </Field>
           <div className="lp-row2">
             <Field label="Site ID">
               <input className="lp-input" value={draft.siteId} onChange={(e) => setDraft((d) => ({ ...d, siteId: e.target.value }))} />
@@ -2324,9 +2330,9 @@ function CalendarPanel({ crm, uid }) {
                       flexDirection: "column",
                     }}
                   >
-                    <strong style={{ lineHeight: 1.2 }}>{e.category}</strong>
+                    <strong style={{ lineHeight: 1.2 }}>{e.title || e.category}</strong>
                     <span>{portionStart.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })} – {portionEnd.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}</span>
-                    <span>{[e.project_name, e.site_name].filter(Boolean).join(" · ")}</span>
+                    <span>{[e.title ? e.category : null, e.project_name, e.site_name].filter(Boolean).join(" · ")}</span>
                   </button>
                 );
               });

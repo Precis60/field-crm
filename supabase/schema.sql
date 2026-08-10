@@ -556,6 +556,7 @@ create policy timesheets_all on timesheets
 -- Weekly calendar events
 create table if not exists events (
   id text primary key,
+  title text,
   site_id text,
   site_name text,
   project_name text,
@@ -572,6 +573,8 @@ create table if not exists events (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table events add column if not exists title text;
 
 alter table events add column if not exists planned_works text;
 alter table events add column if not exists works_completed text;
