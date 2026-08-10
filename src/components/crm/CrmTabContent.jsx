@@ -2579,9 +2579,9 @@ function InvoiceDetail({ id, crm, onBack }) {
           <div className="lp-inv-business">
             <img
               className="lp-inv-logo"
-              src={get("business_logo_url") || `${import.meta.env.BASE_URL}pca-logo.png`}
-              alt=""
-              onError={(e) => { e.currentTarget.style.display = "none"; }}
+              src={/^https?:\/\//i.test(get("business_logo_url").trim()) ? get("business_logo_url").trim() : `${import.meta.env.BASE_URL}pca-logo.png`}
+              alt={get("business_name") || "Business logo"}
+              onError={(e) => { e.currentTarget.src = `${import.meta.env.BASE_URL}pca-logo.png`; }}
             />
             <div className="lp-inv-business-name">{get("business_name") || "Business name — set in Settings"}</div>
             <div className="lp-inv-business-line">{get("business_address") || "Address — set in Settings"}</div>
