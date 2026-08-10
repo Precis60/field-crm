@@ -2823,47 +2823,52 @@ function InvoicesPanel({ crm, uid }) {
       {err && <p className="lp-error">{err}</p>}
 
       {adding ? (
-        <div className="lp-person-row" style={{ marginTop: 12 }}>
-          <Field label="Customer">
-            <select className="lp-input" value={draft.customerId} onChange={(e) => setDraft((d) => ({ ...d, customerId: e.target.value }))}>
-              <option value="">Select customer</option>
-              {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </Field>
-          <div className="lp-row2">
-            <Field label="Invoice number">
-              <input className="lp-input" placeholder="e.g. INV-001" value={draft.invoiceNumber} onChange={(e) => setDraft((d) => ({ ...d, invoiceNumber: e.target.value }))} />
-            </Field>
-            <Field label="Payment terms">
-              <select className="lp-input" value={draft.terms} onChange={(e) => setDraft((d) => ({ ...d, terms: e.target.value }))}>
-                {PAYMENT_TERMS.map((t) => <option key={t} value={t}>{t}</option>)}
+        <div className="lp-person-row lp-invoice-form" style={{ marginTop: 12 }}>
+          <div className="lp-event-section">
+            <h4 className="lp-event-section-title">Invoice details</h4>
+            <Field label="Customer">
+              <select className="lp-input" value={draft.customerId} onChange={(e) => setDraft((d) => ({ ...d, customerId: e.target.value }))}>
+                <option value="">Select customer</option>
+                {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </Field>
-          </div>
-          <div className="lp-row2">
-            <Field label="Invoice date">
-              <input className="lp-input" type="date" value={draft.issuedAt} onChange={(e) => setDraft((d) => ({ ...d, issuedAt: e.target.value }))} />
-            </Field>
-            <Field label="Due date">
-              <input className="lp-input" type="date" value={draft.dueAt} onChange={(e) => setDraft((d) => ({ ...d, dueAt: e.target.value }))} />
-            </Field>
+            <div className="lp-row2">
+              <Field label="Invoice number">
+                <input className="lp-input" placeholder="e.g. INV-001" value={draft.invoiceNumber} onChange={(e) => setDraft((d) => ({ ...d, invoiceNumber: e.target.value }))} />
+              </Field>
+              <Field label="Payment terms">
+                <select className="lp-input" value={draft.terms} onChange={(e) => setDraft((d) => ({ ...d, terms: e.target.value }))}>
+                  {PAYMENT_TERMS.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </Field>
+            </div>
+            <div className="lp-row2">
+              <Field label="Invoice date">
+                <input className="lp-input" type="date" value={draft.issuedAt} onChange={(e) => setDraft((d) => ({ ...d, issuedAt: e.target.value }))} />
+              </Field>
+              <Field label="Due date">
+                <input className="lp-input" type="date" value={draft.dueAt} onChange={(e) => setDraft((d) => ({ ...d, dueAt: e.target.value }))} />
+              </Field>
+            </div>
           </div>
 
-          <div style={{ marginTop: 16 }}>
-            <div style={{ fontWeight: "bold", marginBottom: 8 }}>Labour</div>
-            {draft.labour.map((l, idx) => (
-              <div key={idx} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
-                <input className="lp-input" style={{ flex: "2 1 180px" }} placeholder="Description" value={l.description} onChange={(e) => updateLabourLine(idx, { description: e.target.value })} />
-                <input className="lp-input" style={{ flex: "0 1 80px" }} type="number" min="0" step="any" placeholder="Qty" value={l.quantity} onChange={(e) => updateLabourLine(idx, { quantity: e.target.value })} />
-                <input className="lp-input" style={{ flex: "0 1 100px" }} type="number" min="0" step="0.01" placeholder="Rate" value={l.unit_rate} onChange={(e) => updateLabourLine(idx, { unit_rate: e.target.value })} />
-                <span className="lp-hint" style={{ minWidth: 80, textAlign: "right" }}>{money((Number(l.quantity) || 0) * (Number(l.unit_rate) || 0))}</span>
-                <button className="lp-btn-ghost lp-btn-danger" onClick={() => removeLabourLine(idx)} disabled={draft.labour.length === 1 || busy}><Trash2 size={13} /></button>
-              </div>
-            ))}
+          <div className="lp-event-section">
+            <h4 className="lp-event-section-title">Labour</h4>
+            <div className="lp-invoice-lines">
+              {draft.labour.map((l, idx) => (
+                <div key={idx} className="lp-invoice-line">
+                  <input className="lp-input lp-invoice-line-desc" placeholder="Description" value={l.description} onChange={(e) => updateLabourLine(idx, { description: e.target.value })} />
+                  <input className="lp-input lp-invoice-line-qty" type="number" min="0" step="any" placeholder="Qty" value={l.quantity} onChange={(e) => updateLabourLine(idx, { quantity: e.target.value })} />
+                  <input className="lp-input lp-invoice-line-rate" type="number" min="0" step="0.01" placeholder="Rate" value={l.unit_rate} onChange={(e) => updateLabourLine(idx, { unit_rate: e.target.value })} />
+                  <span className="lp-invoice-line-amount">{money((Number(l.quantity) || 0) * (Number(l.unit_rate) || 0))}</span>
+                  <button className="lp-btn-ghost lp-btn-danger lp-invoice-line-remove" onClick={() => removeLabourLine(idx)} disabled={draft.labour.length === 1 || busy}><Trash2 size={13} /></button>
+                </div>
+              ))}
+            </div>
             <button className="lp-btn-ghost" onClick={addLabourLine} disabled={busy}><Plus size={15} /> Add labour line</button>
 
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12 }}>
-              <div style={{ flex: "0 1 140px" }}>
+            <div className="lp-invoice-discount-row">
+              <div style={{ flex: "0 1 160px" }}>
                 <Field label="Labour discount %">
                   <input className="lp-input" type="number" min="0" max="100" step="0.01" value={draft.labourDiscount} onChange={(e) => setDraft((d) => ({ ...d, labourDiscount: e.target.value }))} />
                 </Field>
@@ -2874,40 +2879,47 @@ function InvoicesPanel({ crm, uid }) {
                 </span>
               )}
             </div>
+          </div>
 
-            <div style={{ fontWeight: "bold", marginBottom: 8, marginTop: 16 }}>Expenses</div>
-            {draft.expenses.map((l, idx) => (
-              <div key={idx} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
-                <input className="lp-input" style={{ flex: "2 1 180px" }} placeholder="Description" value={l.description} onChange={(e) => updateExpenseLine(idx, { description: e.target.value })} />
-                <input className="lp-input" style={{ flex: "0 1 80px" }} type="number" min="0" step="any" placeholder="Qty" value={l.quantity} onChange={(e) => updateExpenseLine(idx, { quantity: e.target.value })} />
-                <input className="lp-input" style={{ flex: "0 1 100px" }} type="number" min="0" step="0.01" placeholder="Rate" value={l.unit_rate} onChange={(e) => updateExpenseLine(idx, { unit_rate: e.target.value })} />
-                <select className="lp-input" style={{ flex: "0 1 150px" }} value={l.cost_type} onChange={(e) => updateExpenseLine(idx, { cost_type: e.target.value })}>
-                  {COST_TYPES.filter((ct) => ct.value !== "labour").map((ct) => <option key={ct.value} value={ct.value}>{ct.label}</option>)}
-                </select>
-                <span className="lp-hint" style={{ minWidth: 80, textAlign: "right" }}>{money((Number(l.quantity) || 0) * (Number(l.unit_rate) || 0))}</span>
-                <button className="lp-btn-ghost lp-btn-danger" onClick={() => removeExpenseLine(idx)} disabled={draft.expenses.length === 1 || busy}><Trash2 size={13} /></button>
-              </div>
-            ))}
+          <div className="lp-event-section">
+            <h4 className="lp-event-section-title">Expenses</h4>
+            <div className="lp-invoice-lines">
+              {draft.expenses.map((l, idx) => (
+                <div key={idx} className="lp-invoice-line lp-invoice-line--expense">
+                  <input className="lp-input lp-invoice-line-desc" placeholder="Description" value={l.description} onChange={(e) => updateExpenseLine(idx, { description: e.target.value })} />
+                  <input className="lp-input lp-invoice-line-qty" type="number" min="0" step="any" placeholder="Qty" value={l.quantity} onChange={(e) => updateExpenseLine(idx, { quantity: e.target.value })} />
+                  <input className="lp-input lp-invoice-line-rate" type="number" min="0" step="0.01" placeholder="Rate" value={l.unit_rate} onChange={(e) => updateExpenseLine(idx, { unit_rate: e.target.value })} />
+                  <select className="lp-input lp-invoice-line-type" value={l.cost_type} onChange={(e) => updateExpenseLine(idx, { cost_type: e.target.value })}>
+                    {COST_TYPES.filter((ct) => ct.value !== "labour").map((ct) => <option key={ct.value} value={ct.value}>{ct.label}</option>)}
+                  </select>
+                  <span className="lp-invoice-line-amount">{money((Number(l.quantity) || 0) * (Number(l.unit_rate) || 0))}</span>
+                  <button className="lp-btn-ghost lp-btn-danger lp-invoice-line-remove" onClick={() => removeExpenseLine(idx)} disabled={draft.expenses.length === 1 || busy}><Trash2 size={13} /></button>
+                </div>
+              ))}
+            </div>
             <button className="lp-btn-ghost" onClick={addExpenseLine} disabled={busy}><Plus size={15} /> Add expense line</button>
           </div>
 
-          <Field label="Terms & Conditions">
-            <textarea className="lp-textarea" rows={3} value={draft.notes} onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))} />
-          </Field>
+          <div className="lp-event-section">
+            <h4 className="lp-event-section-title">Terms & conditions</h4>
+            <Field label="Terms & Conditions">
+              <textarea className="lp-textarea" rows={3} value={draft.notes} onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))} />
+            </Field>
+          </div>
 
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
-            <div style={{ minWidth: 200 }}>
+          <div className="lp-invoice-totals">
+            <div className="lp-invoice-totals-box">
               {Number(draft.labourDiscount) > 0 ? (
                 <>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}><span>Labour (before discount)</span><span>{money(rawLabourSubtotal)}</span></div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}><span>Labour discount ({draft.labourDiscount}%)</span><span>-{money(discountAmount)}</span></div>
+                  <div className="lp-invoice-totals-row"><span>Labour (before discount)</span><span>{money(rawLabourSubtotal)}</span></div>
+                  <div className="lp-invoice-totals-row"><span>Labour discount ({draft.labourDiscount}%)</span><span>-{money(discountAmount)}</span></div>
                 </>
               ) : null}
-              <div style={{ display: "flex", justifyContent: "space-between" }}><span>Labour</span><span>{money(labourSubtotal)}</span></div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}><span>Expenses</span><span>{money(expensesSubtotal)}</span></div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}><span>Subtotal</span><span>{money(subtotal)}</span></div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}><span>GST (10%)</span><span>{money(tax)}</span></div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "bold" }}><span>Total</span><span>{money(total)}</span></div>
+              <div className="lp-invoice-totals-row"><span>Labour</span><span>{money(labourSubtotal)}</span></div>
+              <div className="lp-invoice-totals-row"><span>Expenses</span><span>{money(expensesSubtotal)}</span></div>
+              <div className="lp-invoice-totals-row"><span>Subtotal</span><span>{money(subtotal)}</span></div>
+              <div className="lp-invoice-totals-row"><span>GST (10%)</span><span>{money(tax)}</span></div>
+              <div className="lp-invoice-totals-row lp-invoice-totals-row--grand"><span>Total</span><span>{money(total)}</span></div>
             </div>
           </div>
 
