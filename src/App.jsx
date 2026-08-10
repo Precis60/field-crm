@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { createCrmApi } from "./lib/crm.js";
 import CrmTabContent from "./components/crm/CrmTabContent.jsx";
+import { APP_TIME_ZONE, zonedISODate, zonedDateToUTC } from "./lib/time.js";
 import AddressInput from "./components/AddressInput.jsx";
 
 /* ---------------------------------------------------------------
@@ -37,7 +38,9 @@ const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((v || "").trim());
 const sameEmail = (a, b) => !!(a || "").trim() && (a || "").trim().toLowerCase() === (b || "").trim().toLowerCase();
 
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
-const todayISO = () => new Date().toISOString().slice(0, 10);
+// "Today" is always Melbourne's calendar date, regardless of the viewing
+// device's own time zone — all site work happens in Melbourne.
+const todayISO = () => zonedISODate(new Date());
 const emptyTask = () => ({
   id: uid(), area: "", areaOther: "", workType: "", workTypeOther: "",
   description: "", mode: "Alone", jointWith: [], jointWithOtherOn: false, jointWithOther: "",
@@ -121,21 +124,25 @@ function fmtMonthLong(ym) {
   return new Date(y, m - 1, 1).toLocaleDateString("en-AU", { month: "long", year: "numeric" });
 }
 function monthOf(iso) { return iso.slice(0, 7); }
+// These operate on plain "YYYY-MM-DD" calendar date strings, so they're
+// anchored to UTC internally — that keeps the arithmetic correct no matter
+// what time zone the viewing device is set to (using local midnight here
+// would roll the date back a day for zones ahead of UTC, like Melbourne).
 function addDays(iso, n) {
-  const d = new Date(iso + "T00:00:00");
-  d.setDate(d.getDate() + n);
+  const d = new Date(iso + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
 }
 function addMonths(ym, n) {
   const [y, m] = ym.split("-").map(Number);
-  const d = new Date(y, m - 1 + n, 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const d = new Date(Date.UTC(y, m - 1 + n, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 function startOfWeek(iso) {
-  const d = new Date(iso + "T00:00:00");
-  const day = d.getDay();
+  const d = new Date(iso + "T00:00:00Z");
+  const day = d.getUTCDay();
   const diff = (day === 0 ? -6 : 1) - day; // Monday start
-  d.setDate(d.getDate() + diff);
+  d.setUTCDate(d.getUTCDate() + diff);
   return d.toISOString().slice(0, 10);
 }
 function monthsBetween(startISO, endISO) {
@@ -309,7 +316,7 @@ async function loadMonth(ym) {
   try {
     const start = `${ym}-01`;
     const [y, m] = ym.split("-").map(Number);
-    const nextMonth = new Date(y, m, 1).toISOString().slice(0, 10);
+    const nextMonth = new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
     // Everything except the photo payload: the log fetches images only when a
     // report is expanded, and legacy base64 rows are heavy to drag around.
     const cols = "id,date,worker_name,worker_type,arrival,departure,hours,tasks,photo_count,delays,delay_explain,delay_notes,tomorrow,full_check,submitted_at,site_id";
@@ -2634,8 +2641,10 @@ function MorningBrief({ crm }) {
     let cancelled = false;
     setLoading(true);
     (async () => {
-      const startOfDayISO = new Date(selectedDate + 'T00:00:00.000Z').toISOString();
-      const endOfWeekISO = new Date(addDays(startOfWeek(selectedDate), 6) + 'T23:59:59.999Z').toISOString();
+      // Melbourne midnight, not UTC midnight — otherwise early-morning
+      // Melbourne events on `selectedDate` would be missed.
+      const startOfDayISO = zonedDateToUTC(selectedDate, "00:00:00").toISOString();
+      const endOfWeekISO = zonedDateToUTC(addDays(startOfWeek(selectedDate), 6), "23:59:59.999").toISOString();
       const [e, i, t] = await Promise.all([
         crm.listEvents({ from: startOfDayISO, to: endOfWeekISO }),
         crm.listInvoices(),
@@ -2651,7 +2660,7 @@ function MorningBrief({ crm }) {
   }, [selectedDate, refresh]);
 
   const todaysEvents = events
-    .filter((e) => e.start_at && new Date(e.start_at).toISOString().slice(0, 10) === selectedDate)
+    .filter((e) => e.start_at && zonedISODate(new Date(e.start_at)) === selectedDate)
     .sort((a, b) => new Date(a.start_at) - new Date(b.start_at));
 
   const outstandingInvoices = invoices.filter((i) => i.status !== 'paid' && i.status !== 'void');
@@ -2712,7 +2721,7 @@ function MorningBrief({ crm }) {
             <ul className="lp-outstanding">
               {todaysEvents.map((e) => {
                 const time = e.start_at
-                  ? new Date(e.start_at).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
+                  ? new Date(e.start_at).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', timeZone: APP_TIME_ZONE })
                   : null;
                 return (
                   <li key={e.id || `${e.start_at}-${e.project_name || e.site_name || ''}`}>

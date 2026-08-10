@@ -4,6 +4,7 @@ import {
   Pencil, ChevronRight, ArrowLeft, Settings, Clock, CalendarDays,
 } from "lucide-react";
 import AddressInput from "../AddressInput.jsx";
+import { APP_TIME_ZONE, zonedISODate, zonedDateToUTC, zonedParts } from "../../lib/time.js";
 
 const CUSTOMER_STATUSES = ["active", "prospect", "inactive"];
 const PROJECT_STATUSES = [
@@ -1779,30 +1780,44 @@ function TimesheetsSection({ projectId, customerId, crm, uid }) {
 /*  Calendar                                                           */
 /* ================================================================== */
 
-function startOfWeek(d) {
-  const date = new Date(d);
-  const day = date.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  date.setDate(date.getDate() + diff);
-  date.setHours(0, 0, 0, 0);
-  return date;
+// All site work happens in Melbourne, so the calendar always operates on
+// Melbourne's wall-clock day/week boundaries and hours — regardless of the
+// time zone the viewing device happens to be set to.
+function addCalendarDays(dateStr, n) {
+  const d = new Date(dateStr + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
 }
 
+// Real Date at true Melbourne midnight for the day containing `d`.
 function startOfDay(d) {
-  const date = new Date(d);
-  date.setHours(0, 0, 0, 0);
-  return date;
+  return zonedDateToUTC(zonedISODate(d), "00:00:00");
+}
+
+function startOfWeek(d) {
+  const dateStr = zonedISODate(d);
+  const day = new Date(dateStr + "T00:00:00Z").getUTCDay();
+  const diff = day === 0 ? -6 : 1 - day; // Monday start
+  return zonedDateToUTC(addCalendarDays(dateStr, diff), "00:00:00");
 }
 
 function addDays(d, n) {
-  const date = new Date(d);
-  date.setDate(date.getDate() + n);
-  return date;
+  return zonedDateToUTC(addCalendarDays(zonedISODate(d), n), "00:00:00");
 }
 
+// Melbourne wall-clock value of `d`, formatted for a <input type="datetime-local">.
 function toISOStringLocal(d) {
+  const p = zonedParts(d);
   const pad = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${p.year}-${pad(p.month)}-${pad(p.day)}T${pad(p.hour)}:${pad(p.minute)}`;
+}
+
+// Reverse of the above: a "YYYY-MM-DDTHH:mm" string from a datetime-local
+// input, interpreted as Melbourne wall-clock time, converted to a real Date.
+function fromLocalInputMelbourne(value) {
+  if (!value) return null;
+  const [datePart, timePart] = value.split("T");
+  return zonedDateToUTC(datePart, `${timePart || "00:00"}:00`);
 }
 
 function addMinutes(d, m) {
@@ -1812,7 +1827,7 @@ function addMinutes(d, m) {
 }
 
 function isSameDay(a, b) {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  return zonedISODate(a) === zonedISODate(b);
 }
 
 function CalendarPanel({ crm, uid }) {
@@ -1894,8 +1909,10 @@ function CalendarPanel({ crm, uid }) {
         works_completed: draft.worksCompleted.trim() || null,
         follow_up: draft.followUp.trim() || null,
         category: draft.category,
-        start_at: new Date(draft.startAt).toISOString(),
-        end_at: draft.endAt ? new Date(draft.endAt).toISOString() : null,
+        // The date/time pickers are entered as Melbourne wall-clock time —
+        // convert explicitly rather than trusting the viewing device's zone.
+        start_at: fromLocalInputMelbourne(draft.startAt).toISOString(),
+        end_at: draft.endAt ? fromLocalInputMelbourne(draft.endAt).toISOString() : null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         ...(draft.contactId ? { contact_id: draft.contactId } : {}),
@@ -1934,8 +1951,8 @@ function CalendarPanel({ crm, uid }) {
         id: uid(),
         project_id: p.id,
         person_id: uid,
-        start_at: new Date(draft.startAt).toISOString(),
-        end_at: draft.endAt ? new Date(draft.endAt).toISOString() : null,
+        start_at: fromLocalInputMelbourne(draft.startAt).toISOString(),
+        end_at: draft.endAt ? fromLocalInputMelbourne(draft.endAt).toISOString() : null,
         notes: draft.notes.trim() || null,
         expenses: [],
         follow_ups: [],
@@ -2044,7 +2061,7 @@ function CalendarPanel({ crm, uid }) {
           <>
             <button className="lp-btn-ghost" onClick={() => setSelectedDay((d) => addDays(startOfWeek(d), -7))}>← Prev week</button>
             <span className="lp-hint" style={{ alignSelf: "center" }}>
-              {weekStart.toLocaleDateString("en-AU")} – {addDays(weekStart, 6).toLocaleDateString("en-AU")}
+              {weekStart.toLocaleDateString("en-AU", { timeZone: APP_TIME_ZONE })} – {addDays(weekStart, 6).toLocaleDateString("en-AU", { timeZone: APP_TIME_ZONE })}
             </span>
             <button className="lp-btn-ghost" onClick={() => setSelectedDay((d) => addDays(startOfWeek(d), 7))}>Next week →</button>
           </>
@@ -2052,7 +2069,7 @@ function CalendarPanel({ crm, uid }) {
           <>
             <button className="lp-btn-ghost" onClick={() => setSelectedDay((d) => addDays(d, -1))}>← Prev day</button>
             <span className="lp-hint" style={{ alignSelf: "center" }}>
-              {selectedDay.toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+              {selectedDay.toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: APP_TIME_ZONE })}
             </span>
             <button className="lp-btn-ghost" onClick={() => setSelectedDay((d) => addDays(d, 1))}>Next day →</button>
           </>
@@ -2282,7 +2299,7 @@ function CalendarPanel({ crm, uid }) {
             <div style={{ padding: "10px 4px" }}></div>
             {days.map((day) => (
               <div key={day.toISOString()} style={{ padding: "10px 4px", textAlign: "center", fontWeight: "bold", borderLeft: "1px solid var(--line)" }}>
-                {day.toLocaleDateString("en-AU", { weekday: "short", day: "numeric" })}
+                {day.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", timeZone: APP_TIME_ZONE })}
               </div>
             ))}
           </div>
@@ -2297,7 +2314,7 @@ function CalendarPanel({ crm, uid }) {
                     {label}
                   </div>
                   {days.map((day) => (
-                    <div key={`${i}-${day.toISOString()}`} style={{ borderTop: isHour ? "1px solid var(--line)" : "1px solid rgba(0,0,0,0.05)", borderLeft: "1px solid var(--line)", position: "relative", background: day.getDay() % 6 === 0 ? "rgba(0,0,0,0.02)" : undefined }}></div>
+                    <div key={`${i}-${day.toISOString()}`} style={{ borderTop: isHour ? "1px solid var(--line)" : "1px solid rgba(0,0,0,0.05)", borderLeft: "1px solid var(--line)", position: "relative", background: new Date(day.toLocaleString("en-US", { timeZone: APP_TIME_ZONE })).getDay() % 6 === 0 ? "rgba(0,0,0,0.02)" : undefined }}></div>
                   ))}
                 </div>
               );
@@ -2307,13 +2324,21 @@ function CalendarPanel({ crm, uid }) {
               const end = e.end_at ? new Date(e.end_at) : addMinutes(start, 60);
               const color = EVENT_CATEGORIES.find((c) => c.label === e.category)?.color || "#64748b";
               return days.map((day, dayIndex) => {
+                // `day` is a real Date at true Melbourne midnight for that
+                // calendar day, so comparing against the event's real start/end
+                // instants here is timezone-safe.
                 const dayStart = day;
                 const dayEnd = addDays(day, 1);
                 if (end <= dayStart || start >= dayEnd) return null;
                 const portionStart = start > dayStart ? start : dayStart;
                 const portionEnd = end < dayEnd ? end : dayEnd;
-                const startH = portionStart.getHours() + portionStart.getMinutes() / 60;
-                let endH = portionEnd.getHours() + portionEnd.getMinutes() / 60;
+                // Hour-of-day must be Melbourne's wall-clock hour, not the
+                // viewing device's — otherwise the block renders at the
+                // wrong time for anyone outside Melbourne.
+                const startParts = zonedParts(portionStart);
+                const endParts = zonedParts(portionEnd);
+                const startH = startParts.hour + startParts.minute / 60;
+                let endH = endParts.hour + endParts.minute / 60;
                 if (endH === 0 && portionEnd.getTime() !== portionStart.getTime()) endH = 24;
                 const top = (startH / 24) * 100;
                 const height = Math.max(((endH - startH) / 24) * 100, 1.8);
@@ -2345,7 +2370,7 @@ function CalendarPanel({ crm, uid }) {
                     }}
                   >
                     <strong style={{ lineHeight: 1.2 }}>{e.title || e.category}</strong>
-                    <span>{portionStart.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })} – {portionEnd.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}</span>
+                    <span>{portionStart.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", timeZone: APP_TIME_ZONE })} – {portionEnd.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", timeZone: APP_TIME_ZONE })}</span>
                     <span>{[e.title ? e.category : null, e.project_name, e.site_name].filter(Boolean).join(" · ")}</span>
                   </button>
                 );
@@ -2536,7 +2561,7 @@ function InvoiceDetail({ id, crm, onBack }) {
       <div style={{ background: "#fff", color: "#000", padding: 32, maxWidth: 800, margin: "0 auto", border: "1px solid var(--line)", borderRadius: 8 }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24 }}>
           <div style={{ maxWidth: 360 }}>
-            {get("business_logo_url") ? <img src={get("business_logo_url")} alt="" style={{ maxWidth: 120, maxHeight: 80, marginBottom: 8 }} /> : null}
+            <img src={get("business_logo_url") || "./pca-logo.png"} alt="" style={{ maxWidth: 160, maxHeight: 100, marginBottom: 10 }} />
             <div style={{ fontSize: 20, fontWeight: "bold" }}>{get("business_name") || "Business name — set in Settings"}</div>
             <div>{get("business_address") || "Address — set in Settings"}</div>
             <div>{[get("business_phone"), get("business_email")].filter(Boolean).join(" · ") || "Phone / email — set in Settings"}</div>
@@ -3257,8 +3282,8 @@ function SiteTasksPanel({ crm, uid, sites = [] }) {
       alert("No active project is linked to this task's site.");
       return;
     }
-    const start = task.due_date ? new Date(task.due_date + "T08:00:00") : new Date();
-    const end = task.due_date ? new Date(task.due_date + "T09:00:00") : new Date(Date.now() + 3600000);
+    const start = task.due_date ? zonedDateToUTC(task.due_date, "08:00:00") : new Date();
+    const end = task.due_date ? zonedDateToUTC(task.due_date, "09:00:00") : new Date(Date.now() + 3600000);
     try {
       await Promise.all(
         matching.map((p) =>
