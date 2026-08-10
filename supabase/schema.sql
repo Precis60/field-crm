@@ -312,12 +312,14 @@ create policy invoice_lines_manager_all on invoice_lines
 
 create table if not exists site_task_categories (
   id text primary key,
-  site_id text not null references sites(id) on delete cascade,
+  site_id text references sites(id) on delete set null,
   name text not null,
   active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table site_task_categories alter column site_id drop not null;
 
 create index if not exists site_task_categories_site_idx on site_task_categories (site_id);
 

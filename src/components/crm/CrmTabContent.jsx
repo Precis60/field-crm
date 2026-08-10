@@ -2988,7 +2988,6 @@ function SiteTasksPanel({ crm, uid, sites = [] }) {
   }
 
   function validateCategory() {
-    if (!categoryDraft.site_id) return "Choose a site.";
     if (!categoryDraft.name.trim()) return "Enter a category name.";
     return "";
   }
@@ -2997,7 +2996,7 @@ function SiteTasksPanel({ crm, uid, sites = [] }) {
     const problem = validateCategory(); if (problem) { setErr(problem); return; }
     const ok = await run(() => crm.createSiteTaskCategory({
       id: uid(),
-      site_id: categoryDraft.site_id,
+      site_id: categoryDraft.site_id.trim() || null,
       name: categoryDraft.name.trim(),
       active: true,
       created_at: new Date().toISOString(),
@@ -3009,7 +3008,7 @@ function SiteTasksPanel({ crm, uid, sites = [] }) {
   async function saveEditCategory(id) {
     const problem = validateCategory(); if (problem) { setErr(problem); return; }
     const ok = await run(() => crm.updateSiteTaskCategory(id, {
-      site_id: categoryDraft.site_id,
+      site_id: categoryDraft.site_id.trim() || null,
       name: categoryDraft.name.trim(),
       updated_at: new Date().toISOString(),
     }), "Couldn't save that category.");
@@ -3031,12 +3030,12 @@ function SiteTasksPanel({ crm, uid, sites = [] }) {
 
   const availableCategories = useMemo(() => {
     if (!draft.site_id) return [];
-    return categories.filter((c) => c.site_id === draft.site_id);
+    return categories.filter((c) => !c.site_id || c.site_id === draft.site_id);
   }, [categories, draft.site_id]);
 
   const filteredCategories = useMemo(() => {
     if (!filterSite) return categories;
-    return categories.filter((c) => c.site_id === filterSite);
+    return categories.filter((c) => !c.site_id || c.site_id === filterSite);
   }, [categories, filterSite]);
 
   const taskForm = (
@@ -3094,7 +3093,7 @@ function SiteTasksPanel({ crm, uid, sites = [] }) {
           <div className="lp-row2">
             <Field label="Site *">
               <select className="lp-input" value={categoryDraft.site_id} onChange={(e) => setCategoryDraft((d) => ({ ...d, site_id: e.target.value }))}>
-                <option value="">Select site…</option>
+                <option value="">All sites (shared)</option>
                 {sites.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
               </select>
             </Field>
@@ -3158,7 +3157,7 @@ function SiteTasksPanel({ crm, uid, sites = [] }) {
             <tbody>
               {filteredCategories.map((c) => (
                 <tr key={c.id} style={{ borderBottom: "1px solid var(--border)" }}>
-                  <td style={{ padding: 8 }}>{sites.find((s) => s.id === c.site_id)?.name || "—"}</td>
+                  <td style={{ padding: 8 }}>{c.site_id ? (sites.find((s) => s.id === c.site_id)?.name || "—") : "All sites"}</td>
                   <td style={{ padding: 8 }}>{c.name}</td>
                   <td style={{ padding: 8, whiteSpace: "nowrap" }}>
                     <button className="lp-btn-ghost" onClick={() => { setEditingCategory(c.id); setCategoryDraft({ site_id: c.site_id || "", name: c.name || "" }); setShowCategoryForm(true); }} disabled={busy}>
