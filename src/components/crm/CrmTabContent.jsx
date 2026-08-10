@@ -1458,6 +1458,7 @@ function TimesheetsSection({ projectId, customerId, crm, uid }) {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState(null);
   const [selected, setSelected] = useState([]);
   const [invoicing, setInvoicing] = useState(false);
   const [rate, setRate] = useState("");
@@ -1491,17 +1492,28 @@ function TimesheetsSection({ projectId, customerId, crm, uid }) {
       const followUps = draft.followUps
         .filter((f) => f.description.trim())
         .map((f) => ({ description: f.description.trim() }));
-      await crm.createTimesheet({
-        id: uid(),
-        project_id: projectId,
-        start_at: new Date(draft.startAt).toISOString(),
-        end_at: draft.endAt ? new Date(draft.endAt).toISOString() : null,
-        notes: draft.notes.trim() || null,
-        expenses,
-        follow_ups: followUps,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
+      if (editing) {
+        await crm.updateTimesheet(editing, {
+          start_at: fromLocalInputMelbourne(draft.startAt).toISOString(),
+          end_at: draft.endAt ? fromLocalInputMelbourne(draft.endAt).toISOString() : null,
+          notes: draft.notes.trim() || null,
+          expenses,
+          follow_ups: followUps,
+        });
+        setEditing(null);
+      } else {
+        await crm.createTimesheet({
+          id: uid(),
+          project_id: projectId,
+          start_at: fromLocalInputMelbourne(draft.startAt).toISOString(),
+          end_at: draft.endAt ? fromLocalInputMelbourne(draft.endAt).toISOString() : null,
+          notes: draft.notes.trim() || null,
+          expenses,
+          follow_ups: followUps,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+      }
       setDraft(empty());
       setAdding(false);
       await refresh();
@@ -1521,6 +1533,18 @@ function TimesheetsSection({ projectId, customerId, crm, uid }) {
       setErr(e.message || "Couldn't delete time entry.");
     }
     setBusy(false);
+  }
+
+  function edit(t) {
+    setEditing(t.id);
+    setAdding(true);
+    setDraft({
+      startAt: t.start_at ? toISOStringLocal(new Date(t.start_at)) : "",
+      endAt: t.end_at ? toISOStringLocal(new Date(t.end_at)) : "",
+      notes: t.notes || "",
+      expenses: t.expenses?.length ? t.expenses.map((e) => ({ description: e.description || "", amount: e.amount != null ? String(e.amount) : "" })) : empty().expenses,
+      followUps: t.follow_ups?.length ? t.follow_ups.map((f) => ({ description: f.description || "" })) : empty().followUps,
+    });
   }
 
   function hoursBetween(start, end) {
@@ -1727,9 +1751,9 @@ function TimesheetsSection({ projectId, customerId, crm, uid }) {
           </Field>
           <div className="lp-person-actions">
             <button className="lp-btn-ghost" onClick={save} disabled={busy}>
-              <Check size={13} /> {busy ? "Saving…" : "Save"}
+              <Check size={13} /> {busy ? "Saving…" : editing ? "Update" : "Save"}
             </button>
-            <button className="lp-btn-ghost" onClick={() => { setAdding(false); setErr(""); }}>
+            <button className="lp-btn-ghost" onClick={() => { setAdding(false); setEditing(null); setDraft(empty()); setErr(""); }}>
               <X size={13} /> Cancel
             </button>
           </div>
@@ -1763,6 +1787,9 @@ function TimesheetsSection({ projectId, customerId, crm, uid }) {
                     <input type="checkbox" checked={selected.includes(t.id)} onChange={() => toggleSelected(t.id)} disabled={busy || t.invoiced} />
                     Select
                   </label>
+                  <button className="lp-btn-ghost" disabled={busy} onClick={() => edit(t)}>
+                    <Pencil size={13} />
+                  </button>
                   <button className="lp-btn-ghost lp-btn-danger" disabled={busy} onClick={() => remove(t.id)}>
                     <Trash2 size={13} />
                   </button>
