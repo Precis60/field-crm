@@ -2577,9 +2577,12 @@ function InvoiceDetail({ id, crm, onBack }) {
       <div className="lp-invoice-doc">
         <div className="lp-inv-header">
           <div className="lp-inv-business">
-            {(get("business_logo_url") || "./pca-logo.png") && (
-              <img className="lp-inv-logo" src={get("business_logo_url") || "./pca-logo.png"} alt="" />
-            )}
+            <img
+              className="lp-inv-logo"
+              src={get("business_logo_url") || `${import.meta.env.BASE_URL}pca-logo.png`}
+              alt=""
+              onError={(e) => { e.currentTarget.style.display = "none"; }}
+            />
             <div className="lp-inv-business-name">{get("business_name") || "Business name — set in Settings"}</div>
             <div className="lp-inv-business-line">{get("business_address") || "Address — set in Settings"}</div>
             <div className="lp-inv-business-line">{[get("business_phone"), get("business_email")].filter(Boolean).join(" · ") || "Phone / email — set in Settings"}</div>
