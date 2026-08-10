@@ -1,0 +1,19 @@
+{
+  "name": "Precision Cabling & Automation — Field CRM",
+  "short_name": "Field CRM",
+  "description": "Property and project management for Precision Cabling & Automation",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#F7F5F0",
+  "theme_color": "#A67C3D",
+  "orientation": "portrait",
+  "scope": ".",
+  "icons": [
+    {
+      "src": "pwa-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

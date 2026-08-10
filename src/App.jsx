@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import {
   Check, X, AlertTriangle, Clock, Camera, Lock, ChevronRight,
   ChevronDown, ChevronLeft, Plus, Trash2, ArrowLeft, Sun, ClipboardList, Settings,
-  CalendarDays, ImageOff, ShieldCheck, LogOut, Search, Building2, Users, Pencil
+  CalendarDays, ImageOff, ShieldCheck, LogOut, Search, Building2, Users, Pencil, Download
 } from "lucide-react";
 import { createCrmApi } from "./lib/crm.js";
 import CrmTabContent from "./components/crm/CrmTabContent.jsx";
@@ -1698,14 +1698,40 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
   const [tab, setTab] = useState("brief");
   const [sites, setSites] = useState([]);
   const [reportSaved, setReportSaved] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState(null);
 
   useEffect(() => {
     loadAllSites().then(setSites);
   }, []);
 
+  useEffect(() => {
+    const handler = (e) => { e.preventDefault(); setInstallPrompt(e); };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  async function handleInstall() {
+    if (!installPrompt) return;
+    await installPrompt.prompt();
+    setInstallPrompt(null);
+  }
+
   return (
     <div className="lp-page lp-page--manager">
-      <TopBar title="Manager dashboard" onBack={onExit} right={<button className="lp-signout" onClick={onExit}><LogOut size={15} /> Sign out</button>} />
+      <TopBar
+        title="Manager dashboard"
+        onBack={onExit}
+        right={
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {installPrompt && (
+              <button className="lp-btn-ghost" onClick={handleInstall}>
+                <Download size={15} /> Install
+              </button>
+            )}
+            <button className="lp-signout" onClick={onExit}><LogOut size={15} /> Sign out</button>
+          </div>
+        }
+      />
       <div className="lp-tabs">
         <button className={`lp-tab ${tab === "sites" ? "is-active" : ""}`} onClick={() => setTab("sites")}>Admin</button>
         <button className={`lp-tab ${tab === "assign" ? "is-active" : ""}`} onClick={() => setTab("assign")}>Assign tasks</button>

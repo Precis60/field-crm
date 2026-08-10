@@ -3,10 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#A67C3D" />
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="icon" href="./pwa-icon.svg" type="image/svg+xml" />
     <title>Field CRM — Property & Project Management</title>
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("./sw.js");
+      }
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
