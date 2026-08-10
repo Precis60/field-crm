@@ -3701,7 +3701,8 @@ body{margin:0;}
 .lp-rot{transform:rotate(180deg);transition:transform .15s ease;}
 .lp-task-body{padding:12px;display:flex;flex-direction:column;gap:12px;}
 .lp-btn-ghost{display:inline-flex;align-items:center;gap:6px;background:none;border:1px dashed var(--brass);color:var(--brass-dark);border-radius:9px;padding:8px 12px;font-size:12.5px;cursor:pointer;}
-.lp-btn-danger{border-color:var(--rust);color:var(--rust);align-self:flex-start;}
+.lp-btn-danger{border-color:var(--rust);color:var(--rust);align-self:flex-start;background:rgba(180,72,58,0.06);}
+.lp-btn-danger:hover{background:rgba(180,72,58,0.12);}
 
 .lp-photo-grid{display:flex;flex-wrap:wrap;gap:10px;}
 .lp-photo-thumb{position:relative;width:84px;height:84px;border-radius:10px;overflow:hidden;border:1px solid var(--line);}

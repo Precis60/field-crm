@@ -2571,7 +2571,7 @@ function InvoiceDetail({ id, crm, onBack }) {
         <button className='lp-btn-ghost' onClick={onBack}><ArrowLeft size={13} /> Back</button>
         <button className='lp-btn-ghost' onClick={() => window.print()}>Print</button>
         <button className='lp-btn-ghost' onClick={startEdit} disabled={busy}><Pencil size={13} /> Edit</button>
-        <button className='lp-btn-danger' onClick={handleDelete} disabled={busy}><Trash2 size={13} /> Delete</button>
+        <button className='lp-btn-ghost lp-btn-danger' onClick={handleDelete} disabled={busy}><Trash2 size={13} /> Delete</button>
       </div>
 
       <div className="lp-invoice-doc">
