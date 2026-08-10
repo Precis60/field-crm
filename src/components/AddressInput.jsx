@@ -10,7 +10,7 @@ function loadGoogleMapsScript(key) {
         return;
       }
       const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places&loading=async`;
       script.async = true;
       script.defer = true;
       script.onload = () => resolve(window.google);
@@ -29,7 +29,7 @@ export default function AddressInput({ value, onChange, placeholder, className =
   const [suggestions, setSuggestions] = useState([]);
   const [open, setOpen] = useState(false);
   const [searchError, setSearchError] = useState("");
-  const serviceRef = useRef(null);
+  const placesLibRef = useRef(null);
   const onChangeRef = useRef(onChange);
   const debounceRef = useRef(null);
 
@@ -40,47 +40,46 @@ export default function AddressInput({ value, onChange, placeholder, className =
   useEffect(() => {
     if (!key) return;
     loadGoogleMapsScript(key)
-      .then(() => { setReady(true); setLoadError(false); })
+      .then(async (google) => {
+        placesLibRef.current = await google.maps.importLibrary("places");
+        setReady(true);
+        setLoadError(false);
+      })
       .catch(() => { setReady(false); setLoadError(true); });
   }, [key]);
 
-  useEffect(() => {
-    if (ready && window.google && !serviceRef.current) {
-      serviceRef.current = new window.google.maps.places.AutocompleteService();
-    }
-  }, [ready]);
-
-  function fetchSuggestions(text) {
-    if (!serviceRef.current || !text.trim()) {
+  async function fetchSuggestions(text) {
+    if (!placesLibRef.current || !text.trim()) {
       setSuggestions([]);
       setOpen(false);
       return;
     }
     try {
-      serviceRef.current.getPlacePredictions(
-        { input: text },
-        (predictions, status) => {
-          if (status === window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
-            setSuggestions([]);
-            setOpen(false);
-            setSearchError("");
-            return;
-          }
-          if (status !== window.google.maps.places.PlacesServiceStatus.OK || !predictions) {
-            setSuggestions([]);
-            setOpen(false);
-            setSearchError(`Google Places: ${status}`);
-            return;
-          }
-          setSuggestions(predictions.map((p) => ({ id: p.place_id, label: p.description })));
-          setOpen(true);
-          setSearchError("");
-        }
+      const { AutocompleteSuggestion } = placesLibRef.current;
+      const { suggestions: results } = await AutocompleteSuggestion.fetchAutocompleteSuggestions({
+        input: text,
+      });
+      if (!results || results.length === 0) {
+        setSuggestions([]);
+        setOpen(false);
+        setSearchError("");
+        return;
+      }
+      setSuggestions(
+        results
+          .filter((r) => r.placePrediction)
+          .map((r) => ({
+            id: r.placePrediction.placeId,
+            label: r.placePrediction.text.text,
+            prediction: r.placePrediction,
+          }))
       );
+      setOpen(true);
+      setSearchError("");
     } catch (e) {
       setSuggestions([]);
       setOpen(false);
-      setSearchError("Google Places request failed");
+      setSearchError(e?.message || "Google Places request failed");
     }
   }
 
