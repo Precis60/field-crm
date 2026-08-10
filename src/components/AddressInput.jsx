@@ -14,7 +14,7 @@ function loadGoogleMapsScript(key) {
       script.async = true;
       script.defer = true;
       script.onload = () => resolve(window.google);
-      script.onerror = reject;
+      script.onerror = () => reject(new Error("Could not load Google Places"));
       document.head.appendChild(script);
     });
   }
@@ -25,12 +25,18 @@ export default function AddressInput({ value, onChange, placeholder, className =
   const inputRef = useRef(null);
   const key = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
   const [ready, setReady] = useState(false);
+  const [error, setError] = useState(false);
+  const onChangeRef = useRef(onChange);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   useEffect(() => {
     if (!key) return;
     loadGoogleMapsScript(key)
       .then(() => setReady(true))
-      .catch(() => setReady(false));
+      .catch(() => { setReady(false); setError(true); });
   }, [key]);
 
   useEffect(() => {
@@ -39,27 +45,21 @@ export default function AddressInput({ value, onChange, placeholder, className =
       const listener = autocomplete.addListener("place_changed", () => {
         const place = autocomplete.getPlace();
         if (place && place.formatted_address) {
-          onChange(place.formatted_address);
+          onChangeRef.current(place.formatted_address);
         }
       });
       return () => {
-        window.google.maps.event.removeListener(listener);
+        window.google.maps.event.clearInstanceListeners(autocomplete);
       };
     }
-  }, [ready, onChange]);
-
-  useEffect(() => {
-    if (inputRef.current && inputRef.current.value !== (value ?? "")) {
-      inputRef.current.value = value ?? "";
-    }
-  }, [value]);
+  }, [ready]);
 
   if (!key) {
     return (
       <>
         <input
           ref={inputRef}
-          defaultValue={value ?? ""}
+          value={value ?? ""}
           onChange={(e) => onChange(e.target.value)}
           className={className}
           placeholder={placeholder}
@@ -70,12 +70,15 @@ export default function AddressInput({ value, onChange, placeholder, className =
   }
 
   return (
-    <input
-      ref={inputRef}
-      defaultValue={value ?? ""}
-      onChange={(e) => onChange(e.target.value)}
-      className={className}
-      placeholder={placeholder}
-    />
+    <>
+      <input
+        ref={inputRef}
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+        className={className}
+        placeholder={placeholder}
+      />
+      {error && <p className="lp-hint">Google Places failed to load — manual entry only.</p>}
+    </>
   );
 }
