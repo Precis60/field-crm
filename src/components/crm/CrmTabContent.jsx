@@ -2694,6 +2694,8 @@ function InvoiceDetail({ id, crm, onBack }) {
 
   function startEdit() {
     setErr('');
+    const discountLine = (invoice.invoice_lines || []).find((l) => l.cost_type === 'labour' && /Labour discount/i.test(l.description || ''));
+    const discountPercent = discountLine ? (Number((discountLine.description.match(/\d+(?:\.\d+)?/) || ['0'])[0]) || 0) : 0;
     setEditDraft({
       customer_id: invoice.customer_id || '',
       invoice_number: invoice.invoice_number || '',
@@ -2702,7 +2704,9 @@ function InvoiceDetail({ id, crm, onBack }) {
       issued_at: datePart(invoice.issued_at),
       due_at: datePart(invoice.due_at),
       notes: invoice.notes || '',
-      lines: (invoice.invoice_lines || []).map((l) => ({
+      labourDiscount: discountPercent,
+      discountId: discountLine ? discountLine.id : null,
+      lines: (invoice.invoice_lines || []).filter((l) => l !== discountLine).map((l) => ({
         id: l.id,
         description: l.description || '',
         quantity: l.quantity != null ? String(l.quantity) : '',
@@ -2722,12 +2726,14 @@ function InvoiceDetail({ id, crm, onBack }) {
     }
     setBusy(true);
     try {
-      let subtotal = 0;
+      let rawLabourSubtotal = 0;
+      let expensesSubtotal = 0;
       for (const line of editDraft.lines) {
         const qty = Number(line.quantity) || 0;
         const rate = Number(line.unit_rate) || 0;
         const amount = Math.round(qty * rate * 100) / 100;
-        subtotal += amount;
+        if (line.cost_type === 'labour') rawLabourSubtotal += amount;
+        else expensesSubtotal += amount;
         await crm.updateInvoiceLine(line.id, {
           description: line.description.trim(),
           quantity: qty,
@@ -2735,9 +2741,33 @@ function InvoiceDetail({ id, crm, onBack }) {
           amount,
         });
       }
+      const discountPercent = Math.max(0, Math.min(100, Number(editDraft.labourDiscount) || 0));
+      const discountAmount = discountPercent > 0 && rawLabourSubtotal > 0
+        ? Math.round(rawLabourSubtotal * (discountPercent / 100) * 100) / 100
+        : 0;
+
+      if (discountAmount > 0) {
+        const discountLine = {
+          description: `Labour discount (${discountPercent}%)`,
+          quantity: 1,
+          unit_rate: -discountAmount,
+          amount: -discountAmount,
+          cost_type: 'labour',
+        };
+        if (editDraft.discountId) {
+          await crm.updateInvoiceLine(editDraft.discountId, discountLine);
+        } else {
+          await crm.createInvoiceLines(id, [{ id: uid(), ...discountLine }]);
+        }
+      } else if (editDraft.discountId) {
+        await crm.deleteInvoiceLine(editDraft.discountId);
+      }
+
+      const labourSubtotal = Math.round((rawLabourSubtotal - discountAmount) * 100) / 100;
+      const subtotal = Math.round((labourSubtotal + expensesSubtotal) * 100) / 100;
       const tax = Math.round(subtotal * 0.1 * 100) / 100;
       const total = Math.round((subtotal + tax) * 100) / 100;
-      const { lines, ...invoicePatch } = editDraft;
+      const { lines, labourDiscount, discountId, ...invoicePatch } = editDraft;
       await crm.updateInvoice(id, { ...invoicePatch, subtotal, tax, total, updated_at: new Date().toISOString() });
       await reload();
       setEditing(false);
@@ -2804,6 +2834,61 @@ function InvoiceDetail({ id, crm, onBack }) {
                 ))}
               </div>
             </Field>
+            {(() => {
+              const discountPercent = Math.max(0, Math.min(100, Number(editDraft.labourDiscount) || 0));
+              const rawLabour = editDraft.lines.filter((l) => l.cost_type === 'labour').reduce((sum, l) => sum + (Number(l.quantity) || 0) * (Number(l.unit_rate) || 0), 0);
+              const discountAmount = discountPercent > 0 && rawLabour > 0 ? Math.round(rawLabour * (discountPercent / 100) * 100) / 100 : 0;
+              const labourSubtotal = Math.round((rawLabour - discountAmount) * 100) / 100;
+              const expensesSubtotal = editDraft.lines.filter((l) => l.cost_type !== 'labour').reduce((sum, l) => sum + (Number(l.quantity) || 0) * (Number(l.unit_rate) || 0), 0);
+              const subtotal = Math.round((labourSubtotal + expensesSubtotal) * 100) / 100;
+              const tax = Math.round(subtotal * 0.1 * 100) / 100;
+              const total = subtotal + tax;
+              return (
+                <>
+                  <div className="lp-row2">
+                    <Field label="Labour discount %">
+                      <input className="lp-input" type="number" min="0" max="100" step="0.01" value={editDraft.labourDiscount} onChange={(e) => setEditDraft((d) => ({ ...d, labourDiscount: e.target.value }))} />
+                    </Field>
+                  </div>
+                  <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 8, padding: 16 }}>
+                    {discountPercent > 0 && rawLabour > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, color: 'var(--muted)' }}>
+                        <span>Labour (before discount)</span>
+                        <span>{money(rawLabour)}</span>
+                      </div>
+                    )}
+                    {discountPercent > 0 && rawLabour > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, color: 'var(--muted)' }}>
+                        <span>Labour discount ({discountPercent}%)</span>
+                        <span>-{money(discountAmount)}</span>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <span>Labour</span>
+                      <span>{money(labourSubtotal)}</span>
+                    </div>
+                    {expensesSubtotal > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <span>Expenses</span>
+                        <span>{money(expensesSubtotal)}</span>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontWeight: 600 }}>
+                      <span>Subtotal</span>
+                      <span>{money(subtotal)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <span>GST (10%)</span>
+                      <span>{money(tax)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.1rem' }}>
+                      <span>Total</span>
+                      <span>{money(total)}</span>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
             <div className='no-print' style={{ display: 'flex', gap: 10 }}>
               <button className='lp-btn-ghost' type='button' onClick={() => setEditing(false)} disabled={busy}><X size={13} /> Cancel</button>
               <button className='lp-btn-ghost' type='submit' disabled={busy}><Check size={13} /> Save</button>

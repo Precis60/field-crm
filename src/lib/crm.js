@@ -321,6 +321,10 @@ export function createCrmApi(supabaseFetch) {
     await supabaseFetch(`/invoice_lines?id=eq.${id}`, { method: "PATCH", body: patch });
   }
 
+  async function deleteInvoiceLine(id) {
+    await supabaseFetch(`/invoice_lines?id=eq.${id}`, { method: "DELETE" });
+  }
+
   async function updateInvoice(id, patch) {
     await supabaseFetch(`/invoices?id=eq.${id}`, {
       method: "PATCH",
@@ -484,6 +488,7 @@ export function createCrmApi(supabaseFetch) {
     createInvoice,
     createInvoiceLines,
     updateInvoiceLine,
+    deleteInvoiceLine,
     updateInvoice,
     deleteInvoice,
     draftInvoiceFromProject,
