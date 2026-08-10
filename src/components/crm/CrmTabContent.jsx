@@ -1468,6 +1468,7 @@ function TimesheetsSection({ projectId, customerId, crm, uid }) {
     startAt: "",
     endAt: "",
     notes: "",
+    billable: true,
     expenses: [{ description: "", amount: "" }],
     followUps: [{ description: "" }],
   });
@@ -1497,6 +1498,7 @@ function TimesheetsSection({ projectId, customerId, crm, uid }) {
           start_at: fromLocalInputMelbourne(draft.startAt).toISOString(),
           end_at: draft.endAt ? fromLocalInputMelbourne(draft.endAt).toISOString() : null,
           notes: draft.notes.trim() || null,
+          billable: Boolean(draft.billable),
           expenses,
           follow_ups: followUps,
         });
@@ -1508,6 +1510,7 @@ function TimesheetsSection({ projectId, customerId, crm, uid }) {
           start_at: fromLocalInputMelbourne(draft.startAt).toISOString(),
           end_at: draft.endAt ? fromLocalInputMelbourne(draft.endAt).toISOString() : null,
           notes: draft.notes.trim() || null,
+          billable: Boolean(draft.billable),
           expenses,
           follow_ups: followUps,
           created_at: new Date().toISOString(),
@@ -1542,6 +1545,7 @@ function TimesheetsSection({ projectId, customerId, crm, uid }) {
       startAt: t.start_at ? toISOStringLocal(new Date(t.start_at)) : "",
       endAt: t.end_at ? toISOStringLocal(new Date(t.end_at)) : "",
       notes: t.notes || "",
+      billable: t.billable !== false,
       expenses: t.expenses?.length ? t.expenses.map((e) => ({ description: e.description || "", amount: e.amount != null ? String(e.amount) : "" })) : empty().expenses,
       followUps: t.follow_ups?.length ? t.follow_ups.map((f) => ({ description: f.description || "" })) : empty().followUps,
     });
@@ -1651,11 +1655,25 @@ function TimesheetsSection({ projectId, customerId, crm, uid }) {
       .finally(() => setBusy(false));
   }
 
+  function toggleBillable(id, billable) {
+    setBusy(true); setErr("");
+    crm.updateTimesheet(id, { billable: !billable })
+      .then(() => refresh())
+      .catch((e) => setErr(e.message || "Couldn't update billable status."))
+      .finally(() => setBusy(false));
+  }
+
   const totalInvoiced = timesheets
     .filter((t) => t.invoiced && t.end_at)
     .reduce((sum, t) => sum + hoursBetween(t.start_at, t.end_at), 0);
   const totalUninvoiced = timesheets
     .filter((t) => !t.invoiced && t.end_at)
+    .reduce((sum, t) => sum + hoursBetween(t.start_at, t.end_at), 0);
+  const totalBillable = timesheets
+    .filter((t) => t.billable !== false && t.end_at)
+    .reduce((sum, t) => sum + hoursBetween(t.start_at, t.end_at), 0);
+  const totalUnbillable = timesheets
+    .filter((t) => t.billable === false && t.end_at)
     .reduce((sum, t) => sum + hoursBetween(t.start_at, t.end_at), 0);
 
   if (loading) return <p className="lp-hint">Loading time entries…</p>;
@@ -1665,7 +1683,7 @@ function TimesheetsSection({ projectId, customerId, crm, uid }) {
       <h4 className="lp-schedule-heading">Time entries</h4>
       {timesheets.length > 0 && (
         <div className="lp-hint" style={{ marginTop: 2, marginBottom: 8 }}>
-          <strong>Invoiced:</strong> {totalInvoiced.toFixed(2)}h · <strong>Uninvoiced:</strong> {totalUninvoiced.toFixed(2)}h
+          <strong>Invoiced:</strong> {totalInvoiced.toFixed(2)}h · <strong>Uninvoiced:</strong> {totalUninvoiced.toFixed(2)}h · <strong>Billable:</strong> {totalBillable.toFixed(2)}h · <strong>Unbillable:</strong> {totalUnbillable.toFixed(2)}h
         </div>
       )}
       {err && <p className="lp-error">{err}</p>}
@@ -1718,6 +1736,12 @@ function TimesheetsSection({ projectId, customerId, crm, uid }) {
           <Field label="Notes">
             <textarea className="lp-textarea" rows={2} value={draft.notes}
               onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))} />
+          </Field>
+          <Field label="Billable">
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "13px", cursor: "pointer" }}>
+              <input type="checkbox" checked={draft.billable} onChange={(e) => setDraft((d) => ({ ...d, billable: e.target.checked }))} />
+              This time is billable
+            </label>
           </Field>
           <Field label="Expenses">
             {draft.expenses.map((e, i) => (
@@ -1783,6 +1807,10 @@ function TimesheetsSection({ projectId, customerId, crm, uid }) {
                   {t.follow_ups?.length > 0 && <span className="lp-hint"><strong>Follow-ups:</strong> {t.follow_ups.map((f) => f.description).join(" · ")}</span>}
                 </div>
                 <div className="lp-person-actions" style={{ marginTop: 0, alignSelf: "flex-start", flexWrap: "nowrap" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "12.5px", color: "var(--muted)", cursor: "pointer" }}>
+                    <input type="checkbox" checked={t.billable !== false} onChange={() => toggleBillable(t.id, t.billable)} disabled={busy} />
+                    Billable
+                  </label>
                   <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "12.5px", color: "var(--muted)", cursor: t.invoiced ? "default" : "pointer" }}>
                     <input type="checkbox" checked={selected.includes(t.id)} onChange={() => toggleSelected(t.id)} disabled={busy || t.invoiced} />
                     Select
