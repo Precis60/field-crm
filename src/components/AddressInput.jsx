@@ -25,11 +25,12 @@ export default function AddressInput({ value, onChange, placeholder, className =
   const inputRef = useRef(null);
   const key = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
   const [ready, setReady] = useState(false);
-  const [error, setError] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [open, setOpen] = useState(false);
   const serviceRef = useRef(null);
   const onChangeRef = useRef(onChange);
+  const debounceRef = useRef(null);
 
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -38,8 +39,8 @@ export default function AddressInput({ value, onChange, placeholder, className =
   useEffect(() => {
     if (!key) return;
     loadGoogleMapsScript(key)
-      .then(() => { setReady(true); setError(false); })
-      .catch(() => { setReady(false); setError(true); });
+      .then(() => { setReady(true); setLoadError(false); })
+      .catch(() => { setReady(false); setLoadError(true); });
   }, [key]);
 
   useEffect(() => {
@@ -54,24 +55,30 @@ export default function AddressInput({ value, onChange, placeholder, className =
       setOpen(false);
       return;
     }
-    serviceRef.current.getPlacePredictions(
-      { input: text, types: ["address"] },
-      (predictions, status) => {
-        if (status !== window.google.maps.places.PlacesServiceStatus.OK || !predictions) {
-          setSuggestions([]);
-          setOpen(false);
-          return;
+    try {
+      serviceRef.current.getPlacePredictions(
+        { input: text },
+        (predictions, status) => {
+          if (status !== window.google.maps.places.PlacesServiceStatus.OK || !predictions) {
+            setSuggestions([]);
+            setOpen(false);
+            return;
+          }
+          setSuggestions(predictions.map((p) => ({ id: p.place_id, label: p.description })));
+          setOpen(true);
         }
-        setSuggestions(predictions.map((p) => ({ id: p.place_id, label: p.description })));
-        setOpen(true);
-      }
-    );
+      );
+    } catch (e) {
+      setSuggestions([]);
+      setOpen(false);
+    }
   }
 
   function handleInput(e) {
     const text = e.target.value;
-    onChange(text);
-    fetchSuggestions(text);
+    onChangeRef.current(text);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchSuggestions(text), 250);
   }
 
   function select(s) {
@@ -101,7 +108,7 @@ export default function AddressInput({ value, onChange, placeholder, className =
         ref={inputRef}
         value={value ?? ""}
         onChange={handleInput}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onBlur={() => setTimeout(() => setOpen(false), 120)}
         onFocus={() => { if (suggestions.length) setOpen(true); }}
         className={className}
         placeholder={placeholder}
@@ -145,7 +152,7 @@ export default function AddressInput({ value, onChange, placeholder, className =
           ))}
         </div>
       )}
-      {error && <p className="lp-hint">Google Places failed to load — manual entry only.</p>}
+      {loadError && <p className="lp-hint">Google Places failed to load — manual entry only.</p>}
     </div>
   );
 }
