@@ -3,6 +3,7 @@ import {
   Check, X, AlertTriangle, Plus, Trash2, Search, Building2, Users,
   Pencil, ChevronRight, ArrowLeft, Settings, Clock, CalendarDays,
 } from "lucide-react";
+import AddressInput from "../AddressInput.jsx";
 
 const CUSTOMER_STATUSES = ["active", "prospect", "inactive"];
 const PROJECT_STATUSES = [
@@ -265,8 +266,7 @@ function CustomersPanel({ crm, uid, sites = [] }) {
         </Field>
       </div>
       <Field label="Billing address">
-        <textarea className="lp-textarea" rows={2} value={draft.billing_address}
-          onChange={(e) => setDraft((d) => ({ ...d, billing_address: e.target.value }))} />
+        <AddressInput value={draft.billing_address} onChange={(v) => setDraft((d) => ({ ...d, billing_address: v }))} placeholder="" />
       </Field>
       <Field label="Site contact">
         <select className="lp-input" value={draft.siteContactId}
@@ -2154,7 +2154,7 @@ function CalendarPanel({ crm, uid }) {
           )}
           <div className="lp-row2">
             <Field label="Site address">
-              <input className="lp-input" value={draft.siteAddress} onChange={(e) => setDraft((d) => ({ ...d, siteAddress: e.target.value }))} />
+              <AddressInput value={draft.siteAddress} onChange={(v) => setDraft((d) => ({ ...d, siteAddress: v }))} />
             </Field>
             <Field label="Site contact">
               <select className="lp-input" value={draft.contactId}
@@ -3020,7 +3020,7 @@ function SuppliersPanel({ crm, uid }) {
           <input className="lp-input" value={draft.abn} onChange={(e) => setDraft((d) => ({ ...d, abn: e.target.value }))} />
         </Field>
         <Field label="Address">
-          <input className="lp-input" value={draft.address} onChange={(e) => setDraft((d) => ({ ...d, address: e.target.value }))} />
+          <AddressInput value={draft.address} onChange={(v) => setDraft((d) => ({ ...d, address: v }))} />
         </Field>
       </div>
       <Field label="Notes">

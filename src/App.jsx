@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { createCrmApi } from "./lib/crm.js";
 import CrmTabContent from "./components/crm/CrmTabContent.jsx";
+import AddressInput from "./components/AddressInput.jsx";
 
 /* ---------------------------------------------------------------
    PROPERTY MAINTENANCE — Property & Project Management system
@@ -3145,8 +3146,7 @@ function AdminPanel() {
                     onChange={(e) => setNewSite((d) => ({ ...d, name: e.target.value }))} />
                 </Field>
                 <Field label="Address">
-                  <input className="lp-input" value={newSite.address} placeholder="Optional"
-                    onChange={(e) => setNewSite((d) => ({ ...d, address: e.target.value }))} />
+                  <AddressInput value={newSite.address} onChange={(v) => setNewSite((d) => ({ ...d, address: v }))} placeholder="Optional" />
                 </Field>
                 <Field label="Site contact">
                   <input className="lp-input" value={newSite.contact_name} placeholder="Optional"
@@ -3190,8 +3190,7 @@ function AdminPanel() {
                           onChange={(e) => setSiteDraft((d) => ({ ...d, name: e.target.value }))} />
                       </Field>
                       <Field label="Address">
-                        <input className="lp-input" value={siteDraft.address} placeholder="e.g. 14 Riverbend Rd, Kenthurst"
-                          onChange={(e) => setSiteDraft((d) => ({ ...d, address: e.target.value }))} />
+                        <AddressInput value={siteDraft.address} onChange={(v) => setSiteDraft((d) => ({ ...d, address: v }))} placeholder="e.g. 14 Riverbend Rd, Kenthurst" />
                       </Field>
                       <Field label="Site contact">
                         <input className="lp-input" value={siteDraft.contact_name}
