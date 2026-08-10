@@ -1685,6 +1685,12 @@ function CalendarPanel({ crm, uid }) {
   const [projects, setProjects] = useState([]);
   const [contacts, setContacts] = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [siteTaskCategories, setSiteTaskCategories] = useState([]);
+  const [creatingSiteTask, setCreatingSiteTask] = useState(false);
+  const [taskCategoryId, setTaskCategoryId] = useState("");
+  const [taskName, setTaskName] = useState("");
+  const [taskDue, setTaskDue] = useState("");
+  const [taskDesc, setTaskDesc] = useState("");
   const [selectedTaskIds, setSelectedTaskIds] = useState([]);
   const [msg, setMsg] = useState("");
 
@@ -1692,6 +1698,7 @@ function CalendarPanel({ crm, uid }) {
     crm.listProjects({ activeOnly: true }).then((rows) => setProjects(rows || [])).catch(() => setProjects([]));
     crm.listContacts().then((rows) => setContacts(rows || [])).catch(() => setContacts([]));
     crm.listSiteTasks().then((rows) => setTasks(rows || [])).catch(() => setTasks([]));
+    crm.listSiteTaskCategories().then((rows) => setSiteTaskCategories(rows || [])).catch(() => setSiteTaskCategories([]));
   }, [crm]);
 
   async function refresh() {
@@ -1776,6 +1783,33 @@ function CalendarPanel({ crm, uid }) {
       setErr(e.message || "Couldn't add time entry.");
     }
     setBusy(false);
+  }
+
+  async function createSiteTask() {
+    setErr("");
+    try {
+      await crm.createSiteTask({
+        id: uid(),
+        site_id: draft.siteId,
+        category_id: taskCategoryId,
+        name: taskName.trim(),
+        description: taskDesc.trim() || null,
+        due_date: taskDue || null,
+        start_date: null,
+        end_date: null,
+        status: "not_started",
+        active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+      setCreatingSiteTask(false);
+      setTaskCategoryId("");
+      setTaskName("");
+      setTaskDue("");
+      setTaskDesc("");
+    } catch (e) {
+      setErr(e.message || "Couldn't create site task.");
+    }
   }
 
   async function remove(id) {
@@ -2010,6 +2044,36 @@ function CalendarPanel({ crm, uid }) {
             </button>
             <button className="lp-btn-ghost" onClick={() => { setAdding(false); setEditing(null); setDraft(empty()); setErr(""); setMsg(""); }}><X size={13} /> Cancel</button>
           </div>
+          {!creatingSiteTask && draft.siteId && (
+            <div className="lp-person-actions" style={{ marginTop: 8 }}>
+              <button className="lp-btn-ghost" onClick={() => { setCreatingSiteTask(true); setTaskCategoryId(""); setTaskName(draft.projectName || draft.siteName || draft.category); setTaskDue(draft.startAt ? draft.startAt.slice(0, 10) : ""); setTaskDesc(draft.notes); }}><Plus size={13} /> Create site task</button>
+            </div>
+          )}
+          {creatingSiteTask && (
+            <div style={{ marginTop: 16 }}>
+              <Field label="Task category">
+                <select className="lp-input" value={taskCategoryId} onChange={(e) => setTaskCategoryId(e.target.value)}>
+                  <option value="">Select category…</option>
+                  {siteTaskCategories.filter((c) => !c.site_id || c.site_id === draft.siteId).map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Task name">
+                <input className="lp-input" value={taskName} onChange={(e) => setTaskName(e.target.value)} />
+              </Field>
+              <Field label="Due date">
+                <input className="lp-input" type="date" value={taskDue} onChange={(e) => setTaskDue(e.target.value)} />
+              </Field>
+              <Field label="Description">
+                <textarea className="lp-textarea" rows={2} value={taskDesc} onChange={(e) => setTaskDesc(e.target.value)} />
+              </Field>
+              <div className="lp-person-actions">
+                <button className="lp-btn-ghost" onClick={createSiteTask}><Check size={13} /> Save site task</button>
+                <button className="lp-btn-ghost" onClick={() => { setCreatingSiteTask(false); setTaskCategoryId(""); setTaskName(""); setTaskDue(""); setTaskDesc(""); }}><X size={13} /> Cancel</button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
