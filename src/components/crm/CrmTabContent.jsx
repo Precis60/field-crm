@@ -1676,6 +1676,9 @@ function CalendarPanel({ crm, uid }) {
     siteContact: "",
     contactId: "",
     notes: "",
+    plannedWorks: "",
+    worksCompleted: "",
+    followUp: "",
     category: EVENT_CATEGORIES[0].label,
     startAt: "",
     endAt: "",
@@ -1728,6 +1731,9 @@ function CalendarPanel({ crm, uid }) {
         site_address: draft.siteAddress.trim() || null,
         site_contact: draft.siteContact.trim() || null,
         notes: draft.notes.trim() || null,
+        planned_works: draft.plannedWorks.trim() || null,
+        works_completed: draft.worksCompleted.trim() || null,
+        follow_up: draft.followUp.trim() || null,
         category: draft.category,
         start_at: new Date(draft.startAt).toISOString(),
         end_at: draft.endAt ? new Date(draft.endAt).toISOString() : null,
@@ -1840,6 +1846,9 @@ function CalendarPanel({ crm, uid }) {
       siteContact: e.site_contact || "",
       contactId: e.contact_id || "",
       notes: e.notes || "",
+      plannedWorks: e.planned_works || "",
+      worksCompleted: e.works_completed || "",
+      followUp: e.follow_up || "",
       category: e.category,
       startAt: e.start_at ? toISOStringLocal(new Date(e.start_at)) : "",
       endAt: e.end_at ? toISOStringLocal(new Date(e.end_at)) : "",
@@ -2026,6 +2035,15 @@ function CalendarPanel({ crm, uid }) {
           </Field>
           <Field label="Notes">
             <textarea className="lp-textarea" rows={2} value={draft.notes} onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))} />
+          </Field>
+          <Field label="Planned works">
+            <textarea className="lp-textarea" rows={2} value={draft.plannedWorks} onChange={(e) => setDraft((d) => ({ ...d, plannedWorks: e.target.value }))} />
+          </Field>
+          <Field label="Works completed">
+            <textarea className="lp-textarea" rows={2} value={draft.worksCompleted} onChange={(e) => setDraft((d) => ({ ...d, worksCompleted: e.target.value }))} />
+          </Field>
+          <Field label="Follow up">
+            <textarea className="lp-textarea" rows={2} value={draft.followUp} onChange={(e) => setDraft((d) => ({ ...d, followUp: e.target.value }))} />
           </Field>
           <div className="lp-person-actions">
             <button className="lp-btn-ghost" onClick={save} disabled={busy}><Check size={13} /> {busy ? "Saving…" : editing ? "Update event" : "Add event"}</button>

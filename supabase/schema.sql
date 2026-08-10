@@ -563,12 +563,19 @@ create table if not exists events (
   site_contact text,
   contact_id text references contacts(id) on delete set null,
   notes text,
+  planned_works text,
+  works_completed text,
+  follow_up text,
   category text not null,
   start_at timestamptz not null,
   end_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table events add column if not exists planned_works text;
+alter table events add column if not exists works_completed text;
+alter table events add column if not exists follow_up text;
 
 create index if not exists events_start_at_idx on events (start_at);
 

@@ -403,7 +403,7 @@ export function createCrmApi(supabaseFetch) {
   /* ---------- Calendar events ---------- */
 
   async function listEvents({ from, to } = {}) {
-    let path = "/events?select=id,site_id,site_name,project_name,site_address,site_contact,contact_id,notes,category,start_at,end_at,created_at,updated_at&order=start_at";
+    let path = "/events?select=id,site_id,site_name,project_name,site_address,site_contact,contact_id,notes,planned_works,works_completed,follow_up,category,start_at,end_at,created_at,updated_at&order=start_at";
     if (from) path += `&start_at=gte.${encodeURIComponent(from)}`;
     if (to) path += `&start_at=lt.${encodeURIComponent(to)}`;
     return (await supabaseFetch(path).catch(() => [])) || [];
