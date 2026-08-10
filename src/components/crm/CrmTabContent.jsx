@@ -1837,6 +1837,11 @@ function TimesheetsSection({ projectId, customerId, crm, uid }) {
                     <input type="checkbox" checked={selected.includes(t.id)} onChange={() => toggleSelected(t.id)} disabled={busy || t.invoiced} />
                     Select
                   </label>
+                  {t.invoiced && (
+                    <button className="lp-btn-ghost" disabled={busy} onClick={() => toggleInvoiced(t.id, t.invoiced)}>
+                      <X size={13} /> Uninvoice
+                    </button>
+                  )}
                   <button className="lp-btn-ghost" disabled={busy} onClick={() => edit(t)}>
                     <Pencil size={13} />
                   </button>
