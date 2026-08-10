@@ -2969,7 +2969,7 @@ function SiteTasksPanel({ crm, uid, sites = [] }) {
             site_address: site?.address || "",
             site_contact: p.customers?.name || "",
             notes: `Task: ${task.name}${task.description ? " - " + task.description : ""}`,
-            category: task.site_task_categories?.name || "Site task",
+            category: p.name || "Site task",
             start_at: new Date(start).toISOString(),
             end_at: new Date(end).toISOString(),
             created_at: new Date().toISOString(),
