@@ -2680,6 +2680,13 @@ function InvoiceDetail({ id, crm, onBack }) {
       issued_at: datePart(invoice.issued_at),
       due_at: datePart(invoice.due_at),
       notes: invoice.notes || '',
+      lines: (invoice.invoice_lines || []).map((l) => ({
+        id: l.id,
+        description: l.description || '',
+        quantity: l.quantity != null ? String(l.quantity) : '',
+        unit_rate: l.unit_rate != null ? String(l.unit_rate) : '',
+        cost_type: l.cost_type || 'labour',
+      })),
     });
     setEditing(true);
   }
@@ -2693,7 +2700,23 @@ function InvoiceDetail({ id, crm, onBack }) {
     }
     setBusy(true);
     try {
-      await crm.updateInvoice(id, { ...editDraft, updated_at: new Date().toISOString() });
+      let subtotal = 0;
+      for (const line of editDraft.lines) {
+        const qty = Number(line.quantity) || 0;
+        const rate = Number(line.unit_rate) || 0;
+        const amount = Math.round(qty * rate * 100) / 100;
+        subtotal += amount;
+        await crm.updateInvoiceLine(line.id, {
+          description: line.description.trim(),
+          quantity: qty,
+          unit_rate: rate,
+          amount,
+        });
+      }
+      const tax = Math.round(subtotal * 0.1 * 100) / 100;
+      const total = Math.round((subtotal + tax) * 100) / 100;
+      const { lines, ...invoicePatch } = editDraft;
+      await crm.updateInvoice(id, { ...invoicePatch, subtotal, tax, total, updated_at: new Date().toISOString() });
       await reload();
       setEditing(false);
       setEditDraft(null);
@@ -2747,6 +2770,17 @@ function InvoiceDetail({ id, crm, onBack }) {
             </Field>
             <Field label='Terms & Conditions'>
               <textarea className='lp-textarea' rows={4} value={editDraft.notes} onChange={(e) => setEditDraft((d) => ({ ...d, notes: e.target.value }))} />
+            </Field>
+            <Field label='Line items'>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {editDraft.lines.map((l, idx) => (
+                  <div key={l.id} style={{ display: 'grid', gridTemplateColumns: '2fr 80px 120px', gap: 8, alignItems: 'center' }}>
+                    <input className='lp-input' value={l.description} onChange={(e) => setEditDraft((d) => ({ ...d, lines: d.lines.map((x, i) => i === idx ? { ...x, description: e.target.value } : x) }))} />
+                    <input className='lp-input' type='number' step='0.01' value={l.quantity} onChange={(e) => setEditDraft((d) => ({ ...d, lines: d.lines.map((x, i) => i === idx ? { ...x, quantity: e.target.value } : x) }))} />
+                    <input className='lp-input' type='number' step='0.01' value={l.unit_rate} onChange={(e) => setEditDraft((d) => ({ ...d, lines: d.lines.map((x, i) => i === idx ? { ...x, unit_rate: e.target.value } : x) }))} />
+                  </div>
+                ))}
+              </div>
             </Field>
             <div className='no-print' style={{ display: 'flex', gap: 10 }}>
               <button className='lp-btn-ghost' type='button' onClick={() => setEditing(false)} disabled={busy}><X size={13} /> Cancel</button>
