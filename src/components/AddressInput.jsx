@@ -28,6 +28,7 @@ export default function AddressInput({ value, onChange, placeholder, className =
   const [loadError, setLoadError] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [open, setOpen] = useState(false);
+  const [searchError, setSearchError] = useState("");
   const serviceRef = useRef(null);
   const onChangeRef = useRef(onChange);
   const debounceRef = useRef(null);
@@ -59,24 +60,34 @@ export default function AddressInput({ value, onChange, placeholder, className =
       serviceRef.current.getPlacePredictions(
         { input: text },
         (predictions, status) => {
+          if (status === window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+            setSuggestions([]);
+            setOpen(false);
+            setSearchError("");
+            return;
+          }
           if (status !== window.google.maps.places.PlacesServiceStatus.OK || !predictions) {
             setSuggestions([]);
             setOpen(false);
+            setSearchError(`Google Places: ${status}`);
             return;
           }
           setSuggestions(predictions.map((p) => ({ id: p.place_id, label: p.description })));
           setOpen(true);
+          setSearchError("");
         }
       );
     } catch (e) {
       setSuggestions([]);
       setOpen(false);
+      setSearchError("Google Places request failed");
     }
   }
 
   function handleInput(e) {
     const text = e.target.value;
     onChangeRef.current(text);
+    setSearchError("");
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => fetchSuggestions(text), 250);
   }
@@ -153,6 +164,7 @@ export default function AddressInput({ value, onChange, placeholder, className =
         </div>
       )}
       {loadError && <p className="lp-hint">Google Places failed to load — manual entry only.</p>}
+      {searchError && <p className="lp-hint" style={{ color: "#B4483A" }}>{searchError}</p>}
     </div>
   );
 }
