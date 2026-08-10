@@ -2523,25 +2523,34 @@ function InvoiceDetail({ id, crm, onBack }) {
   const fmt = (d) => d ? new Date(d).toLocaleDateString("en-AU") : "—";
   const get = (k) => settings[k] || "";
 
+  const STATUS_STYLES = {
+    paid: { bg: "#e7f3ea", fg: "#2f6d3f" },
+    draft: { bg: "#f1eee6", fg: "#6b6455" },
+    sent: { bg: "#e8eef7", fg: "#31517d" },
+    overdue: { bg: "#fbe9e7", fg: "#a13c2d" },
+    void: { bg: "#eee", fg: "#888" },
+  };
+  const statusStyle = STATUS_STYLES[invoice.status] || STATUS_STYLES.draft;
+
   const renderTable = (rows, isLabour) => (
-    <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 16 }}>
+    <table className="lp-inv-table">
       <thead>
-        <tr style={{ borderBottom: "2px solid #000" }}>
-          <th style={{ textAlign: "left", padding: "6px 0" }}>#</th>
-          <th style={{ textAlign: "left", padding: "6px 0" }}>{isLabour ? "Task & Description" : "Description"}</th>
-          <th style={{ textAlign: "right", padding: "6px 0" }}>{isLabour ? "Project Hours" : "Qty"}</th>
-          <th style={{ textAlign: "right", padding: "6px 0" }}>Rate</th>
-          <th style={{ textAlign: "right", padding: "6px 0" }}>Amount</th>
+        <tr>
+          <th className="lp-inv-th" style={{ width: 32 }}>#</th>
+          <th className="lp-inv-th lp-inv-th-left">{isLabour ? "Task & Description" : "Description"}</th>
+          <th className="lp-inv-th lp-inv-th-right">{isLabour ? "Hours" : "Qty"}</th>
+          <th className="lp-inv-th lp-inv-th-right">Rate</th>
+          <th className="lp-inv-th lp-inv-th-right">Amount</th>
         </tr>
       </thead>
       <tbody>
         {rows.map((l, idx) => (
-          <tr key={l.id || idx} style={{ borderBottom: "1px solid #ddd" }}>
-            <td style={{ padding: "6px 0" }}>{idx + 1}</td>
-            <td style={{ padding: "6px 0" }}>{l.description || "—"}</td>
-            <td style={{ textAlign: "right", padding: "6px 0" }}>{l.quantity}</td>
-            <td style={{ textAlign: "right", padding: "6px 0" }}>{money(l.unit_rate)}</td>
-            <td style={{ textAlign: "right", padding: "6px 0" }}>{money(l.amount)}</td>
+          <tr key={l.id || idx} className="lp-inv-tr">
+            <td className="lp-inv-td">{idx + 1}</td>
+            <td className="lp-inv-td lp-inv-td-left">{l.description || "—"}</td>
+            <td className="lp-inv-td lp-inv-td-right">{l.quantity}</td>
+            <td className="lp-inv-td lp-inv-td-right">{money(l.unit_rate)}</td>
+            <td className="lp-inv-td lp-inv-td-right lp-inv-td-amount">{money(l.amount)}</td>
           </tr>
         ))}
       </tbody>
@@ -2550,7 +2559,7 @@ function InvoiceDetail({ id, crm, onBack }) {
 
   return (
     <div className="lp-settings lp-settings--wide">
-      <style>{`@media print { .no-print { display: none !important; } }`}</style>
+      <style>{`@media print { .no-print { display: none !important; } body { background: #fff !important; } }`}</style>
       {err && <p className='lp-error'>{err}</p>}
       <div className='no-print' style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
         <button className='lp-btn-ghost' onClick={onBack}><ArrowLeft size={13} /> Back</button>
@@ -2558,83 +2567,95 @@ function InvoiceDetail({ id, crm, onBack }) {
         <button className='lp-btn-ghost' onClick={startEdit} disabled={busy}><Pencil size={13} /> Edit</button>
         <button className='lp-btn-danger' onClick={handleDelete} disabled={busy}><Trash2 size={13} /> Delete</button>
       </div>
-      <div style={{ background: "#fff", color: "#000", padding: 32, maxWidth: 800, margin: "0 auto", border: "1px solid var(--line)", borderRadius: 8 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24 }}>
-          <div style={{ maxWidth: 360 }}>
-            <img src={get("business_logo_url") || "./pca-logo.png"} alt="" style={{ maxWidth: 160, maxHeight: 100, marginBottom: 10 }} />
-            <div style={{ fontSize: 20, fontWeight: "bold" }}>{get("business_name") || "Business name — set in Settings"}</div>
-            <div>{get("business_address") || "Address — set in Settings"}</div>
-            <div>{[get("business_phone"), get("business_email")].filter(Boolean).join(" · ") || "Phone / email — set in Settings"}</div>
-            {get("business_abn") ? <div>ABN: {get("business_abn")}</div> : null}
+
+      <div className="lp-invoice-doc">
+        <div className="lp-inv-header">
+          <div className="lp-inv-business">
+            {(get("business_logo_url") || "./pca-logo.png") && (
+              <img className="lp-inv-logo" src={get("business_logo_url") || "./pca-logo.png"} alt="" />
+            )}
+            <div className="lp-inv-business-name">{get("business_name") || "Business name — set in Settings"}</div>
+            <div className="lp-inv-business-line">{get("business_address") || "Address — set in Settings"}</div>
+            <div className="lp-inv-business-line">{[get("business_phone"), get("business_email")].filter(Boolean).join(" · ") || "Phone / email — set in Settings"}</div>
+            {get("business_abn") ? <div className="lp-inv-business-line">ABN {get("business_abn")}</div> : null}
           </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 28, fontWeight: "bold" }}>INVOICE</div>
-            <div>{invoice.invoice_number}</div>
-            <div style={{ fontSize: 18, marginTop: 8, fontWeight: "bold" }}>Balance Due {money(total)}</div>
+          <div className="lp-inv-heading">
+            <div className="lp-inv-title">INVOICE</div>
+            <div className="lp-inv-number">{invoice.invoice_number}</div>
+            <span className="lp-inv-status" style={{ background: statusStyle.bg, color: statusStyle.fg }}>{(invoice.status || "draft").toUpperCase()}</span>
+            <div className="lp-inv-balance">
+              <span className="lp-inv-balance-label">Balance Due</span>
+              <span className="lp-inv-balance-amount">{money(total)}</span>
+            </div>
           </div>
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24 }}>
-          <div>
-            <div style={{ fontWeight: "bold", marginBottom: 4 }}>Bill To</div>
-            <div><strong>{c.name || invoice.customer_name || "—"}</strong></div>
-            <div>{c.billing_address || invoice.billing_address || "—"}</div>
-            <div>{[c.phone, c.email].filter(Boolean).join(" · ") || null}</div>
+
+        <div className="lp-inv-meta">
+          <div className="lp-inv-meta-block">
+            <div className="lp-inv-meta-title">Bill To</div>
+            <div className="lp-inv-meta-strong">{c.name || invoice.customer_name || "—"}</div>
+            <div className="lp-inv-meta-line">{c.billing_address || invoice.billing_address || "—"}</div>
+            {[c.phone, c.email].filter(Boolean).length > 0 && (
+              <div className="lp-inv-meta-line">{[c.phone, c.email].filter(Boolean).join(" · ")}</div>
+            )}
           </div>
-          <div style={{ textAlign: "right" }}>
-            <div><strong>Invoice Date</strong> {fmt(invoice.issued_at)}</div>
-            <div><strong>Terms</strong> {invoice.terms || "—"}</div>
-            <div><strong>Due Date</strong> {fmt(invoice.due_at)}</div>
+          <div className="lp-inv-meta-block lp-inv-meta-block-right">
+            <div className="lp-inv-meta-row"><span>Invoice Date</span><strong>{fmt(invoice.issued_at)}</strong></div>
+            <div className="lp-inv-meta-row"><span>Terms</span><strong>{invoice.terms || "—"}</strong></div>
+            <div className="lp-inv-meta-row"><span>Due Date</span><strong>{fmt(invoice.due_at)}</strong></div>
           </div>
         </div>
 
         {labour.length > 0 && (
-          <>
-            <div style={{ fontWeight: "bold", marginBottom: 8 }}>Labour</div>
+          <div className="lp-inv-section">
+            <div className="lp-inv-section-title">Labour</div>
             {renderTable(labour, true)}
-            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 24 }}>
-              <div style={{ minWidth: 200 }}>
-                <div style={{ display: "flex", justifyContent: "space-between" }}><span>Labour total (excl. GST)</span><span>{money(labourTotal)}</span></div>
-              </div>
+            <div className="lp-inv-section-total">
+              <span>Labour total (excl. GST)</span><span>{money(labourTotal)}</span>
             </div>
-          </>
+          </div>
         )}
 
         {expenses.length > 0 && (
-          <>
-            <div style={{ fontWeight: "bold", marginBottom: 8 }}>Expenses</div>
+          <div className="lp-inv-section">
+            <div className="lp-inv-section-title">Expenses</div>
             {renderTable(expenses, false)}
-            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 24 }}>
-              <div style={{ minWidth: 200 }}>
-                <div style={{ display: "flex", justifyContent: "space-between" }}><span>Expenses total (excl. GST)</span><span>{money(expensesTotal)}</span></div>
-              </div>
+            <div className="lp-inv-section-total">
+              <span>Expenses total (excl. GST)</span><span>{money(expensesTotal)}</span>
             </div>
-          </>
+          </div>
         )}
 
-        <div style={{ borderTop: "1px solid #000", paddingTop: 12, display: "flex", justifyContent: "flex-end", marginBottom: 24 }}>
-          <div style={{ minWidth: 200 }}>
-            {labour.length > 0 && <div style={{ display: "flex", justifyContent: "space-between" }}><span>Labour</span><span>{money(labourTotal)}</span></div>}
-            {expenses.length > 0 && <div style={{ display: "flex", justifyContent: "space-between" }}><span>Expenses</span><span>{money(expensesTotal)}</span></div>}
-            <div style={{ display: "flex", justifyContent: "space-between" }}><span>Subtotal (excl. GST)</span><span>{money(subtotal)}</span></div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}><span>GST (10%)</span><span>{money(tax)}</span></div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "bold" }}><span>Total (incl. GST)</span><span>{money(total)}</span></div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "bold" }}><span>Balance Due</span><span>{money(total)}</span></div>
+        <div className="lp-inv-totals-wrap">
+          <div className="lp-inv-totals-box">
+            {labour.length > 0 && <div className="lp-inv-totals-row"><span>Labour</span><span>{money(labourTotal)}</span></div>}
+            {expenses.length > 0 && <div className="lp-inv-totals-row"><span>Expenses</span><span>{money(expensesTotal)}</span></div>}
+            <div className="lp-inv-totals-row"><span>Subtotal (excl. GST)</span><span>{money(subtotal)}</span></div>
+            <div className="lp-inv-totals-row"><span>GST (10%)</span><span>{money(tax)}</span></div>
+            <div className="lp-inv-totals-row lp-inv-totals-row--strong"><span>Total (incl. GST)</span><span>{money(total)}</span></div>
+            <div className="lp-inv-totals-row lp-inv-totals-row--balance"><span>Balance Due</span><span>{money(total)}</span></div>
           </div>
         </div>
+
         {invoice.notes && (
-          <div style={{ borderTop: "1px solid #000", paddingTop: 12, marginBottom: 12 }}>
-            <div style={{ fontWeight: "bold", marginBottom: 4 }}>Notes & Conditions</div>
-            <div style={{ whiteSpace: "pre-wrap" }}>{invoice.notes}</div>
+          <div className="lp-inv-footer-section">
+            <div className="lp-inv-footer-title">Terms & Conditions</div>
+            <div className="lp-inv-footer-body">{invoice.notes}</div>
           </div>
         )}
-        <div style={{ borderTop: "1px solid #000", paddingTop: 12 }}>
-          <div style={{ fontWeight: "bold", marginBottom: 4 }}>Payment Details</div>
-          <div>Account Name: {get("business_account_name") || "—"}</div>
-          <div>Address: {get("business_bank_address") || "—"}</div>
-          <div>BSB: {get("business_bsb") || "—"}</div>
-          <div>Account Number: {get("business_account_number") || "—"}</div>
-          <div>ABN: {get("business_abn") || "—"}</div>
+
+        <div className="lp-inv-footer-section">
+          <div className="lp-inv-footer-title">Payment Details</div>
+          <div className="lp-inv-payment-grid">
+            <div><span className="lp-inv-payment-label">Account Name</span><span>{get("business_account_name") || "—"}</span></div>
+            <div><span className="lp-inv-payment-label">Bank Address</span><span>{get("business_bank_address") || "—"}</span></div>
+            <div><span className="lp-inv-payment-label">BSB</span><span>{get("business_bsb") || "—"}</span></div>
+            <div><span className="lp-inv-payment-label">Account Number</span><span>{get("business_account_number") || "—"}</span></div>
+            <div><span className="lp-inv-payment-label">ABN</span><span>{get("business_abn") || "—"}</span></div>
+          </div>
         </div>
+
+        <div className="lp-inv-thankyou">Thank you for your business.</div>
       </div>
     </div>
   );

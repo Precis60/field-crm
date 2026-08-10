@@ -3757,6 +3757,68 @@ body{margin:0;}
 .lp-invoice-totals-box{min-width:240px;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:14px 16px;}
 .lp-invoice-totals-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;color:var(--ink);}
 .lp-invoice-totals-row--grand{border-top:1px solid var(--line);margin-top:6px;padding-top:10px;font-weight:700;font-size:14.5px;}
+
+/* ---- Printable invoice document ---- */
+.lp-invoice-doc{background:#fff;color:#1a1a1a;max-width:800px;margin:0 auto;border:1px solid var(--line);border-radius:10px;padding:40px 44px;font-family:'Public Sans',sans-serif;box-shadow:0 2px 10px rgba(0,0,0,0.04);}
+.lp-inv-header{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;padding-bottom:22px;border-bottom:2px solid var(--brass);margin-bottom:22px;}
+.lp-inv-business{max-width:340px;}
+.lp-inv-logo{max-width:150px;max-height:90px;margin-bottom:10px;display:block;object-fit:contain;}
+.lp-inv-business-name{font-family:'Fraunces',serif;font-size:19px;font-weight:700;margin-bottom:4px;color:#1a1a1a;}
+.lp-inv-business-line{font-size:12.5px;line-height:1.6;color:#4a4a44;}
+.lp-inv-heading{text-align:right;flex-shrink:0;}
+.lp-inv-title{font-family:'Fraunces',serif;font-size:30px;font-weight:700;letter-spacing:.04em;color:#1a1a1a;}
+.lp-inv-number{font-size:13px;color:#6b6455;margin-top:2px;font-family:'IBM Plex Mono',monospace;}
+.lp-inv-status{display:inline-block;margin-top:8px;padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.05em;}
+.lp-inv-balance{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);}
+.lp-inv-balance-label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#8a8478;margin-bottom:2px;}
+.lp-inv-balance-amount{display:block;font-size:22px;font-weight:700;color:#1a1a1a;}
+.lp-inv-meta{display:flex;justify-content:space-between;gap:24px;background:#faf8f3;border:1px solid var(--line);border-radius:10px;padding:16px 20px;margin-bottom:28px;}
+.lp-inv-meta-block{font-size:13px;}
+.lp-inv-meta-block-right{text-align:right;}
+.lp-inv-meta-title{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#8a8478;font-weight:700;margin-bottom:6px;}
+.lp-inv-meta-strong{font-weight:700;font-size:14px;margin-bottom:3px;}
+.lp-inv-meta-line{color:#4a4a44;line-height:1.5;}
+.lp-inv-meta-row{display:flex;justify-content:space-between;gap:14px;font-size:12.5px;color:#4a4a44;padding:2px 0;}
+.lp-inv-meta-row strong{color:#1a1a1a;}
+.lp-inv-section{margin-bottom:24px;}
+.lp-inv-section-title{font-family:'Fraunces',serif;font-size:14.5px;font-weight:700;margin-bottom:10px;color:#1a1a1a;}
+.lp-inv-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+.lp-inv-th{text-align:left;padding:9px 10px;background:#f1eee6;color:#5c564a;font-size:11px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;border-bottom:1px solid var(--line);}
+.lp-inv-th:first-child{border-radius:6px 0 0 0;}
+.lp-inv-th:last-child{border-radius:0 6px 0 0;}
+.lp-inv-th-left{text-align:left;}
+.lp-inv-th-right{text-align:right;}
+.lp-inv-tr:nth-child(even){background:#fbfaf7;}
+.lp-inv-td{padding:9px 10px;border-bottom:1px solid #eee6d8;vertical-align:top;color:#333;}
+.lp-inv-td-left{text-align:left;}
+.lp-inv-td-right{text-align:right;font-family:'IBM Plex Mono',monospace;}
+.lp-inv-td-amount{font-weight:600;color:#1a1a1a;}
+.lp-inv-section-total{display:flex;justify-content:flex-end;gap:24px;font-size:12.5px;color:#5c564a;padding:8px 10px 0;font-weight:600;}
+.lp-inv-totals-wrap{display:flex;justify-content:flex-end;margin-bottom:28px;}
+.lp-inv-totals-box{min-width:260px;border:1px solid var(--line);border-radius:10px;padding:14px 18px;background:#faf8f3;}
+.lp-inv-totals-row{display:flex;justify-content:space-between;font-size:12.5px;color:#4a4a44;padding:4px 0;}
+.lp-inv-totals-row--strong{border-top:1px solid var(--line);margin-top:6px;padding-top:8px;font-weight:700;color:#1a1a1a;font-size:13.5px;}
+.lp-inv-totals-row--balance{font-weight:700;color:#8A6530;font-size:15px;padding-top:6px;}
+.lp-inv-footer-section{border-top:1px solid var(--line);padding-top:16px;margin-bottom:20px;}
+.lp-inv-footer-title{font-family:'Fraunces',serif;font-size:13px;font-weight:700;margin-bottom:8px;color:#1a1a1a;}
+.lp-inv-footer-body{font-size:12.5px;line-height:1.6;color:#4a4a44;white-space:pre-wrap;}
+.lp-inv-payment-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;font-size:12.5px;}
+.lp-inv-payment-grid > div{display:flex;justify-content:space-between;gap:10px;color:#333;border-bottom:1px dotted #e3ddcc;padding:3px 0;}
+.lp-inv-payment-label{color:#8a8478;}
+.lp-inv-thankyou{text-align:center;font-family:'Fraunces',serif;font-style:italic;font-size:13px;color:#8a8478;margin-top:8px;}
+@media (max-width:640px){
+  .lp-invoice-doc{padding:24px 18px;}
+  .lp-inv-header{flex-direction:column;}
+  .lp-inv-heading{text-align:left;}
+  .lp-inv-balance{border-top:none;padding-top:0;}
+  .lp-inv-meta{flex-direction:column;}
+  .lp-inv-meta-block-right{text-align:left;}
+  .lp-inv-meta-row{justify-content:flex-start;gap:6px;}
+  .lp-inv-payment-grid{grid-template-columns:1fr;}
+}
+@media print{
+  .lp-invoice-doc{border:none;box-shadow:none;padding:0;}
+}
 .lp-person-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
 .lp-person-head strong{font-family:'Fraunces',serif;font-size:14px;margin-right:8px;}
 .lp-person-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
