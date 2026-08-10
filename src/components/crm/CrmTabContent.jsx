@@ -1797,11 +1797,11 @@ function TimesheetsSection({ projectId, customerId, crm, uid }) {
               <div className="lp-person-head" style={{ alignItems: "flex-start" }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <strong style={{ fontSize: "1.05rem" }}>{new Date(t.start_at).toLocaleString("en-AU", { dateStyle: "short", timeStyle: "short" })}</strong>
+                    <strong style={{ fontSize: "1.05rem" }}>Start: {new Date(t.start_at).toLocaleString("en-AU", { dateStyle: "short", timeStyle: "short" })}</strong>
                     {t.end_at && <span className="lp-tag">{formatDuration(t.start_at, t.end_at)}</span>}
                     {t.invoiced && <span className="lp-tag">Invoiced</span>}
                   </div>
-                  {t.end_at && <span className="lp-hint">End: {new Date(t.end_at).toLocaleString("en-AU", { dateStyle: "short", timeStyle: "short" })}</span>}
+                  <span className="lp-hint">End: {t.end_at ? new Date(t.end_at).toLocaleString("en-AU", { dateStyle: "short", timeStyle: "short" }) : "—"}</span>
                   {t.notes && <span className="lp-hint">{t.notes}</span>}
                   {t.expenses?.length > 0 && <span className="lp-hint"><strong>Expenses:</strong> {t.expenses.map((e) => `${e.description} (${money(e.amount)})`).join(" · ")}</span>}
                   {t.follow_ups?.length > 0 && <span className="lp-hint"><strong>Follow-ups:</strong> {t.follow_ups.map((f) => f.description).join(" · ")}</span>}
