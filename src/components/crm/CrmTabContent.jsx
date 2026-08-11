@@ -2657,7 +2657,7 @@ function CalendarPanel({ crm, uid }) {
   );
 }
 
-function InvoiceDetail({ id, crm, onBack }) {
+function InvoiceDetail({ id, crm, uid, onBack }) {
   const [invoice, setInvoice] = useState(null);
   const [customers, setCustomers] = useState([]);
   const [settings, setSettings] = useState({});
@@ -2666,6 +2666,7 @@ function InvoiceDetail({ id, crm, onBack }) {
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const [editDraft, setEditDraft] = useState(null);
+  const [removedIds, setRemovedIds] = useState([]);
 
   const datePart = (d) => d ? new Date(d).toISOString().split('T')[0] : '';
 
@@ -2719,7 +2720,23 @@ function InvoiceDetail({ id, crm, onBack }) {
         cost_type: l.cost_type || 'labour',
       })),
     });
+    setRemovedIds([]);
     setEditing(true);
+  }
+
+  function addLine(costType) {
+    setEditDraft((d) => ({
+      ...d,
+      lines: [...d.lines, { id: '', description: '', quantity: '1', unit_rate: '', cost_type: costType }],
+    }));
+  }
+
+  function removeLine(idx) {
+    setEditDraft((d) => {
+      const removed = d.lines[idx];
+      if (removed && removed.id) setRemovedIds((prev) => [...prev, removed.id]);
+      return { ...d, lines: d.lines.filter((_, i) => i !== idx) };
+    });
   }
 
   async function saveEdit(e) {
@@ -2733,19 +2750,29 @@ function InvoiceDetail({ id, crm, onBack }) {
     try {
       let rawLabourSubtotal = 0;
       let expensesSubtotal = 0;
+      const newLines = [];
       for (const line of editDraft.lines) {
         const qty = Number(line.quantity) || 0;
         const rate = Number(line.unit_rate) || 0;
         const amount = Math.round(qty * rate * 100) / 100;
         if (line.cost_type === 'labour') rawLabourSubtotal += amount;
         else expensesSubtotal += amount;
-        await crm.updateInvoiceLine(line.id, {
+        const payload = {
           description: line.description.trim(),
           quantity: qty,
           unit_rate: rate,
           amount,
-        });
+          cost_type: line.cost_type,
+        };
+        if (line.id) {
+          await crm.updateInvoiceLine(line.id, payload);
+        } else if (payload.description) {
+          newLines.push({ id: uid(), ...payload });
+        }
       }
+      if (newLines.length) await crm.createInvoiceLines(id, newLines);
+      if (removedIds.length) await Promise.all(removedIds.map((rid) => crm.deleteInvoiceLine(rid)));
+
       const discountPercent = Math.max(0, Math.min(100, Number(editDraft.labourDiscount) || 0));
       const discountAmount = discountPercent > 0 && rawLabourSubtotal > 0
         ? Math.round(rawLabourSubtotal * (discountPercent / 100) * 100) / 100
@@ -2777,6 +2804,7 @@ function InvoiceDetail({ id, crm, onBack }) {
       await reload();
       setEditing(false);
       setEditDraft(null);
+      setRemovedIds([]);
     } catch (e) {
       setErr(e.message || 'Save failed.');
     } finally {
@@ -2831,12 +2859,24 @@ function InvoiceDetail({ id, crm, onBack }) {
             <Field label='Line items'>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {editDraft.lines.map((l, idx) => (
-                  <div key={l.id} style={{ display: 'grid', gridTemplateColumns: '2fr 80px 120px', gap: 8, alignItems: 'center' }}>
+                  <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 80px 120px 140px 40px', gap: 8, alignItems: 'center' }}>
                     <input className='lp-input' value={l.description} onChange={(e) => setEditDraft((d) => ({ ...d, lines: d.lines.map((x, i) => i === idx ? { ...x, description: e.target.value } : x) }))} />
                     <input className='lp-input' type='number' step='0.01' value={l.quantity} onChange={(e) => setEditDraft((d) => ({ ...d, lines: d.lines.map((x, i) => i === idx ? { ...x, quantity: e.target.value } : x) }))} />
                     <input className='lp-input' type='number' step='0.01' value={l.unit_rate} onChange={(e) => setEditDraft((d) => ({ ...d, lines: d.lines.map((x, i) => i === idx ? { ...x, unit_rate: e.target.value } : x) }))} />
+                    {l.cost_type === 'labour' ? (
+                      <span className='lp-hint'>Labour</span>
+                    ) : (
+                      <select className='lp-input' value={l.cost_type} onChange={(e) => setEditDraft((d) => ({ ...d, lines: d.lines.map((x, i) => i === idx ? { ...x, cost_type: e.target.value } : x) }))}>
+                        {COST_TYPES.filter((ct) => ct.value !== 'labour').map((ct) => <option key={ct.value} value={ct.value}>{ct.label}</option>)}
+                      </select>
+                    )}
+                    <button className='lp-btn-ghost lp-btn-danger' type='button' onClick={() => removeLine(idx)} disabled={busy} style={{ padding: 4 }}><X size={13} /></button>
                   </div>
                 ))}
+                <div className='no-print' style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                  <button className='lp-btn-ghost' type='button' onClick={() => addLine('labour')} disabled={busy}><Plus size={13} /> Add labour line</button>
+                  <button className='lp-btn-ghost' type='button' onClick={() => addLine('other')} disabled={busy}><Plus size={13} /> Add expense line</button>
+                </div>
               </div>
             </Field>
             {(() => {
@@ -2954,11 +2994,12 @@ function InvoiceDetail({ id, crm, onBack }) {
     <div className="lp-settings lp-settings--wide">
       <style>{`@media print { .no-print { display: none !important; } body { background: #fff !important; } }`}</style>
       {err && <p className='lp-error'>{err}</p>}
-      <div className='no-print' style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+      <div className='no-print' style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
         <button className='lp-btn-ghost' onClick={onBack}><ArrowLeft size={13} /> Back</button>
         <button className='lp-btn-ghost' onClick={() => window.print()}>Print</button>
         <button className='lp-btn-ghost' onClick={startEdit} disabled={busy}><Pencil size={13} /> Edit</button>
         <button className='lp-btn-ghost lp-btn-danger' onClick={handleDelete} disabled={busy}><Trash2 size={13} /> Delete</button>
+        <button className='lp-btn-ghost' onClick={() => window.print()}>Save as PDF</button>
       </div>
 
       <div className="lp-invoice-doc">
@@ -3229,7 +3270,7 @@ function InvoicesPanel({ crm, uid }) {
   const visible = filterLetter ? sorted.filter((i) => i.letter === filterLetter) : sorted;
   const counts = ALPHABET.reduce((acc, l) => { acc[l] = sorted.filter((i) => i.letter === l).length; return acc; }, {});
 
-  if (selected) return <InvoiceDetail id={selected} crm={crm} onBack={() => setSelected(null)} />;
+  if (selected) return <InvoiceDetail id={selected} crm={crm} uid={uid} onBack={() => setSelected(null)} />;
   if (loading) return <div className="lp-settings lp-settings--wide"><p className="lp-hint">Loading invoices…</p></div>;
 
   return (
