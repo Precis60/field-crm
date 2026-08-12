@@ -1660,7 +1660,7 @@ function TaskBlock({ index, task, workerName, workerNames, onChange, onRemove })
 /* ---------------- small building blocks ---------------- */
 function TopBar({ title, onBack, right, backLabel }) {
   return (
-    <div className="lp-topbar">
+    <div className="lp-topbar no-print">
       <button className="lp-back" onClick={onBack} aria-label={backLabel || "Back"}><ArrowLeft size={18} /></button>
       <span className="lp-topbar-title">{title}</span>
       {right}
@@ -1740,7 +1740,7 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
           </div>
         }
       />
-      <div className="lp-tabs">
+      <div className="lp-tabs no-print">
         <button className={`lp-tab ${tab === "sites" ? "is-active" : ""}`} onClick={() => setTab("sites")}>Admin</button>
         <button className={`lp-tab ${tab === "assign" ? "is-active" : ""}`} onClick={() => setTab("assign")}>Assign tasks</button>
         <button className={`lp-tab ${tab === "calendar" ? "is-active" : ""}`} onClick={() => setTab("calendar")}>Calendar</button>
