@@ -592,6 +592,8 @@ alter table events add column if not exists title text;
 alter table events add column if not exists planned_works text;
 alter table events add column if not exists works_completed text;
 alter table events add column if not exists follow_up text;
+alter table events add column if not exists status text not null default 'tentative'
+  check (status in ('tentative', 'booked', 'confirmed', 'in_progress', 'completed', 'project_connected'));
 
 create index if not exists events_start_at_idx on events (start_at);
 

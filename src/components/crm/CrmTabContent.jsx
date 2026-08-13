@@ -45,6 +45,41 @@ const EVENT_CATEGORIES = [
   { label: "Website / Coding & Marketing", color: "#0d9488" },
 ];
 
+const EVENT_STATUSES = [
+  { value: "tentative", label: "Tentative", color: "#94a3b8" },
+  { value: "booked", label: "Booked", color: "#3b82f6" },
+  { value: "confirmed", label: "Confirmed", color: "#22c55e" },
+  { value: "in_progress", label: "In Progress", color: "#C97A2B" },
+  { value: "completed", label: "Completed", color: "#4C7A54" },
+  { value: "project_connected", label: "Project Connected", color: "#8b5cf6" },
+];
+
+function eventStatusLabel(v) {
+  return EVENT_STATUSES.find((s) => s.value === v)?.label || "Tentative";
+}
+
+function eventStatusBadge(v) {
+  const s = EVENT_STATUSES.find((x) => x.value === v) || EVENT_STATUSES[0];
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 5,
+        padding: "2px 9px",
+        borderRadius: 12,
+        fontSize: 11,
+        fontWeight: 700,
+        color: "#fff",
+        background: s.color,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {s.label}
+    </span>
+  );
+}
+
 const COST_TYPES = [
   { value: "labour", label: "Labour" },
   { value: "materials", label: "Materials" },
@@ -1956,6 +1991,7 @@ function CalendarPanel({ crm, uid, selectedId = null }) {
     worksCompleted: "",
     followUp: "",
     category: EVENT_CATEGORIES[0].label,
+    status: EVENT_STATUSES[0].value,
     startAt: "",
     endAt: "",
   });
@@ -2040,6 +2076,7 @@ function CalendarPanel({ crm, uid, selectedId = null }) {
         works_completed: draft.worksCompleted.trim() || null,
         follow_up: draft.followUp.trim() || null,
         category: draft.category,
+        status: draft.status || EVENT_STATUSES[0].value,
         // The date/time pickers are entered as Melbourne wall-clock time —
         // convert explicitly rather than trusting the viewing device's zone.
         start_at: fromLocalInputMelbourne(draft.startAt).toISOString(),
@@ -2167,6 +2204,7 @@ function CalendarPanel({ crm, uid, selectedId = null }) {
       worksCompleted: e.works_completed || "",
       followUp: e.follow_up || "",
       category: e.category,
+      status: e.status || EVENT_STATUSES[0].value,
       startAt: e.start_at ? toISOStringLocal(new Date(e.start_at)) : "",
       endAt: e.end_at ? toISOStringLocal(new Date(e.end_at)) : "",
     });
@@ -2259,6 +2297,12 @@ function CalendarPanel({ crm, uid, selectedId = null }) {
 
       {adding && (
         <div className="lp-person-row lp-event-form" style={{ marginTop: 12 }}>
+          {editing && (
+            <div className="lp-event-section" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+              <h4 className="lp-event-section-title" style={{ margin: 0 }}>Status</h4>
+              {eventStatusBadge(draft.status)}
+            </div>
+          )}
           {editing && (
             <div className="lp-event-section">
               <h4 className="lp-event-section-title">Time entries</h4>
@@ -2385,13 +2429,22 @@ function CalendarPanel({ crm, uid, selectedId = null }) {
                 <DateTimeClockInput className="lp-input" value={draft.endAt} onChange={(e) => setDraft((d) => ({ ...d, endAt: e.target.value }))} />
               </Field>
             </div>
-            <Field label="Category">
-              <select className="lp-input" value={draft.category} onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value }))}>
-                {EVENT_CATEGORIES.map((c) => (
-                  <option key={c.label} value={c.label}>{c.label}</option>
-                ))}
-              </select>
-            </Field>
+            <div className="lp-row2">
+              <Field label="Category">
+                <select className="lp-input" value={draft.category} onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value }))}>
+                  {EVENT_CATEGORIES.map((c) => (
+                    <option key={c.label} value={c.label}>{c.label}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Status">
+                <select className="lp-input" value={draft.status} onChange={(e) => setDraft((d) => ({ ...d, status: e.target.value }))}>
+                  {EVENT_STATUSES.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </select>
+              </Field>
+            </div>
           </div>
 
           <div className="lp-event-section">

@@ -419,7 +419,7 @@ export function createCrmApi(supabaseFetch, supabaseProjectUrl, supabaseAnonKey)
   /* ---------- Calendar events ---------- */
 
   async function listEvents({ from, to } = {}) {
-    let path = "/events?select=id,title,site_id,site_name,project_name,site_address,site_contact,contact_id,notes,planned_works,works_completed,follow_up,category,start_at,end_at,created_at,updated_at&order=start_at";
+    let path = "/events?select=id,title,site_id,site_name,project_name,site_address,site_contact,contact_id,notes,planned_works,works_completed,follow_up,category,status,start_at,end_at,created_at,updated_at&order=start_at";
     if (from) path += `&start_at=gte.${encodeURIComponent(from)}`;
     if (to) path += `&start_at=lt.${encodeURIComponent(to)}`;
     return (await supabaseFetch(path)) || [];
