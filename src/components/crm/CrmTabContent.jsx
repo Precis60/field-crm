@@ -90,15 +90,15 @@ function EmptyState({ icon, text, compact }) {
   );
 }
 
-export default function CrmTabContent({ tab, crm, uid, sites = [] }) {
+export default function CrmTabContent({ tab, crm, uid, sites = [], selectedId = null }) {
   if (tab === "customers") return <CustomersPanel crm={crm} uid={uid} sites={sites} />;
   if (tab === "contacts") return <ContactsPanel crm={crm} />;
   if (tab === "suppliers") return <SuppliersPanel crm={crm} uid={uid} />;
   if (tab === "projects") return <ProjectsPanel crm={crm} uid={uid} sites={sites} />;
-  if (tab === "calendar") return <CalendarPanel crm={crm} uid={uid} />;
-  if (tab === "site_tasks") return <SiteTasksPanel crm={crm} uid={uid} sites={sites} />;
+  if (tab === "calendar") return <CalendarPanel crm={crm} uid={uid} selectedId={selectedId} />;
+  if (tab === "site_tasks") return <SiteTasksPanel crm={crm} uid={uid} sites={sites} selectedId={selectedId} />;
   if (tab === "site_notes") return <SiteNotesPanel crm={crm} uid={uid} sites={sites} />;
-  if (tab === "invoices") return <InvoicesPanel crm={crm} uid={uid} />;
+  if (tab === "invoices") return <InvoicesPanel crm={crm} uid={uid} selectedId={selectedId} />;
   return null;
 }
 
@@ -1933,7 +1933,7 @@ function addMonthsToDate(d, n) {
 // blocks all share the same scale.
 const HOUR_HEIGHT = 40;
 
-function CalendarPanel({ crm, uid }) {
+function CalendarPanel({ crm, uid, selectedId = null }) {
   const [selectedDay, setSelectedDay] = useState(new Date());
   const [view, setView] = useState("week");
   const [events, setEvents] = useState([]);
@@ -1980,6 +1980,13 @@ function CalendarPanel({ crm, uid }) {
     crm.listSiteTasks().then((rows) => setTasks(rows || [])).catch(() => setTasks([]));
     crm.listSiteTaskCategories().then((rows) => setSiteTaskCategories(rows || [])).catch(() => setSiteTaskCategories([]));
   }, [crm]);
+
+  useEffect(() => {
+    if (selectedId && events.length && projects.length) {
+      const e = events.find((x) => x.id === selectedId);
+      if (e) editEvent(e);
+    }
+  }, [selectedId, events, projects]);
 
   async function refresh() {
     const from = view === "week" ? startOfWeek(selectedDay) : view === "month" ? startOfMonth(selectedDay) : startOfDay(selectedDay);
@@ -3193,14 +3200,14 @@ const PAYMENT_TERMS = [
   "Payment Upfront",
 ];
 
-function InvoicesPanel({ crm, uid }) {
+function InvoicesPanel({ crm, uid, selectedId = null }) {
   const [invoices, setInvoices] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [filterLetter, setFilterLetter] = useState("");
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState(selectedId);
   const [adding, setAdding] = useState(false);
   const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
@@ -3752,7 +3759,7 @@ function statusLabel(v) {
   return SITE_TASK_STATUSES.find((s) => s.value === v)?.label || v;
 }
 
-function SiteTasksPanel({ crm, uid, sites = [] }) {
+function SiteTasksPanel({ crm, uid, sites = [], selectedId = null }) {
   const [tasks, setTasks] = useState([]);
   const [categories, setCategories] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -3768,6 +3775,25 @@ function SiteTasksPanel({ crm, uid, sites = [] }) {
   const [categoryDraft, setCategoryDraft] = useState({ site_id: "", name: "" });
   const emptyTask = () => ({ site_id: "", category_id: "", name: "", description: "", due_date: "", start_date: "", end_date: "", status: "not_started" });
   const [draft, setDraft] = useState(emptyTask());
+
+  useEffect(() => {
+    if (selectedId && tasks.length) {
+      const t = tasks.find((x) => x.id === selectedId);
+      if (t) {
+        setEditing(t.id);
+        setDraft({
+          site_id: t.site_id || "",
+          category_id: t.category_id || "",
+          name: t.name || "",
+          description: t.description || "",
+          due_date: t.due_date || "",
+          start_date: t.start_date || "",
+          end_date: t.end_date || "",
+          status: t.status || "not_started",
+        });
+      }
+    }
+  }, [selectedId, tasks]);
 
   async function refresh() {
     const [t, c, p] = await Promise.all([

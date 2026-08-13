@@ -1705,6 +1705,7 @@ function SubmittedScreen({ onHome, edited = false }) {
 /* ---------------- Manager dashboard ---------------- */
 function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getMonths, refreshMonths, cacheVersion, assignedTasks, onAddAssignedTask, onRemoveAssignedTask, onUpdateAssignedTask, onAcknowledgeAssignedTask, onAddReport, onDeleteReport, onRestored, onExit }) {
   const [tab, setTab] = useState("brief");
+  const [selectedId, setSelectedId] = useState(null);
   const [sites, setSites] = useState([]);
   const [reportSaved, setReportSaved] = useState(false);
   const [installPrompt, setInstallPrompt] = useState(null);
@@ -1759,7 +1760,7 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
         <button className={`lp-tab ${tab === "suppliers" ? "is-active" : ""}`} onClick={() => setTab("suppliers")}>Suppliers</button>
         <button className={`lp-tab ${tab === "tasks" ? "is-active" : ""}`} onClick={() => setTab("tasks")}>Tasks</button>
       </div>
-      {tab === "brief" && <MorningBrief crm={crm} />}
+      {tab === "brief" && <MorningBrief crm={crm} onOpen={(type, id) => { setSelectedId(id); setTab(type); }} />}
       {tab === "tasks" && <TasksPanel currentManager={currentManager} />}
       {tab === "assign" && <AssignTasksPanel workers={workers} assignedTasks={assignedTasks} onAdd={onAddAssignedTask} onRemove={onRemoveAssignedTask} onUpdate={onUpdateAssignedTask} />}
       {tab === "myreport" && (
@@ -1785,7 +1786,7 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
       {tab === "log" && <FullLog monthsIndex={monthsIndex} getMonths={getMonths} cacheVersion={cacheVersion} onDeleteReport={onDeleteReport} />}
       {tab === "sites" && <AdminPanel />}
       {["customers", "contacts", "projects", "calendar", "suppliers", "site_notes", "site_tasks", "invoices"].includes(tab) && (
-        <CrmTabContent tab={tab} crm={crm} uid={uid} sites={sites} />
+        <CrmTabContent tab={tab} crm={crm} uid={uid} sites={sites} selectedId={selectedId} />
       )}
       {tab === "settings" && <ManagerSettings onRestored={onRestored} />}
     </div>
@@ -2627,7 +2628,7 @@ function BriefTasksPanel({ date, assignedTasks }) {
   );
 }
 
-function MorningBrief({ crm }) {
+function MorningBrief({ crm, onOpen }) {
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [events, setEvents] = useState([]);
   const [invoices, setInvoices] = useState([]);
@@ -2725,7 +2726,7 @@ function MorningBrief({ crm }) {
                   ? new Date(e.start_at).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', timeZone: APP_TIME_ZONE })
                   : null;
                 return (
-                  <li key={e.id || `${e.start_at}-${e.project_name || e.site_name || ''}`}>
+                  <li key={e.id || `${e.start_at}-${e.project_name || e.site_name || ''}`} onClick={() => onOpen('calendar', e.id)} style={{ cursor: 'pointer' }}>
                     <span className="lp-out-dot lp-out-dot--blue" />
                     <div>
                       <strong>{e.title || e.category}</strong>
@@ -2749,7 +2750,7 @@ function MorningBrief({ crm }) {
           ) : (
             <ul className="lp-outstanding">
               {outstandingInvoices.map((i) => (
-                <li key={i.id || i.invoice_number}>
+                <li key={i.id || i.invoice_number} onClick={() => onOpen('invoices', i.id)} style={{ cursor: 'pointer' }}>
                   <span className="lp-out-dot" />
                   <div>
                     <strong>{i.customers?.name || i.customer_id} · {i.invoice_number}</strong>
@@ -2775,7 +2776,7 @@ function MorningBrief({ crm }) {
           ) : (
             <ul className="lp-outstanding">
               {todaysTasks.map((t) => (
-                <li key={t.id || t.name}>
+                <li key={t.id || t.name} onClick={() => onOpen('site_tasks', t.id)} style={{ cursor: 'pointer' }}>
                   <span className="lp-out-dot lp-out-dot--amber" />
                   <div>
                     <strong>{t.name}</strong>
@@ -2803,7 +2804,7 @@ function MorningBrief({ crm }) {
                 <strong>{fmtDateLong(d)}</strong>
                 <ul className="lp-outstanding">
                   {byDate[d].map((t) => (
-                    <li key={t.id || t.name}>
+                    <li key={t.id || t.name} onClick={() => onOpen('site_tasks', t.id)} style={{ cursor: 'pointer' }}>
                       <span className="lp-out-dot lp-out-dot--amber" />
                       <div>
                         <strong>{t.name}</strong>
