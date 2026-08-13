@@ -5,3 +5,4 @@ dist
 .DS_Store
 *.log
 .vite
+.devin/mcp_config.local.json
