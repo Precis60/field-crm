@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const HOURS = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 const MINUTES = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
@@ -39,28 +39,31 @@ export default function ClockTimeInput({ value, onChange, className = "", ...res
   const [ampm, setAmpm] = useState(parsed.ampm);
   const [selHour, setSelHour] = useState(parsed.hour12);
   const [selMinute, setSelMinute] = useState(parsed.minute);
-  const dialogRef = useRef(null);
 
-  useEffect(() => {
-    if (open) {
-      setMode("hour");
-      setAmpm(parsed.ampm);
-      setSelHour(parsed.hour12);
-      setSelMinute(parsed.minute);
-      dialogRef.current?.showModal?.();
-    } else {
-      dialogRef.current?.close?.();
-    }
-  }, [open]);
-
-  useEffect(() => {
+  function openPicker() {
+    setMode("hour");
     setAmpm(parsed.ampm);
     setSelHour(parsed.hour12);
     setSelMinute(parsed.minute);
-  }, [value]);
+    setOpen(true);
+  }
 
-  function commit() {
-    const v = to24(selHour, ampm, selMinute);
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [open]);
+
+  function commit(h = selHour, a = ampm, m = selMinute) {
+    const v = to24(h, a, m);
     if (onChange) onChange({ target: { value: v } });
     setOpen(false);
   }
@@ -79,104 +82,8 @@ export default function ClockTimeInput({ value, onChange, className = "", ...res
     return value ? `${pad2(p.hour12)}:${pad2(p.minute)} ${p.ampm.toUpperCase()}` : "--:--";
   }, [value]);
 
-  const renderNumbers = () => {
-    const numbers = mode === "hour" ? HOURS : MINUTES;
-    const radius = 92;
-    return (
-      <div
-        className="lp-clock-face"
-        style={{
-          position: "relative",
-          width: 240,
-          height: 240,
-          borderRadius: "50%",
-          margin: "0 auto",
-          background: "#f4f6f8",
-        }}
-      >
-        {numbers.map((n, i) => {
-          const angle = (i * 30 - 90) * (Math.PI / 180);
-          const x = 120 + radius * Math.cos(angle);
-          const y = 120 + radius * Math.sin(angle);
-          const selected =
-            (mode === "hour" && n === selHour) ||
-            (mode === "minute" && n === selMinute);
-          return (
-            <button
-              key={n}
-              type="button"
-              className="lp-clock-number"
-              onClick={() => (mode === "hour" ? selectHour(n) : selectMinute(n))}
-              style={{
-                position: "absolute",
-                left: x,
-                top: y,
-                width: 40,
-                height: 40,
-                marginLeft: -20,
-                marginTop: -20,
-                borderRadius: "50%",
-                border: "none",
-                background: selected ? "#1890ff" : "#fff",
-                color: selected ? "#fff" : "#1a1a1a",
-                fontSize: 15,
-                fontWeight: 600,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
-              }}
-            >
-              {pad2(n)}
-            </button>
-          );
-        })}
-        <div
-          style={{
-            position: "absolute",
-            left: "50%",
-            top: "50%",
-            transform: "translate(-50%, -50%)",
-            display: "flex",
-            gap: 4,
-            zIndex: 2,
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => setAmpm("am")}
-            style={{
-              padding: "6px 12px",
-              borderRadius: 20,
-              border: "none",
-              background: ampm === "am" ? "#1890ff" : "#e4e7eb",
-              color: ampm === "am" ? "#fff" : "#1a1a1a",
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            AM
-          </button>
-          <button
-            type="button"
-            onClick={() => setAmpm("pm")}
-            style={{
-              padding: "6px 12px",
-              borderRadius: 20,
-              border: "none",
-              background: ampm === "pm" ? "#1890ff" : "#e4e7eb",
-              color: ampm === "pm" ? "#fff" : "#1a1a1a",
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            PM
-          </button>
-        </div>
-      </div>
-    );
-  };
+  const numbers = mode === "hour" ? HOURS : MINUTES;
+  const radius = 92;
 
   return (
     <>
@@ -184,66 +91,155 @@ export default function ClockTimeInput({ value, onChange, className = "", ...res
         type="text"
         readOnly
         value={display}
-        onFocus={() => setOpen(true)}
-        onClick={() => setOpen(true)}
+        onFocus={openPicker}
+        onClick={openPicker}
         placeholder="--:--"
         className={className}
         {...rest}
       />
-      <dialog
-        ref={dialogRef}
-        onCancel={() => setOpen(false)}
-        className="lp-clock-dialog"
-        style={{
-          border: "none",
-          borderRadius: 12,
-          padding: "24px 16px",
-          minWidth: 320,
-          maxWidth: "calc(100vw - 32px)",
-          maxHeight: "calc(100vh - 32px)",
-          overflow: "auto",
-          background: "#fff",
-          boxShadow: "0 16px 40px rgba(0,0,0,0.25)",
-          textAlign: "center",
-        }}
-      >
-        <style>{`
-          .lp-clock-dialog::backdrop { background: rgba(0,0,0,0.45); }
-          @media (max-width: 480px) {
-            .lp-clock-dialog { width: 100vw; min-height: 100vh; height: auto !important; max-width: none; margin: 0; border-radius: 0; display: flex; flex-direction: column; justify-content: center; overflow: auto !important; }
-            .lp-clock-dialog .lp-clock-face { width: 280px; height: 280px; }
-            .lp-clock-dialog .lp-clock-number { width: 48px; height: 48px; font-size: 17px; }
-          }
-        `}</style>
-        <div style={{ fontSize: 34, fontWeight: 700, marginBottom: 16 }}>
-          {pad2(selHour)}:{pad2(selMinute)} {ampm.toUpperCase()}
-        </div>
-        <div style={{ marginBottom: 16, fontWeight: 600, color: "#666" }}>
-          {mode === "hour" ? "Select hour" : "Select minutes"}
-        </div>
-        {renderNumbers()}
-        <div style={{ marginTop: 24, display: "flex", gap: 12, justifyContent: "center" }}>
-          <button
-            type="button"
-            className="lp-btn-ghost"
-            onClick={() => setOpen(false)}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="lp-btn-ghost"
-            onClick={commit}
+      {open && (
+        <div
+          onClick={() => setOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: 16,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
             style={{
-              background: "#1890ff",
-              color: "#fff",
-              border: "1px solid #1890ff",
+              border: "none",
+              borderRadius: 12,
+              padding: "24px 16px",
+              width: 320,
+              maxWidth: "100%",
+              maxHeight: "calc(100vh - 32px)",
+              overflow: "auto",
+              background: "#fff",
+              boxShadow: "0 16px 40px rgba(0,0,0,0.25)",
+              textAlign: "center",
             }}
           >
-            Done
-          </button>
+            <div style={{ fontSize: 34, fontWeight: 700, marginBottom: 16 }}>
+              {pad2(selHour)}:{pad2(selMinute)} {ampm.toUpperCase()}
+            </div>
+            <div style={{ marginBottom: 16, fontWeight: 600, color: "#666" }}>
+              {mode === "hour" ? "Select hour" : "Select minutes"}
+            </div>
+
+            <div
+              style={{
+                position: "relative",
+                width: 240,
+                height: 240,
+                borderRadius: "50%",
+                margin: "0 auto",
+                background: "#f4f6f8",
+              }}
+            >
+              {numbers.map((n, i) => {
+                const angle = (i * 30 - 90) * (Math.PI / 180);
+                const x = 120 + radius * Math.cos(angle);
+                const y = 120 + radius * Math.sin(angle);
+                const selected =
+                  (mode === "hour" && n === selHour) ||
+                  (mode === "minute" && n === selMinute);
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => (mode === "hour" ? selectHour(n) : selectMinute(n))}
+                    style={{
+                      position: "absolute",
+                      left: x,
+                      top: y,
+                      width: 40,
+                      height: 40,
+                      marginLeft: -20,
+                      marginTop: -20,
+                      borderRadius: "50%",
+                      border: "none",
+                      background: selected ? "#1890ff" : "#fff",
+                      color: selected ? "#fff" : "#1a1a1a",
+                      fontSize: 15,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+                    }}
+                  >
+                    {pad2(n)}
+                  </button>
+                );
+              })}
+              <div
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  top: "50%",
+                  transform: "translate(-50%, -50%)",
+                  display: "flex",
+                  gap: 4,
+                  zIndex: 2,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setAmpm("am")}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: 20,
+                    border: "none",
+                    background: ampm === "am" ? "#1890ff" : "#e4e7eb",
+                    color: ampm === "am" ? "#fff" : "#1a1a1a",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  AM
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAmpm("pm")}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: 20,
+                    border: "none",
+                    background: ampm === "pm" ? "#1890ff" : "#e4e7eb",
+                    color: ampm === "pm" ? "#fff" : "#1a1a1a",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  PM
+                </button>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 24, display: "flex", gap: 12, justifyContent: "center" }}>
+              <button type="button" className="lp-btn-ghost" onClick={() => setOpen(false)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="lp-btn-ghost"
+                onClick={() => commit()}
+                style={{ background: "#1890ff", color: "#fff", border: "1px solid #1890ff" }}
+              >
+                Done
+              </button>
+            </div>
+          </div>
         </div>
-      </dialog>
+      )}
     </>
   );
 }

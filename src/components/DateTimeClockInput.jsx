@@ -5,13 +5,19 @@ export default function DateTimeClockInput({ value, onChange, className = "", ..
 
   function handleDate(e) {
     const newDate = e.target.value;
-    const next = newDate && time ? `${newDate}T${time}` : "";
+    if (!newDate) {
+      if (onChange) onChange({ target: { value: "" } });
+      return;
+    }
+    const next = `${newDate}T${time || "00:00"}`;
     if (onChange) onChange({ target: { value: next } });
   }
 
   function handleTime(e) {
     const newTime = e.target.value;
-    const next = date && newTime ? `${date}T${newTime}` : value;
+    if (!newTime) return;
+    const baseDate = date || new Date().toISOString().slice(0, 10);
+    const next = `${baseDate}T${newTime}`;
     if (onChange) onChange({ target: { value: next } });
   }
 
