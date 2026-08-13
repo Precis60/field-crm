@@ -392,6 +392,14 @@ export function createCrmApi(supabaseFetch) {
     );
   }
 
+  async function listTimesheetsByEvent(eventId) {
+    return (
+      (await supabaseFetch(
+        `/timesheets?event_id=eq.${eventId}&select=*,people(id,name)&order=created_at.desc`
+      ).catch(() => [])) || []
+    );
+  }
+
   async function createTimesheet(timesheet) {
     await supabaseFetch("/timesheets", { method: "POST", body: [timesheet] });
     return timesheet;
@@ -493,6 +501,7 @@ export function createCrmApi(supabaseFetch) {
     deleteInvoice,
     draftInvoiceFromProject,
     listTimesheets,
+    listTimesheetsByEvent,
     createTimesheet,
     updateTimesheet,
     setTimesheetInvoiced,

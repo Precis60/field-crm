@@ -542,6 +542,7 @@ create table if not exists timesheets (
   follow_ups jsonb not null default '[]'::jsonb,
   invoiced boolean not null default false,
   billable boolean not null default true,
+  event_id text references events(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

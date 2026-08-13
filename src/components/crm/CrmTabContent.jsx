@@ -1970,6 +1970,7 @@ function CalendarPanel({ crm, uid }) {
   const [taskDesc, setTaskDesc] = useState("");
   const [selectedTaskIds, setSelectedTaskIds] = useState([]);
   const [msg, setMsg] = useState("");
+  const [linkedTimesheets, setLinkedTimesheets] = useState([]);
 
   useEffect(() => {
     crm.listProjects({ activeOnly: true }).then((rows) => setProjects(rows || [])).catch(() => setProjects([]));
@@ -1997,6 +1998,20 @@ function CalendarPanel({ crm, uid }) {
   useEffect(() => {
     refresh().finally(() => setLoading(false));
   }, [selectedDay, view, crm]);
+
+  async function loadLinked(eventId) {
+    try {
+      const rows = await crm.listTimesheetsByEvent(eventId);
+      setLinkedTimesheets(rows || []);
+    } catch (e) {
+      setLinkedTimesheets([]);
+    }
+  }
+
+  useEffect(() => {
+    if (editing) loadLinked(editing);
+    else setLinkedTimesheets([]);
+  }, [editing, crm]);
 
   async function save() {
     if (!draft.startAt) { setErr("Enter a start time."); return; }
@@ -2071,10 +2086,12 @@ function CalendarPanel({ crm, uid }) {
         follow_ups: [],
         billable: true,
         invoiced: false,
+        ...(editing ? { event_id: editing } : {}),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       });
       setMsg(`Time entry added to ${p.name}.`);
+      if (editing) await loadLinked(editing);
     } catch (e) {
       setErr(e.message || "Couldn't add time entry.");
     }
@@ -2233,6 +2250,17 @@ function CalendarPanel({ crm, uid }) {
 
       {adding && (
         <div className="lp-person-row lp-event-form" style={{ marginTop: 12 }}>
+          {editing && (
+            <div className="lp-event-section">
+              <h4 className="lp-event-section-title">Time entries</h4>
+              {linkedTimesheets.length === 0 ? (
+                <p className="lp-hint">Not added to any project time entries.</p>
+              ) : (
+                <p className="lp-saved">Added to {linkedTimesheets.length} time {linkedTimesheets.length === 1 ? "entry" : "entries"}.</p>
+              )}
+            </div>
+          )}
+
           <div className="lp-event-section">
             <Field label="Event title">
               <input className="lp-input" value={draft.title} placeholder="e.g. Site walkthrough" onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))} />
