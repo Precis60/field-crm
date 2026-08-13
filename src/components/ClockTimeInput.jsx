@@ -103,7 +103,7 @@ export default function ClockTimeInput({ value, onChange, className = "", ...res
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,0.45)",
+            background: "rgba(27,43,34,0.45)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -114,22 +114,21 @@ export default function ClockTimeInput({ value, onChange, className = "", ...res
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              border: "none",
-              borderRadius: 12,
-              padding: "24px 16px",
+              borderRadius: 14,
+              padding: "24px 18px",
               width: 320,
               maxWidth: "100%",
               maxHeight: "calc(100vh - 32px)",
               overflow: "auto",
-              background: "#fff",
-              boxShadow: "0 16px 40px rgba(0,0,0,0.25)",
+              background: "var(--panel, #fff)",
+              boxShadow: "0 16px 40px rgba(27,43,34,0.25)",
               textAlign: "center",
             }}
           >
-            <div style={{ fontSize: 34, fontWeight: 700, marginBottom: 16 }}>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 32, fontWeight: 600, marginBottom: 14, color: "var(--ink, #1B2B22)" }}>
               {pad2(selHour)}:{pad2(selMinute)} {ampm.toUpperCase()}
             </div>
-            <div style={{ marginBottom: 16, fontWeight: 600, color: "#666" }}>
+            <div style={{ marginBottom: 16, fontWeight: 600, fontSize: 12.5, letterSpacing: ".04em", textTransform: "uppercase", color: "var(--muted, #6B7268)" }}>
               {mode === "hour" ? "Select hour" : "Select minutes"}
             </div>
 
@@ -140,7 +139,7 @@ export default function ClockTimeInput({ value, onChange, className = "", ...res
                 height: 240,
                 borderRadius: "50%",
                 margin: "0 auto",
-                background: "#f4f6f8",
+                background: "var(--stone, #EFEBDF)",
               }}
             >
               {numbers.map((n, i) => {
@@ -165,15 +164,15 @@ export default function ClockTimeInput({ value, onChange, className = "", ...res
                       marginTop: -20,
                       borderRadius: "50%",
                       border: "none",
-                      background: selected ? "#1890ff" : "#fff",
-                      color: selected ? "#fff" : "#1a1a1a",
+                      background: selected ? "var(--brass, #A67C3D)" : "#FCFBF8",
+                      color: selected ? "#fff" : "var(--ink, #1B2B22)",
                       fontSize: 15,
                       fontWeight: 600,
                       cursor: "pointer",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+                      boxShadow: selected ? "0 2px 6px rgba(166,124,61,0.4)" : "0 1px 3px rgba(27,43,34,0.1)",
                     }}
                   >
                     {pad2(n)}
@@ -198,9 +197,10 @@ export default function ClockTimeInput({ value, onChange, className = "", ...res
                     padding: "6px 12px",
                     borderRadius: 20,
                     border: "none",
-                    background: ampm === "am" ? "#1890ff" : "#e4e7eb",
-                    color: ampm === "am" ? "#fff" : "#1a1a1a",
+                    background: ampm === "am" ? "var(--brass, #A67C3D)" : "var(--panel, #fff)",
+                    color: ampm === "am" ? "#fff" : "var(--ink, #1B2B22)",
                     fontWeight: 700,
+                    fontSize: 12,
                     cursor: "pointer",
                   }}
                 >
@@ -213,9 +213,10 @@ export default function ClockTimeInput({ value, onChange, className = "", ...res
                     padding: "6px 12px",
                     borderRadius: 20,
                     border: "none",
-                    background: ampm === "pm" ? "#1890ff" : "#e4e7eb",
-                    color: ampm === "pm" ? "#fff" : "#1a1a1a",
+                    background: ampm === "pm" ? "var(--brass, #A67C3D)" : "var(--panel, #fff)",
+                    color: ampm === "pm" ? "#fff" : "var(--ink, #1B2B22)",
                     fontWeight: 700,
+                    fontSize: 12,
                     cursor: "pointer",
                   }}
                 >
@@ -224,7 +225,7 @@ export default function ClockTimeInput({ value, onChange, className = "", ...res
               </div>
             </div>
 
-            <div style={{ marginTop: 24, display: "flex", gap: 12, justifyContent: "center" }}>
+            <div style={{ marginTop: 22, display: "flex", gap: 10, justifyContent: "center" }}>
               <button type="button" className="lp-btn-ghost" onClick={() => setOpen(false)}>
                 Cancel
               </button>
@@ -232,7 +233,7 @@ export default function ClockTimeInput({ value, onChange, className = "", ...res
                 type="button"
                 className="lp-btn-ghost"
                 onClick={() => commit()}
-                style={{ background: "#1890ff", color: "#fff", border: "1px solid #1890ff" }}
+                style={{ background: "var(--brass, #A67C3D)", color: "#fff", border: "1px solid var(--brass, #A67C3D)" }}
               >
                 Done
               </button>

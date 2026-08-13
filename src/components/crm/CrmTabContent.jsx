@@ -6,6 +6,7 @@ import {
 import AddressInput from "../AddressInput.jsx";
 import ClockTimeInput from "../ClockTimeInput.jsx";
 import DateTimeClockInput from "../DateTimeClockInput.jsx";
+import DateInput from "../DateInput.jsx";
 import { APP_TIME_ZONE, zonedISODate, zonedDateToUTC, zonedParts } from "../../lib/time.js";
 
 const CUSTOMER_STATUSES = ["active", "prospect", "inactive"];
@@ -1022,9 +1023,8 @@ function ProjectList({ projects, customers, sites, crm, uid, onOpen, onChanged, 
                       />
                     </Field>
                     <Field label="Due date">
-                      <input
+                      <DateInput
                         className="lp-input"
-                        type="date"
                         value={taskDue}
                         onChange={(e) => setTaskDue(e.target.value)}
                       />
@@ -1043,7 +1043,7 @@ function ProjectList({ projects, customers, sites, crm, uid, onOpen, onChanged, 
                   <div style={{ marginTop: 12 }}>
                     <div className="lp-row2">
                       <Field label="Date">
-                        <input className="lp-input" type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
+                        <DateInput className="lp-input" value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
                       </Field>
                       <Field label="Start">
                         <ClockTimeInput className="lp-input" value={eventStart} onChange={(e) => setEventStart(e.target.value)} />
@@ -2443,7 +2443,7 @@ function CalendarPanel({ crm, uid, selectedId = null }) {
                 <input className="lp-input" value={taskName} onChange={(e) => setTaskName(e.target.value)} />
               </Field>
               <Field label="Due date">
-                <input className="lp-input" type="date" value={taskDue} onChange={(e) => setTaskDue(e.target.value)} />
+                <DateInput className="lp-input" value={taskDue} onChange={(e) => setTaskDue(e.target.value)} />
               </Field>
               <Field label="Description">
                 <textarea className="lp-textarea" rows={2} value={taskDesc} onChange={(e) => setTaskDesc(e.target.value)} />
@@ -2932,14 +2932,14 @@ function InvoiceDetail({ id, crm, uid, onBack }) {
             </Field>
             {editDraft.status === 'paid' && (
               <Field label='Paid date'>
-                <input className='lp-input' type='date' value={editDraft.paid_at} onChange={(e) => setEditDraft((d) => ({ ...d, paid_at: e.target.value }))} />
+                <DateInput className='lp-input' value={editDraft.paid_at} onChange={(e) => setEditDraft((d) => ({ ...d, paid_at: e.target.value }))} />
               </Field>
             )}
             <Field label='Invoice date'>
-              <input className='lp-input' type='date' value={editDraft.issued_at} onChange={(e) => setEditDraft((d) => ({ ...d, issued_at: e.target.value }))} />
+              <DateInput className='lp-input' value={editDraft.issued_at} onChange={(e) => setEditDraft((d) => ({ ...d, issued_at: e.target.value }))} />
             </Field>
             <Field label='Due date'>
-              <input className='lp-input' type='date' value={editDraft.due_at} onChange={(e) => setEditDraft((d) => ({ ...d, due_at: e.target.value }))} />
+              <DateInput className='lp-input' value={editDraft.due_at} onChange={(e) => setEditDraft((d) => ({ ...d, due_at: e.target.value }))} />
             </Field>
             <Field label='Notes'>
               <textarea className='lp-textarea' rows={4} value={editDraft.notes} onChange={(e) => setEditDraft((d) => ({ ...d, notes: e.target.value }))} />
@@ -3395,10 +3395,10 @@ function InvoicesPanel({ crm, uid, selectedId = null }) {
             </div>
             <div className="lp-row2">
               <Field label="Invoice date">
-                <input className="lp-input" type="date" value={draft.issuedAt} onChange={(e) => setDraft((d) => ({ ...d, issuedAt: e.target.value }))} />
+                <DateInput className="lp-input" value={draft.issuedAt} onChange={(e) => setDraft((d) => ({ ...d, issuedAt: e.target.value }))} />
               </Field>
               <Field label="Due date">
-                <input className="lp-input" type="date" value={draft.dueAt} onChange={(e) => setDraft((d) => ({ ...d, dueAt: e.target.value }))} />
+                <DateInput className="lp-input" value={draft.dueAt} onChange={(e) => setDraft((d) => ({ ...d, dueAt: e.target.value }))} />
               </Field>
             </div>
           </div>
@@ -4003,13 +4003,13 @@ function SiteTasksPanel({ crm, uid, sites = [], selectedId = null }) {
       </Field>
       <div className="lp-row3">
         <Field label="Due date">
-          <input className="lp-input" type="date" value={draft.due_date} onChange={(e) => setDraft((d) => ({ ...d, due_date: e.target.value }))} />
+          <DateInput className="lp-input" value={draft.due_date} onChange={(e) => setDraft((d) => ({ ...d, due_date: e.target.value }))} />
         </Field>
         <Field label="Start date">
-          <input className="lp-input" type="date" value={draft.start_date} onChange={(e) => setDraft((d) => ({ ...d, start_date: e.target.value }))} />
+          <DateInput className="lp-input" value={draft.start_date} onChange={(e) => setDraft((d) => ({ ...d, start_date: e.target.value }))} />
         </Field>
         <Field label="End date">
-          <input className="lp-input" type="date" value={draft.end_date} onChange={(e) => setDraft((d) => ({ ...d, end_date: e.target.value }))} />
+          <DateInput className="lp-input" value={draft.end_date} onChange={(e) => setDraft((d) => ({ ...d, end_date: e.target.value }))} />
         </Field>
       </div>
       <Field label="Status">

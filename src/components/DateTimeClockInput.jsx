@@ -1,4 +1,5 @@
 import ClockTimeInput from "./ClockTimeInput";
+import DateInput from "./DateInput";
 
 export default function DateTimeClockInput({ value, onChange, className = "", ...rest }) {
   const [date, time] = (value || "").split("T");
@@ -30,8 +31,7 @@ export default function DateTimeClockInput({ value, onChange, className = "", ..
         flexWrap: "wrap",
       }}
     >
-      <input
-        type="date"
+      <DateInput
         className={className}
         value={date || ""}
         onChange={handleDate}

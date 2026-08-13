@@ -10,6 +10,7 @@ import CrmTabContent from "./components/crm/CrmTabContent.jsx";
 import { APP_TIME_ZONE, zonedISODate, zonedDateToUTC } from "./lib/time.js";
 import AddressInput from "./components/AddressInput.jsx";
 import ClockTimeInput from "./components/ClockTimeInput.jsx";
+import DateInput from "./components/DateInput.jsx";
 
 /* ---------------------------------------------------------------
    PROPERTY MAINTENANCE — Property & Project Management system
@@ -1121,7 +1122,7 @@ function StaffTasksPanel({ person }) {
     <div className="lp-panel lp-my-tasks">
       <div className="lp-assigned-day-head">
         <h4><ClipboardList size={15} /> My tasks</h4>
-        <input type="date" className="lp-input lp-input--slim" value={date} onChange={(e) => setDate(e.target.value)} />
+        <DateInput className="lp-input lp-input--slim" value={date} onChange={(e) => setDate(e.target.value)} allowClear={false} />
       </div>
 
       {err && <p className="lp-error">{err}</p>}
@@ -1471,7 +1472,7 @@ function WorkerForm({ onBack, onSubmitted, presetName, workerNames, assignedTask
             )}
           </Field>
           <div className="lp-row3">
-            <Field label="Date"><input type="date" className="lp-input" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
+            <Field label="Date"><DateInput className="lp-input" value={date} onChange={(e) => setDate(e.target.value)} allowClear={false} /></Field>
             <Field label="Arrival time"><ClockTimeInput className="lp-input" value={arrival} onChange={(e) => setArrival(e.target.value)} /></Field>
             <Field label="Departure time"><ClockTimeInput className="lp-input" value={departure} onChange={(e) => setDeparture(e.target.value)} /></Field>
           </div>
@@ -1923,7 +1924,7 @@ function ManagerSchedulePanel({ managers, currentManager }) {
 
       <h4 className="lp-schedule-heading">{isOwnSchedule ? "Add to your schedule" : `Propose to ${ownerName}`}</h4>
       <div className="lp-row2">
-        <Field label="Date"><input type="date" className="lp-input" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
+        <Field label="Date"><DateInput className="lp-input" value={date} onChange={(e) => setDate(e.target.value)} allowClear={false} /></Field>
         <Field label="What's happening"><input className="lp-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Site Four walkthrough with the arborist" /></Field>
       </div>
       <div className="lp-row2">
@@ -2031,7 +2032,7 @@ function AssignedTaskRow({ task, onRemove, onUpdate, nameOptions }) {
     return (
       <li>
         <Field label="Date it should appear">
-          <input type="date" className="lp-input" value={draft.date} onChange={(e) => setDraft((d) => ({ ...d, date: e.target.value }))} />
+          <DateInput className="lp-input" value={draft.date} onChange={(e) => setDraft((d) => ({ ...d, date: e.target.value }))} allowClear={false} />
         </Field>
         <Field label="Assign to">
           <div className="lp-checkbox-grid">
@@ -2167,7 +2168,7 @@ function AssignTasksPanel({ assignedTasks, onAdd, onRemove, onUpdate, workers })
         <h4><Plus size={15} /> Add a task for staff</h4>
         <p className="lp-hint">It'll appear on the report form for everyone it's assigned to, on the date you choose — each of them fills in area, time, and status themselves, same as their own tasks.</p>
         <Field label="Date it should appear">
-          <input type="date" className="lp-input" value={date} onChange={(e) => setDate(e.target.value)} />
+          <DateInput className="lp-input" value={date} onChange={(e) => setDate(e.target.value)} allowClear={false} />
         </Field>
         <Field label="Assign to (tick as many as needed)">
           <div className="lp-checkbox-grid">
@@ -2398,7 +2399,7 @@ function TasksPanel({ currentManager }) {
           </select>
         </Field>
         <Field label="Date">
-          <input type="date" className="lp-input" value={draft.date} onChange={(e) => setDraft((d) => ({ ...d, date: e.target.value }))} />
+          <DateInput className="lp-input" value={draft.date} onChange={(e) => setDraft((d) => ({ ...d, date: e.target.value }))} allowClear={false} />
         </Field>
       </div>
       <Field label="Task">
@@ -2685,7 +2686,7 @@ function MorningBrief({ crm, onOpen }) {
   const DateBar = (
     <div className="lp-datebar">
       <button className="lp-nav-btn" onClick={() => setSelectedDate(addDays(selectedDate, -1))} aria-label="Previous day"><ChevronLeft size={16} /></button>
-      <input type="date" className="lp-input lp-datebar-input" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+      <DateInput className="lp-input lp-datebar-input" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} allowClear={false} />
       <button className="lp-nav-btn" onClick={() => setSelectedDate(addDays(selectedDate, 1))} aria-label="Next day"><ChevronRight size={16} /></button>
       <button className="lp-btn-ghost lp-today-btn" onClick={() => setSelectedDate(todayISO())}>Today</button>
       <button className="lp-btn-ghost" onClick={() => setRefresh((n) => n + 1)}>Refresh</button>
