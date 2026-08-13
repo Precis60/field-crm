@@ -512,6 +512,15 @@ create policy sites_all on sites
   with check (auth.uid() is not null);
 
 grant select on site_assignments to authenticated;
+
+-- `roster` is a plain view over `people`, so it runs with the privileges of
+-- its owner and bypasses `people`'s row-level security (this is intentional
+-- — it only exposes id/name/role/active/sort_order, so unprivileged staff
+-- can list names without a broader grant on `people`). Supabase grants new
+-- objects to `anon`/`authenticated` by default, which for a view like this
+-- would let anyone write straight through to `people`, bypassing RLS
+-- entirely. Lock it down to read-only for signed-in users only.
+revoke all on roster from public, anon, authenticated;
 grant select on roster to authenticated;
 
 -- Customer <-> site assignments (independent of projects)
