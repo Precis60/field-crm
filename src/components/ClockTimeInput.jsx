@@ -59,8 +59,8 @@ export default function ClockTimeInput({ value, onChange, className = "", ...res
     setSelMinute(parsed.minute);
   }, [value]);
 
-  function commit() {
-    const v = to24(selHour, ampm, selMinute);
+  function commitWithMinute(m) {
+    const v = to24(selHour, ampm, m);
     if (onChange) onChange({ target: { value: v } });
     setOpen(false);
   }
@@ -72,6 +72,7 @@ export default function ClockTimeInput({ value, onChange, className = "", ...res
 
   function selectMinute(m) {
     setSelMinute(m);
+    commitWithMinute(m);
   }
 
   const display = useMemo(() => {
@@ -200,6 +201,8 @@ export default function ClockTimeInput({ value, onChange, className = "", ...res
           padding: "24px 16px",
           minWidth: 320,
           maxWidth: "calc(100vw - 32px)",
+          maxHeight: "calc(100vh - 32px)",
+          overflow: "auto",
           background: "#fff",
           boxShadow: "0 16px 40px rgba(0,0,0,0.25)",
           textAlign: "center",
@@ -208,7 +211,7 @@ export default function ClockTimeInput({ value, onChange, className = "", ...res
         <style>{`
           .lp-clock-dialog::backdrop { background: rgba(0,0,0,0.45); }
           @media (max-width: 480px) {
-            .lp-clock-dialog { width: 100vw; height: 100vh; max-width: none; margin: 0; border-radius: 0; display: flex; flex-direction: column; justify-content: center; }
+            .lp-clock-dialog { width: 100vw; min-height: 100vh; height: auto !important; max-width: none; margin: 0; border-radius: 0; display: flex; flex-direction: column; justify-content: center; overflow: auto !important; }
             .lp-clock-dialog .lp-clock-face { width: 280px; height: 280px; }
             .lp-clock-dialog .lp-clock-number { width: 48px; height: 48px; font-size: 17px; }
           }
@@ -227,13 +230,6 @@ export default function ClockTimeInput({ value, onChange, className = "", ...res
             onClick={() => setOpen(false)}
           >
             Cancel
-          </button>
-          <button
-            type="button"
-            className="lp-btn"
-            onClick={commit}
-          >
-            Done
           </button>
         </div>
       </dialog>
