@@ -59,8 +59,8 @@ export default function ClockTimeInput({ value, onChange, className = "", ...res
     setSelMinute(parsed.minute);
   }, [value]);
 
-  function commitWithMinute(m) {
-    const v = to24(selHour, ampm, m);
+  function commit() {
+    const v = to24(selHour, ampm, selMinute);
     if (onChange) onChange({ target: { value: v } });
     setOpen(false);
   }
@@ -72,7 +72,6 @@ export default function ClockTimeInput({ value, onChange, className = "", ...res
 
   function selectMinute(m) {
     setSelMinute(m);
-    commitWithMinute(m);
   }
 
   const display = useMemo(() => {
@@ -230,6 +229,18 @@ export default function ClockTimeInput({ value, onChange, className = "", ...res
             onClick={() => setOpen(false)}
           >
             Cancel
+          </button>
+          <button
+            type="button"
+            className="lp-btn-ghost"
+            onClick={commit}
+            style={{
+              background: "#1890ff",
+              color: "#fff",
+              border: "1px solid #1890ff",
+            }}
+          >
+            Done
           </button>
         </div>
       </dialog>

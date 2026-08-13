@@ -3759,6 +3759,36 @@ function statusLabel(v) {
   return SITE_TASK_STATUSES.find((s) => s.value === v)?.label || v;
 }
 
+function formatDate(d) {
+  if (!d) return "—";
+  const parsed = new Date(d + "T00:00:00");
+  if (isNaN(parsed.getTime())) return d;
+  return parsed.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function statusBadge(v) {
+  const label = statusLabel(v);
+  const color =
+    v === "complete" ? "#4C7A54" :
+    v === "in_progress" ? "#C97A2B" :
+    v === "not_started" ? "#6b7280" :
+    v === "on_hold" ? "#8b5cf6" :
+    v === "cancelled" ? "#B4483A" :
+    "#1a1a1a";
+  const bg =
+    v === "complete" ? "#EDF6EE" :
+    v === "in_progress" ? "#FDF4E8" :
+    v === "not_started" ? "#f4f6f8" :
+    v === "on_hold" ? "#F3EEFD" :
+    v === "cancelled" ? "#FBEAE7" :
+    "#f4f6f8";
+  return (
+    <span style={{ display: "inline-block", padding: "3px 8px", borderRadius: 12, fontSize: 12, fontWeight: 600, color, background: bg, whiteSpace: "nowrap" }}>
+      {label}
+    </span>
+  );
+}
+
 function SiteTasksPanel({ crm, uid, sites = [], selectedId = null }) {
   const [tasks, setTasks] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -4091,44 +4121,56 @@ function SiteTasksPanel({ crm, uid, sites = [], selectedId = null }) {
             <span className="lp-hint">No site tasks found.</span>
           </div>
         ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <thead>
-              <tr style={{ textAlign: "left", borderBottom: "1px solid var(--border)" }}>
-                <th style={{ padding: 8 }}>Site Name</th>
-                <th style={{ padding: 8 }}>Task Name</th>
-                <th style={{ padding: 8 }}>Task Description</th>
-                <th style={{ padding: 8 }}>Task Due Date</th>
-                <th style={{ padding: 8 }}>Task Start Date</th>
-                <th style={{ padding: 8 }}>Task End Date</th>
-                <th style={{ padding: 8 }}>Task Status</th>
-                <th style={{ padding: 8 }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map((t) => (
-                <tr key={t.id} style={{ borderBottom: "1px solid var(--border)" }}>
-                  <td style={{ padding: 8 }}>{t.sites?.name || sites.find((s) => s.id === t.site_id)?.name || "—"}</td>
-                  <td style={{ padding: 8 }}>{t.name}</td>
-                  <td style={{ padding: 8 }}>{t.description}</td>
-                  <td style={{ padding: 8 }}>{t.due_date || "—"}</td>
-                  <td style={{ padding: 8 }}>{t.start_date || "—"}</td>
-                  <td style={{ padding: 8 }}>{t.end_date || "—"}</td>
-                  <td style={{ padding: 8 }}>{statusLabel(t.status)}</td>
-                  <td style={{ padding: 8, whiteSpace: "nowrap" }}>
-                    <button className="lp-btn-ghost" onClick={() => handleAddToCalendar(t)} title="Add to calendar" disabled={busy}>
-                      <CalendarDays size={13} />
-                    </button>
-                    <button className="lp-btn-ghost" onClick={() => { setEditing(t.id); setDraft({ site_id: t.site_id || "", category_id: t.category_id || "", name: t.name || "", description: t.description || "", due_date: t.due_date || "", start_date: t.start_date || "", end_date: t.end_date || "", status: t.status || "not_started" }); }}>
-                      <Pencil size={13} /> Edit
-                    </button>
-                    <button className="lp-btn-ghost lp-btn-danger" onClick={() => removeTask(t.id)} disabled={busy}>
-                      <Trash2 size={13} /> Delete
-                    </button>
-                  </td>
+          <div style={{ border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden", overflowX: "auto" }}>
+            <table style={{ width: "100%", minWidth: 900, borderCollapse: "collapse", fontSize: 13, tableLayout: "fixed" }}>
+              <colgroup>
+                <col style={{ width: "12%" }} />
+                <col style={{ width: "15%" }} />
+                <col style={{ width: "22%" }} />
+                <col style={{ width: "11%" }} />
+                <col style={{ width: "11%" }} />
+                <col style={{ width: "11%" }} />
+                <col style={{ width: "12%" }} />
+                <col style={{ width: "16%" }} />
+              </colgroup>
+              <thead>
+                <tr style={{ textAlign: "left", background: "#f4f6f8", fontWeight: 600 }}>
+                  <th style={{ padding: "10px 8px" }}>Site Name</th>
+                  <th style={{ padding: "10px 8px" }}>Task Name</th>
+                  <th style={{ padding: "10px 8px" }}>Task Description</th>
+                  <th style={{ padding: "10px 8px" }}>Due</th>
+                  <th style={{ padding: "10px 8px" }}>Start</th>
+                  <th style={{ padding: "10px 8px" }}>End</th>
+                  <th style={{ padding: "10px 8px" }}>Status</th>
+                  <th style={{ padding: "10px 8px" }}></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {visible.map((t) => (
+                  <tr key={t.id} style={{ borderTop: "1px solid var(--line)" }}>
+                    <td style={{ padding: 8, verticalAlign: "top" }}>{t.sites?.name || sites.find((s) => s.id === t.site_id)?.name || "—"}</td>
+                    <td style={{ padding: 8, verticalAlign: "top", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.name}</td>
+                    <td style={{ padding: 8, verticalAlign: "top", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.description}</td>
+                    <td style={{ padding: 8, verticalAlign: "top", whiteSpace: "nowrap" }}>{formatDate(t.due_date)}</td>
+                    <td style={{ padding: 8, verticalAlign: "top", whiteSpace: "nowrap" }}>{formatDate(t.start_date)}</td>
+                    <td style={{ padding: 8, verticalAlign: "top", whiteSpace: "nowrap" }}>{formatDate(t.end_date)}</td>
+                    <td style={{ padding: 8, verticalAlign: "top" }}>{statusBadge(t.status)}</td>
+                    <td style={{ padding: 8, whiteSpace: "nowrap", verticalAlign: "top" }}>
+                      <button className="lp-btn-ghost" onClick={() => handleAddToCalendar(t)} title="Add to calendar" disabled={busy}>
+                        <CalendarDays size={13} />
+                      </button>
+                      <button className="lp-btn-ghost" onClick={() => { setEditing(t.id); setDraft({ site_id: t.site_id || "", category_id: t.category_id || "", name: t.name || "", description: t.description || "", due_date: t.due_date || "", start_date: t.start_date || "", end_date: t.end_date || "", status: t.status || "not_started" }); }}>
+                        <Pencil size={13} /> Edit
+                      </button>
+                      <button className="lp-btn-ghost lp-btn-danger" onClick={() => removeTask(t.id)} disabled={busy}>
+                        <Trash2 size={13} /> Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
