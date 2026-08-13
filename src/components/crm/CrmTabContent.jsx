@@ -2575,6 +2575,7 @@ function CalendarPanel({ crm, uid, selectedId = null }) {
                     const color = EVENT_CATEGORIES.find((c) => c.label === e.category)?.color || "#64748b";
                     const time = start.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", timeZone: APP_TIME_ZONE });
                     const isProjectConnected = e.status === "project_connected";
+                    const isInternalWorks = e.status === "internal_works";
                     return (
                       <button
                         key={e.id}
@@ -2587,7 +2588,7 @@ function CalendarPanel({ crm, uid, selectedId = null }) {
                           fontSize: 10.5,
                           padding: "2px 5px",
                           borderRadius: 4,
-                          border: isProjectConnected ? `2px solid ${color}` : "none",
+                          border: isProjectConnected ? `2px solid ${color}` : isInternalWorks ? `2px dotted ${color}` : "none",
                           borderLeft: `3px solid ${color}`,
                           background: color + "26",
                           color: "#333",
@@ -2710,6 +2711,7 @@ function CalendarPanel({ crm, uid, selectedId = null }) {
               return laidOut.map(({ e, portionStart, portionEnd, col, cols }) => {
                 const color = EVENT_CATEGORIES.find((c) => c.label === e.category)?.color || "#64748b";
                 const isProjectConnected = e.status === "project_connected";
+                const isInternalWorks = e.status === "internal_works";
                 // Hour-of-day must be Melbourne's wall-clock hour, not the
                 // viewing device's — otherwise the block renders at the
                 // wrong time for anyone outside Melbourne.
@@ -2738,8 +2740,8 @@ function CalendarPanel({ crm, uid, selectedId = null }) {
                       borderLeft: `3px solid ${color}`,
                       borderRight: cols > 1 ? "1px solid #fff" : undefined,
                       boxShadow: cols > 1 ? "0 0 0 1px rgba(255,255,255,0.9)" : undefined,
-                      outline: isProjectConnected ? `2px solid ${color}` : "none",
-                      outlineOffset: isProjectConnected ? -1 : 0,
+                      outline: isProjectConnected ? `2px solid ${color}` : isInternalWorks ? `2px dotted ${color}` : "none",
+                      outlineOffset: isProjectConnected || isInternalWorks ? -1 : 0,
                       borderRadius: 4,
                       padding: "3px 5px",
                       fontSize: cols > 1 ? 9.5 : 10.5,
