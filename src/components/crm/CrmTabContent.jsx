@@ -4024,13 +4024,26 @@ function SiteTasksPanel({ crm, uid, sites = [], selectedId = null }) {
 
   return (
     <div className="lp-settings lp-settings--wide">
-      <h3><Building2 size={16} /> Site Tasks</h3>
-      <p className="lp-hint">Tasks by site and category.</p>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <h3><Building2 size={16} /> Site Tasks</h3>
+          <p className="lp-hint">Tasks by site and category.</p>
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button className="lp-btn-ghost" onClick={() => { setEditingCategory(null); setCategoryDraft({ site_id: "", name: "" }); setShowCategoryForm(true); setAdding(false); setEditing(null); setErr(""); }}>
+            <Plus size={15} /> Add a category
+          </button>
+          <button className="lp-btn-ghost" onClick={() => { setAdding(true); setEditing(null); setDraft(emptyTask()); setShowCategoryForm(false); setErr(""); }}>
+            <Plus size={15} /> Add a task
+          </button>
+        </div>
+      </div>
 
       {err && <p className="lp-error">{err}</p>}
 
-      {showCategoryForm ? (
-        <div className="lp-person-row" style={{ marginTop: 12 }}>
+      {showCategoryForm && (
+        <div className="lp-person-row" style={{ marginTop: 16 }}>
+          <h4 style={{ fontSize: 13, fontWeight: 600, margin: "0 0 4px" }}>{editingCategory ? "Edit category" : "New category"}</h4>
           <div className="lp-row2">
             <Field label="Site *">
               <select className="lp-input" value={categoryDraft.site_id} onChange={(e) => setCategoryDraft((d) => ({ ...d, site_id: e.target.value }))}>
@@ -4047,27 +4060,20 @@ function SiteTasksPanel({ crm, uid, sites = [], selectedId = null }) {
             <button className="lp-btn-ghost" onClick={() => { setShowCategoryForm(false); setEditingCategory(null); setCategoryDraft({ site_id: "", name: "" }); setErr(""); }}><X size={13} /> Cancel</button>
           </div>
         </div>
-      ) : (
-        <button className="lp-btn-ghost" style={{ marginTop: 10 }} onClick={() => { setEditingCategory(null); setCategoryDraft({ site_id: "", name: "" }); setShowCategoryForm(true); setErr(""); }}>
-          <Plus size={15} /> Add a category
-        </button>
       )}
 
-      {adding || editing ? (
-        <div className="lp-person-row" style={{ marginTop: 12 }}>
+      {(adding || editing) && (
+        <div className="lp-person-row" style={{ marginTop: 16 }}>
+          <h4 style={{ fontSize: 13, fontWeight: 600, margin: "0 0 4px" }}>{editing ? "Edit task" : "New task"}</h4>
           {taskForm}
           <div className="lp-person-actions">
             <button className="lp-btn-ghost" onClick={editing ? () => saveEditTask(editing) : saveNewTask} disabled={busy}><Check size={13} /> {busy ? "Saving…" : editing ? "Save" : "Add task"}</button>
             <button className="lp-btn-ghost" onClick={() => { setAdding(false); setEditing(null); setErr(""); setDraft(emptyTask()); }}><X size={13} /> Cancel</button>
           </div>
         </div>
-      ) : (
-        <button className="lp-btn-ghost" style={{ marginTop: 10 }} onClick={() => { setAdding(true); setEditing(null); setDraft(emptyTask()); setErr(""); }}>
-          <Plus size={15} /> Add a task
-        </button>
       )}
 
-      <div style={{ marginTop: 16, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "end" }}>
+      <div className="lp-filter-bar" style={{ marginTop: 20 }}>
         <Field label="Filter by site">
           <select className="lp-input" value={filterSite} onChange={(e) => { setFilterSite(e.target.value); setFilterCategory(""); }}>
             <option value="">All sites</option>
@@ -4082,40 +4088,50 @@ function SiteTasksPanel({ crm, uid, sites = [], selectedId = null }) {
         </Field>
       </div>
 
-      <div style={{ marginTop: 12 }}>
-        <h4 style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Categories</h4>
-        {filteredCategories.length === 0 ? (
-          <p className="lp-hint">No categories.</p>
-        ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <thead>
-              <tr style={{ textAlign: "left", borderBottom: "1px solid var(--border)" }}>
-                <th style={{ padding: 8 }}>Site Name</th>
-                <th style={{ padding: 8 }}>Category Name</th>
-                <th style={{ padding: 8 }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredCategories.map((c) => (
-                <tr key={c.id} style={{ borderBottom: "1px solid var(--border)" }}>
-                  <td style={{ padding: 8 }}>{c.site_id ? (sites.find((s) => s.id === c.site_id)?.name || "—") : "All sites"}</td>
-                  <td style={{ padding: 8 }}>{c.name}</td>
-                  <td style={{ padding: 8, whiteSpace: "nowrap" }}>
-                    <button className="lp-btn-ghost" onClick={() => { setEditingCategory(c.id); setCategoryDraft({ site_id: c.site_id || "", name: c.name || "" }); setShowCategoryForm(true); }} disabled={busy}>
-                      <Pencil size={13} /> Edit
-                    </button>
-                    <button className="lp-btn-ghost lp-btn-danger" onClick={() => removeCategory(c.id)} disabled={busy}>
-                      <Trash2 size={13} /> Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      <details className="lp-collapse" style={{ marginTop: 20 }}>
+        <summary className="lp-collapse-summary">
+          <span>Categories</span>
+          <span className="lp-panel-count">{filteredCategories.length}</span>
+        </summary>
+        <div style={{ marginTop: 10 }}>
+          {filteredCategories.length === 0 ? (
+            <p className="lp-hint">No categories.</p>
+          ) : (
+            <div style={{ border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden", overflowX: "auto" }}>
+              <table style={{ width: "100%", minWidth: 480, borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ textAlign: "left", background: "#f4f6f8", fontWeight: 600 }}>
+                    <th style={{ padding: "10px 8px" }}>Site Name</th>
+                    <th style={{ padding: "10px 8px" }}>Category Name</th>
+                    <th style={{ padding: "10px 8px" }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredCategories.map((c) => (
+                    <tr key={c.id} style={{ borderTop: "1px solid var(--line)" }}>
+                      <td style={{ padding: 8 }}>{c.site_id ? (sites.find((s) => s.id === c.site_id)?.name || "—") : "All sites"}</td>
+                      <td style={{ padding: 8 }}>{c.name}</td>
+                      <td style={{ padding: 8, whiteSpace: "nowrap", textAlign: "right" }}>
+                        <button className="lp-btn-ghost" onClick={() => { setEditingCategory(c.id); setCategoryDraft({ site_id: c.site_id || "", name: c.name || "" }); setShowCategoryForm(true); setAdding(false); setEditing(null); }} disabled={busy}>
+                          <Pencil size={13} /> Edit
+                        </button>
+                        <button className="lp-btn-ghost lp-btn-danger" onClick={() => removeCategory(c.id)} disabled={busy}>
+                          <Trash2 size={13} /> Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </details>
 
-      <div className="lp-person-list" style={{ marginTop: 12 }}>
+      <div style={{ marginTop: 20 }}>
+        <h4 style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>
+          Tasks <span className="lp-panel-count">{visible.length}</span>
+        </h4>
         {visible.length === 0 ? (
           <div className="lp-person-row" style={{ justifyContent: "center" }}>
             <span className="lp-hint">No site tasks found.</span>
@@ -4146,24 +4162,24 @@ function SiteTasksPanel({ crm, uid, sites = [], selectedId = null }) {
                 </tr>
               </thead>
               <tbody>
-                {visible.map((t) => (
-                  <tr key={t.id} style={{ borderTop: "1px solid var(--line)" }}>
+                {visible.map((t, i) => (
+                  <tr key={t.id} style={{ borderTop: "1px solid var(--line)", background: i % 2 ? "#fafafa" : "#fff" }}>
                     <td style={{ padding: 8, verticalAlign: "top" }}>{t.sites?.name || sites.find((s) => s.id === t.site_id)?.name || "—"}</td>
-                    <td style={{ padding: 8, verticalAlign: "top", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.name}</td>
-                    <td style={{ padding: 8, verticalAlign: "top", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.description}</td>
+                    <td style={{ padding: 8, verticalAlign: "top", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={t.name}>{t.name}</td>
+                    <td style={{ padding: 8, verticalAlign: "top", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: "#6b7280" }} title={t.description}>{t.description || "—"}</td>
                     <td style={{ padding: 8, verticalAlign: "top", whiteSpace: "nowrap" }}>{formatDate(t.due_date)}</td>
                     <td style={{ padding: 8, verticalAlign: "top", whiteSpace: "nowrap" }}>{formatDate(t.start_date)}</td>
                     <td style={{ padding: 8, verticalAlign: "top", whiteSpace: "nowrap" }}>{formatDate(t.end_date)}</td>
                     <td style={{ padding: 8, verticalAlign: "top" }}>{statusBadge(t.status)}</td>
                     <td style={{ padding: 8, whiteSpace: "nowrap", verticalAlign: "top" }}>
-                      <button className="lp-btn-ghost" onClick={() => handleAddToCalendar(t)} title="Add to calendar" disabled={busy}>
+                      <button className="lp-btn-icon" onClick={() => handleAddToCalendar(t)} title="Add to calendar" disabled={busy}>
                         <CalendarDays size={13} />
                       </button>
-                      <button className="lp-btn-ghost" onClick={() => { setEditing(t.id); setDraft({ site_id: t.site_id || "", category_id: t.category_id || "", name: t.name || "", description: t.description || "", due_date: t.due_date || "", start_date: t.start_date || "", end_date: t.end_date || "", status: t.status || "not_started" }); }}>
-                        <Pencil size={13} /> Edit
+                      <button className="lp-btn-icon" onClick={() => { setEditing(t.id); setAdding(false); setShowCategoryForm(false); setDraft({ site_id: t.site_id || "", category_id: t.category_id || "", name: t.name || "", description: t.description || "", due_date: t.due_date || "", start_date: t.start_date || "", end_date: t.end_date || "", status: t.status || "not_started" }); }} title="Edit">
+                        <Pencil size={13} />
                       </button>
-                      <button className="lp-btn-ghost lp-btn-danger" onClick={() => removeTask(t.id)} disabled={busy}>
-                        <Trash2 size={13} /> Delete
+                      <button className="lp-btn-icon lp-btn-icon-danger" onClick={() => removeTask(t.id)} disabled={busy} title="Delete">
+                        <Trash2 size={13} />
                       </button>
                     </td>
                   </tr>
