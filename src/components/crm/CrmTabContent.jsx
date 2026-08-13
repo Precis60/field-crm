@@ -2724,6 +2724,7 @@ function InvoiceDetail({ id, crm, uid, onBack }) {
       status: invoice.status || 'draft',
       issued_at: datePart(invoice.issued_at),
       due_at: datePart(invoice.due_at),
+      paid_at: datePart(invoice.paid_at),
       notes: invoice.notes || '',
       labourDiscount: discountPercent,
       discountId: discountLine ? discountLine.id : null,
@@ -2815,6 +2816,7 @@ function InvoiceDetail({ id, crm, uid, onBack }) {
       const tax = Math.round(subtotal * 0.1 * 100) / 100;
       const total = Math.round((subtotal + tax) * 100) / 100;
       const { lines, labourDiscount, discountId, ...invoicePatch } = editDraft;
+      invoicePatch.paid_at = invoicePatch.status === 'paid' ? (invoicePatch.paid_at || null) : null;
       await crm.updateInvoice(id, { ...invoicePatch, subtotal, tax, total, updated_at: new Date().toISOString() });
       await reload();
       setEditing(false);
@@ -2858,10 +2860,28 @@ function InvoiceDetail({ id, crm, uid, onBack }) {
               </select>
             </Field>
             <Field label='Status'>
-              <select className='lp-input' value={editDraft.status} onChange={(e) => setEditDraft((d) => ({ ...d, status: e.target.value }))}>
+              <select
+                className='lp-input'
+                value={editDraft.status}
+                onChange={(e) => {
+                  const status = e.target.value;
+                  setEditDraft((d) => ({
+                    ...d,
+                    status,
+                    // Marking an invoice paid pre-fills today's date; any other
+                    // status clears it so a stale paid date can't linger.
+                    paid_at: status === 'paid' ? (d.paid_at || zonedISODate(new Date())) : '',
+                  }));
+                }}
+              >
                 {['draft', 'sent', 'paid', 'void', 'overdue'].map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </Field>
+            {editDraft.status === 'paid' && (
+              <Field label='Paid date'>
+                <input className='lp-input' type='date' value={editDraft.paid_at} onChange={(e) => setEditDraft((d) => ({ ...d, paid_at: e.target.value }))} />
+              </Field>
+            )}
             <Field label='Invoice date'>
               <input className='lp-input' type='date' value={editDraft.issued_at} onChange={(e) => setEditDraft((d) => ({ ...d, issued_at: e.target.value }))} />
             </Field>
@@ -3055,6 +3075,9 @@ function InvoiceDetail({ id, crm, uid, onBack }) {
             <div className="lp-inv-meta-row"><span>Invoice Date</span><strong>{fmt(invoice.issued_at)}</strong></div>
             <div className="lp-inv-meta-row"><span>Terms</span><strong>{invoice.terms || "—"}</strong></div>
             <div className="lp-inv-meta-row"><span>Due Date</span><strong>{fmt(invoice.due_at)}</strong></div>
+            {invoice.status === 'paid' && invoice.paid_at && (
+              <div className="lp-inv-meta-row"><span>Paid Date</span><strong>{fmt(invoice.paid_at)}</strong></div>
+            )}
           </div>
         </div>
 
@@ -3442,7 +3465,10 @@ function InvoicesPanel({ crm, uid }) {
                         <span className="lp-tag">{i.status}</span>
                         <span className="lp-hint">{money(i.total)}</span>
                       </div>
-                      <div className="lp-hint">{i.customerName} · {i.issued_at ? new Date(i.issued_at).toLocaleDateString("en-AU") : "—"}</div>
+                      <div className="lp-hint">
+                        {i.customerName} · {i.issued_at ? new Date(i.issued_at).toLocaleDateString("en-AU") : "—"}
+                        {i.status === "paid" && i.paid_at ? ` · Paid ${new Date(i.paid_at).toLocaleDateString("en-AU")}` : ""}
+                      </div>
                     </div>
                     <ChevronRight size={15} />
                   </div>
