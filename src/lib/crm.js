@@ -3,7 +3,7 @@
  * All calls go through the shared supabaseFetch so auth headers stay consistent.
  */
 
-export function createCrmApi(supabaseFetch) {
+export function createCrmApi(supabaseFetch, supabaseProjectUrl, supabaseAnonKey) {
   /* ---------- Customers ---------- */
 
   async function listCustomers({ activeOnly = true, q = "" } = {}) {
@@ -445,6 +445,27 @@ export function createCrmApi(supabaseFetch) {
     await supabaseFetch(`/timesheets?id=eq.${id}`, { method: "DELETE" });
   }
 
+  async function sendInvoice(invoiceId, to) {
+    const res = await fetch(`${supabaseProjectUrl}/functions/v1/send-invoice`, {
+      method: "POST",
+      headers: {
+        apikey: supabaseAnonKey,
+        Authorization: `Bearer ${supabaseAnonKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ invoice_id: invoiceId, to }),
+    });
+    const text = await res.text().catch(() => "");
+    let data;
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      data = { error: text || "Email failed." };
+    }
+    if (!res.ok) throw new Error(data.error || `Email failed (${res.status})`);
+    return data;
+  }
+
   return {
     listCustomers,
     getCustomer,
@@ -493,6 +514,7 @@ export function createCrmApi(supabaseFetch) {
     updateQuote,
     listInvoices,
     getInvoice,
+    sendInvoice,
     createInvoice,
     createInvoiceLines,
     updateInvoiceLine,

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Check, X, AlertTriangle, Plus, Trash2, Search, Building2, Users,
-  Pencil, ChevronRight, ArrowLeft, Settings, Clock, CalendarDays,
+  Pencil, ChevronRight, ArrowLeft, Settings, Clock, CalendarDays, Mail,
 } from "lucide-react";
 import AddressInput from "../AddressInput.jsx";
 import ClockTimeInput from "../ClockTimeInput.jsx";
@@ -2709,6 +2709,7 @@ function InvoiceDetail({ id, crm, uid, onBack }) {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [err, setErr] = useState('');
+  const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const [editDraft, setEditDraft] = useState(null);
   const [removedIds, setRemovedIds] = useState([]);
@@ -2741,6 +2742,21 @@ function InvoiceDetail({ id, crm, uid, onBack }) {
       setErr(e.message || 'Delete failed.');
       setBusy(false);
     }
+  }
+
+  async function handleEmail() {
+    const to = prompt("Send invoice to:", c?.email || "");
+    if (!to || !to.trim()) return;
+    setBusy(true);
+    setErr('');
+    setMsg('');
+    try {
+      await crm.sendInvoice(invoice.id, to.trim());
+      setMsg(`Invoice sent to ${to.trim()}.`);
+    } catch (e) {
+      setErr(e.message || "Couldn\'t send invoice.");
+    }
+    setBusy(false);
   }
 
   function startEdit() {
@@ -3059,10 +3075,12 @@ function InvoiceDetail({ id, crm, uid, onBack }) {
     <div className="lp-settings lp-settings--wide">
       <style>{`@media print { .no-print { display: none !important; } body { background: #fff !important; } }`}</style>
       {err && <p className='lp-error'>{err}</p>}
+      {msg && <p className='lp-saved'><Check size={13} /> {msg}</p>}
       <div className='no-print' style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
         <button className='lp-btn-ghost' onClick={onBack}><ArrowLeft size={13} /> Back</button>
         <button className='lp-btn-ghost' onClick={() => window.print()}>Print</button>
         <button className='lp-btn-ghost' onClick={startEdit} disabled={busy}><Pencil size={13} /> Edit</button>
+        <button className='lp-btn-ghost' onClick={handleEmail} disabled={busy}><Mail size={13} /> Email</button>
         <button className='lp-btn-ghost lp-btn-danger' onClick={handleDelete} disabled={busy}><Trash2 size={13} /> Delete</button>
         <button className='lp-btn-ghost' onClick={() => window.print()}>Save as PDF</button>
       </div>
