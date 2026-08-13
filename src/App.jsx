@@ -9,6 +9,7 @@ import { createCrmApi } from "./lib/crm.js";
 import CrmTabContent from "./components/crm/CrmTabContent.jsx";
 import { APP_TIME_ZONE, zonedISODate, zonedDateToUTC } from "./lib/time.js";
 import AddressInput from "./components/AddressInput.jsx";
+import ClockTimeInput from "./components/ClockTimeInput.jsx";
 
 /* ---------------------------------------------------------------
    PROPERTY MAINTENANCE — Property & Project Management system
@@ -1471,8 +1472,8 @@ function WorkerForm({ onBack, onSubmitted, presetName, workerNames, assignedTask
           </Field>
           <div className="lp-row3">
             <Field label="Date"><input type="date" className="lp-input" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
-            <Field label="Arrival time"><input type="time" className="lp-input" value={arrival} onChange={(e) => setArrival(e.target.value)} /></Field>
-            <Field label="Departure time"><input type="time" className="lp-input" value={departure} onChange={(e) => setDeparture(e.target.value)} /></Field>
+            <Field label="Arrival time"><ClockTimeInput className="lp-input" value={arrival} onChange={(e) => setArrival(e.target.value)} /></Field>
+            <Field label="Departure time"><ClockTimeInput className="lp-input" value={departure} onChange={(e) => setDeparture(e.target.value)} /></Field>
           </div>
         </Section>
 
@@ -1925,8 +1926,8 @@ function ManagerSchedulePanel({ managers, currentManager }) {
         <Field label="What's happening"><input className="lp-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Site Four walkthrough with the arborist" /></Field>
       </div>
       <div className="lp-row2">
-        <Field label="Start (optional)"><input type="time" className="lp-input" value={startTime} onChange={(e) => setStartTime(e.target.value)} /></Field>
-        <Field label="Finish (optional)"><input type="time" className="lp-input" value={endTime} onChange={(e) => setEndTime(e.target.value)} /></Field>
+        <Field label="Start (optional)"><ClockTimeInput className="lp-input" value={startTime} onChange={(e) => setStartTime(e.target.value)} /></Field>
+        <Field label="Finish (optional)"><ClockTimeInput className="lp-input" value={endTime} onChange={(e) => setEndTime(e.target.value)} /></Field>
       </div>
       <Field label="Notes (optional)">
         <textarea className="lp-textarea" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
@@ -2050,10 +2051,10 @@ function AssignedTaskRow({ task, onRemove, onUpdate, nameOptions }) {
         </Field>
         <div className="lp-row2">
           <Field label="Expected start (optional)">
-            <input type="time" className="lp-input" value={draft.startTime} onChange={(e) => setDraft((d) => ({ ...d, startTime: e.target.value }))} />
+            <ClockTimeInput className="lp-input" value={draft.startTime} onChange={(e) => setDraft((d) => ({ ...d, startTime: e.target.value }))} />
           </Field>
           <Field label="Expected finish (optional)">
-            <input type="time" className="lp-input" value={draft.endTime} onChange={(e) => setDraft((d) => ({ ...d, endTime: e.target.value }))} />
+            <ClockTimeInput className="lp-input" value={draft.endTime} onChange={(e) => setDraft((d) => ({ ...d, endTime: e.target.value }))} />
           </Field>
         </div>
         {acks.length > 0 && <p className="lp-hint">Changing the wording, date or times clears the existing acknowledgement so staff have to confirm again.</p>}
@@ -2186,10 +2187,10 @@ function AssignTasksPanel({ assignedTasks, onAdd, onRemove, onUpdate, workers })
         </Field>
         <div className="lp-row2">
           <Field label="Expected start (optional)">
-            <input type="time" className="lp-input" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+            <ClockTimeInput className="lp-input" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
           </Field>
           <Field label="Expected finish (optional)">
-            <input type="time" className="lp-input" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+            <ClockTimeInput className="lp-input" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
           </Field>
         </div>
         {startTime && endTime && (
@@ -2409,10 +2410,10 @@ function TasksPanel({ currentManager }) {
       </Field>
       <div className="lp-row2">
         <Field label="Expected start (optional)">
-          <input type="time" className="lp-input" value={draft.start} onChange={(e) => setDraft((d) => ({ ...d, start: e.target.value }))} />
+          <ClockTimeInput className="lp-input" value={draft.start} onChange={(e) => setDraft((d) => ({ ...d, start: e.target.value }))} />
         </Field>
         <Field label="Expected finish (optional)">
-          <input type="time" className="lp-input" value={draft.end} onChange={(e) => setDraft((d) => ({ ...d, end: e.target.value }))} />
+          <ClockTimeInput className="lp-input" value={draft.end} onChange={(e) => setDraft((d) => ({ ...d, end: e.target.value }))} />
         </Field>
       </div>
       <Field label="Priority">

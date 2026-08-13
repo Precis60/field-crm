@@ -4,6 +4,8 @@ import {
   Pencil, ChevronRight, ArrowLeft, Settings, Clock, CalendarDays,
 } from "lucide-react";
 import AddressInput from "../AddressInput.jsx";
+import ClockTimeInput from "../ClockTimeInput.jsx";
+import DateTimeClockInput from "../DateTimeClockInput.jsx";
 import { APP_TIME_ZONE, zonedISODate, zonedDateToUTC, zonedParts } from "../../lib/time.js";
 
 const CUSTOMER_STATUSES = ["active", "prospect", "inactive"];
@@ -1044,10 +1046,10 @@ function ProjectList({ projects, customers, sites, crm, uid, onOpen, onChanged, 
                         <input className="lp-input" type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
                       </Field>
                       <Field label="Start">
-                        <input className="lp-input" type="time" value={eventStart} onChange={(e) => setEventStart(e.target.value)} />
+                        <ClockTimeInput className="lp-input" value={eventStart} onChange={(e) => setEventStart(e.target.value)} />
                       </Field>
                       <Field label="End">
-                        <input className="lp-input" type="time" value={eventEnd} onChange={(e) => setEventEnd(e.target.value)} />
+                        <ClockTimeInput className="lp-input" value={eventEnd} onChange={(e) => setEventEnd(e.target.value)} />
                       </Field>
                     </div>
                     <Field label="Notes">
@@ -1747,11 +1749,11 @@ function TimesheetsSection({ projectId, customerId, crm, uid }) {
         <div className="lp-person-row">
           <div className="lp-row2">
             <Field label="Start">
-              <input className="lp-input" type="datetime-local" value={draft.startAt}
+              <DateTimeClockInput className="lp-input" value={draft.startAt}
                 onChange={(e) => setDraft((d) => ({ ...d, startAt: e.target.value }))} />
             </Field>
             <Field label="End">
-              <input className="lp-input" type="datetime-local" value={draft.endAt}
+              <DateTimeClockInput className="lp-input" value={draft.endAt}
                 onChange={(e) => setDraft((d) => ({ ...d, endAt: e.target.value }))} />
             </Field>
           </div>
@@ -2370,10 +2372,10 @@ function CalendarPanel({ crm, uid }) {
             <h4 className="lp-event-section-title">Schedule</h4>
             <div className="lp-row2">
               <Field label="Start">
-                <input className="lp-input" type="datetime-local" value={draft.startAt} onChange={(e) => setDraft((d) => ({ ...d, startAt: e.target.value }))} />
+                <DateTimeClockInput className="lp-input" value={draft.startAt} onChange={(e) => setDraft((d) => ({ ...d, startAt: e.target.value }))} />
               </Field>
               <Field label="End">
-                <input className="lp-input" type="datetime-local" value={draft.endAt} onChange={(e) => setDraft((d) => ({ ...d, endAt: e.target.value }))} />
+                <DateTimeClockInput className="lp-input" value={draft.endAt} onChange={(e) => setDraft((d) => ({ ...d, endAt: e.target.value }))} />
               </Field>
             </div>
             <Field label="Category">
