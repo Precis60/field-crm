@@ -1926,6 +1926,11 @@ function addMonthsToDate(d, n) {
   return zonedDateToUTC(`${year}-${String(month + 1).padStart(2, "0")}-01`, "00:00:00");
 }
 
+// Pixel height of one hour row in the day/week time grid. The grid rows are
+// fixed at this height so the hour labels, the day columns and the event
+// blocks all share the same scale.
+const HOUR_HEIGHT = 40;
+
 function CalendarPanel({ crm, uid }) {
   const [selectedDay, setSelectedDay] = useState(new Date());
   const [view, setView] = useState("week");
@@ -2154,7 +2159,7 @@ function CalendarPanel({ crm, uid }) {
     : view === "month"
     ? []
     : [startOfDay(selectedDay)];
-  const slots = Array.from({ length: 96 }, (_, i) => i);
+  const hours = Array.from({ length: 24 }, (_, i) => i);
 
   return (
     <div className="lp-settings lp-settings--wide" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 160px)" }}>
@@ -2529,18 +2534,28 @@ function CalendarPanel({ crm, uid }) {
               </div>
             ))}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: `60px repeat(${days.length}, 1fr)`, position: "relative", height: 960, minWidth: view === "week" ? 760 : 360 }}>
-            {slots.map((i) => {
-              const h = Math.floor(i / 4);
-              const isHour = i % 4 === 0;
-              const label = isHour ? (h === 0 ? "12am" : h < 12 ? `${h}am` : h === 12 ? "12pm" : `${h - 12}pm`) : null;
+          <div style={{ display: "grid", gridTemplateColumns: `60px repeat(${days.length}, 1fr)`, gridTemplateRows: `repeat(24, ${HOUR_HEIGHT}px)`, position: "relative", height: 24 * HOUR_HEIGHT, minWidth: view === "week" ? 760 : 360 }}>
+            {hours.map((h) => {
+              const label = h === 0 ? "12am" : h < 12 ? `${h}am` : h === 12 ? "12pm" : `${h - 12}pm`;
               return (
-                <div key={i} style={{ display: "contents" }}>
-                  <div style={{ borderTop: isHour ? "1px solid var(--line)" : "1px solid rgba(0,0,0,0.05)", padding: "2px 6px", fontSize: 10.5, color: "var(--muted)", textAlign: "right" }}>
+                <div key={h} style={{ display: "contents" }}>
+                  <div style={{ borderTop: "1px solid var(--line)", padding: "1px 6px 0", fontSize: 10.5, lineHeight: 1.2, color: "var(--muted)", textAlign: "right", overflow: "hidden" }}>
                     {label}
                   </div>
                   {days.map((day) => (
-                    <div key={`${i}-${day.toISOString()}`} style={{ borderTop: isHour ? "1px solid var(--line)" : "1px solid rgba(0,0,0,0.05)", borderLeft: "1px solid var(--line)", position: "relative", background: new Date(day.toLocaleString("en-US", { timeZone: APP_TIME_ZONE })).getDay() % 6 === 0 ? "rgba(0,0,0,0.02)" : undefined }}></div>
+                    <div
+                      key={`${h}-${day.toISOString()}`}
+                      style={{
+                        borderTop: "1px solid var(--line)",
+                        borderLeft: "1px solid var(--line)",
+                        position: "relative",
+                        // Quarter-hour guides drawn inside the hour row, so the
+                        // row height stays exactly HOUR_HEIGHT and the grid lines
+                        // line up with the absolutely positioned event blocks.
+                        backgroundImage: `repeating-linear-gradient(to bottom, transparent 0, transparent ${HOUR_HEIGHT / 4 - 1}px, rgba(0,0,0,0.05) ${HOUR_HEIGHT / 4 - 1}px, rgba(0,0,0,0.05) ${HOUR_HEIGHT / 4}px)`,
+                        backgroundColor: new Date(day.toLocaleString("en-US", { timeZone: APP_TIME_ZONE })).getDay() % 6 === 0 ? "rgba(0,0,0,0.02)" : undefined,
+                      }}
+                    ></div>
                   ))}
                 </div>
               );
@@ -2610,8 +2625,8 @@ function CalendarPanel({ crm, uid }) {
                 const startH = startParts.hour + startParts.minute / 60;
                 let endH = endParts.hour + endParts.minute / 60;
                 if (endH === 0 && portionEnd.getTime() !== portionStart.getTime()) endH = 24;
-                const top = (startH / 24) * 100;
-                const height = Math.max(((endH - startH) / 24) * 100, 1.8);
+                const top = startH * HOUR_HEIGHT;
+                const height = Math.max((endH - startH) * HOUR_HEIGHT, 18);
                 const title = [e.title ? e.category : null, e.project_name, e.site_name].filter(Boolean).join(" · ");
                 return (
                   <button
@@ -2624,8 +2639,8 @@ function CalendarPanel({ crm, uid }) {
                       position: "absolute",
                       left: `calc(60px + (100% - 60px) * (${dayIndex} / ${days.length} + ${col} / (${days.length} * ${cols})))`,
                       width: `calc((100% - 60px) / (${days.length} * ${cols}) - 3px)`,
-                      top: `${top}%`,
-                      height: `${height}%`,
+                      top: `${top}px`,
+                      height: `${height}px`,
                       backgroundColor: color + "33",
                       borderLeft: `3px solid ${color}`,
                       borderRight: cols > 1 ? "1px solid #fff" : undefined,
