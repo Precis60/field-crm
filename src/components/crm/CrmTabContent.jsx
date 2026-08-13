@@ -2888,7 +2888,7 @@ function InvoiceDetail({ id, crm, uid, onBack }) {
             <Field label='Due date'>
               <input className='lp-input' type='date' value={editDraft.due_at} onChange={(e) => setEditDraft((d) => ({ ...d, due_at: e.target.value }))} />
             </Field>
-            <Field label='Terms & Conditions'>
+            <Field label='Notes'>
               <textarea className='lp-textarea' rows={4} value={editDraft.notes} onChange={(e) => setEditDraft((d) => ({ ...d, notes: e.target.value }))} />
             </Field>
             <Field label='Line items'>
@@ -3114,7 +3114,7 @@ function InvoiceDetail({ id, crm, uid, onBack }) {
 
         {invoice.notes && (
           <div className="lp-inv-footer-section">
-            <div className="lp-inv-footer-title">Terms & Conditions</div>
+            <div className="lp-inv-footer-title">Notes</div>
             <div className="lp-inv-footer-body">{invoice.notes}</div>
           </div>
         )}
@@ -3397,8 +3397,8 @@ function InvoicesPanel({ crm, uid }) {
           </div>
 
           <div className="lp-event-section">
-            <h4 className="lp-event-section-title">Terms & conditions</h4>
-            <Field label="Terms & Conditions">
+            <h4 className="lp-event-section-title">Notes</h4>
+            <Field label="Notes">
               <textarea className="lp-textarea" rows={3} value={draft.notes} onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))} />
             </Field>
           </div>
