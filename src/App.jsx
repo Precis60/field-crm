@@ -3147,7 +3147,7 @@ function AdminPanel() {
   const activeSites = sites.filter((s) => s.active);
 
   return (
-    <div className="lp-settings">
+    <div className="lp-settings lp-settings--wide">
       <div className="lp-subtabs">
         <button className={`lp-tab ${adminTab === "sites" ? "is-active" : ""}`} onClick={() => { setErr(""); setAdminTab("sites"); }}>
           <Building2 size={14} /> Sites
