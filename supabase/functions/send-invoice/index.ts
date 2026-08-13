@@ -41,10 +41,8 @@ serve(async (req) => {
     }
 
     const resendKey = Deno.env.get("RESEND_API_KEY");
-    const senderEmail = Deno.env.get("SENDER_EMAIL");
-    const senderName = Deno.env.get("SENDER_NAME") || "";
-    if (!resendKey || !senderEmail) {
-      return new Response(JSON.stringify({ error: "Email not configured. Set RESEND_API_KEY and SENDER_EMAIL secrets." }), {
+    if (!resendKey) {
+      return new Response(JSON.stringify({ error: "Email not configured. Set the RESEND_API_KEY secret." }), {
         status: 503,
         headers: { ...cors, "Content-Type": "application/json" },
       });
@@ -71,14 +69,23 @@ serve(async (req) => {
     const { data: settingsRows } = await supabase.from("settings").select("*");
     const settings = Object.fromEntries((settingsRows || []).map((s: any) => [s.key, s.value]));
 
-    const businessName = settings.business_name || senderName || "Your business";
+    const businessName = settings.business_name || "Your business";
     const businessAddress = settings.business_address || "";
     const businessPhone = settings.business_phone || "";
-    const businessEmail = settings.business_email || senderEmail;
+    const businessEmail = settings.business_email || "";
     const businessAbn = settings.business_abn || "";
     const businessAccountName = settings.business_account_name || "";
     const businessBsb = settings.business_bsb || "";
     const businessAccountNumber = settings.business_account_number || "";
+
+    const fromEmail = Deno.env.get("SENDER_EMAIL") || businessEmail;
+    const fromName = Deno.env.get("SENDER_NAME") || businessName;
+    if (!fromEmail) {
+      return new Response(JSON.stringify({ error: "No sender email. Set SENDER_EMAIL secret or the business_email setting." }), {
+        status: 503,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
 
     const c = invoice.customers || {};
     const lines: any[] = invoice.invoice_lines || [];
@@ -156,7 +163,7 @@ serve(async (req) => {
         "Authorization": `Bearer ${resendKey}`,
       },
       body: JSON.stringify({
-        from: senderName ? `${senderName} <${senderEmail}>` : senderEmail,
+        from: fromName ? `${fromName} <${fromEmail}>` : fromEmail,
         to: [to],
         subject: `Invoice ${invoice.invoice_number} from ${businessName}`,
         html,
