@@ -52,6 +52,7 @@ const EVENT_STATUSES = [
   { value: "in_progress", label: "In Progress", color: "#C97A2B" },
   { value: "completed", label: "Completed", color: "#4C7A54" },
   { value: "project_connected", label: "Project Connected", color: "#8b5cf6" },
+  { value: "internal_works", label: "Internal Works", color: "#0d9488" },
 ];
 
 function eventStatusLabel(v) {
