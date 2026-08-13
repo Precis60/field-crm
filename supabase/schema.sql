@@ -237,12 +237,14 @@ create table if not exists invoices (
   notes text,
   issued_at timestamptz,
   due_at timestamptz,
+  paid_at timestamptz,
   active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
 alter table invoices add column if not exists active boolean not null default true;
+alter table invoices add column if not exists paid_at timestamptz;
 
 create index if not exists invoices_project_idx on invoices (project_id);
 create index if not exists invoices_status_idx on invoices (status);
