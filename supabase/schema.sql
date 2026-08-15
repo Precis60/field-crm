@@ -534,10 +534,12 @@ create table if not exists customer_sites (
 alter table customer_sites enable row level security;
 grant select, insert, update, delete on customer_sites to authenticated;
 
+-- Manager-only: customer<->site links are only ever read/written from the
+-- manager-facing CRM (Admin panel), never by worker accounts.
 drop policy if exists customer_sites_all on customer_sites;
 create policy customer_sites_all on customer_sites
-  for all using (auth.uid() is not null)
-  with check (auth.uid() is not null);
+  for all using (is_manager())
+  with check (is_manager());
 
 -- Project timesheets with expenses and follow-up tasks
 create table if not exists timesheets (
@@ -561,10 +563,12 @@ create index if not exists timesheets_project_idx on timesheets (project_id);
 alter table timesheets enable row level security;
 grant select, insert, update, delete on timesheets to authenticated;
 
+-- Manager-only: timesheets are only ever read/written from the manager CRM
+-- (Projects/Invoices tabs), never by worker accounts.
 drop policy if exists timesheets_all on timesheets;
 create policy timesheets_all on timesheets
-  for all using (auth.uid() is not null)
-  with check (auth.uid() is not null);
+  for all using (is_manager())
+  with check (is_manager());
 
 -- Weekly calendar events
 create table if not exists events (
@@ -603,10 +607,12 @@ create index if not exists events_start_at_idx on events (start_at);
 alter table events enable row level security;
 grant select, insert, update, delete on events to authenticated;
 
+-- Manager-only: calendar events are only ever read/written from the manager
+-- CRM (Calendar tab), never by worker accounts.
 drop policy if exists events_all on events;
 create policy events_all on events
-  for all using (auth.uid() is not null)
-  with check (auth.uid() is not null);
+  for all using (is_manager())
+  with check (is_manager());
 
 -- ========== Password vault ==========
 -- Zero-knowledge design: the server (and anyone with DB access, including a
