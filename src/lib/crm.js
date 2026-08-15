@@ -3,7 +3,7 @@
  * All calls go through the shared supabaseFetch so auth headers stay consistent.
  */
 
-export function createCrmApi(supabaseFetch, supabaseProjectUrl, supabaseAnonKey) {
+export function createCrmApi(supabaseFetch, supabaseProjectUrl, supabaseAnonKey, getAccessToken = () => null) {
   /* ---------- Customers ---------- */
 
   async function listCustomers({ activeOnly = true, q = "" } = {}) {
@@ -446,11 +446,14 @@ export function createCrmApi(supabaseFetch, supabaseProjectUrl, supabaseAnonKey)
   }
 
   async function sendInvoice(invoiceId, to) {
+    // Send the signed-in user's own token (not the shared anon key) so the
+    // edge function can verify the caller is actually a manager.
+    const token = getAccessToken() || supabaseAnonKey;
     const res = await fetch(`${supabaseProjectUrl}/functions/v1/send-invoice`, {
       method: "POST",
       headers: {
         apikey: supabaseAnonKey,
-        Authorization: `Bearer ${supabaseAnonKey}`,
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ invoice_id: invoiceId, to }),

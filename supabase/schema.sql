@@ -474,7 +474,7 @@ begin
   new.active := (new.status != 'archived');
   return new;
 end;
-$$ language plpgsql;
+$$ language plpgsql set search_path = public;
 
 drop trigger if exists sites_active_sync on sites;
 create trigger sites_active_sync

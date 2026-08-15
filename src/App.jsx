@@ -227,7 +227,7 @@ async function supabaseFetch(path, { method = "GET", body, timeoutMs = 15000 } =
   return text ? JSON.parse(text) : null;
 }
 
-export const crm = createCrmApi(supabaseFetch, SUPABASE_PROJECT_URL, SUPABASE_KEY);
+export const crm = createCrmApi(supabaseFetch, SUPABASE_PROJECT_URL, SUPABASE_KEY, () => accessToken);
 
 function rowToReport(row) {
   return {

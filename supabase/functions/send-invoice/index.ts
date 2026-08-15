@@ -40,6 +40,25 @@ serve(async (req) => {
       });
     }
 
+    // Require the caller to be a signed-in manager. Without this, anyone
+    // holding the public anon key (which is embedded in the frontend bundle
+    // by design) could call this function directly and have any invoice's
+    // financial details emailed to an address of their choosing.
+    const authHeader = req.headers.get("Authorization") || "";
+    const callerToken = authHeader.replace(/^Bearer\s+/i, "");
+    const userClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: `Bearer ${callerToken}` } } }
+    );
+    const { data: isManager, error: managerErr } = await userClient.rpc("is_manager");
+    if (managerErr || !isManager) {
+      return new Response(JSON.stringify({ error: "Not authorized." }), {
+        status: 403,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
     const resendKey = Deno.env.get("RESEND_API_KEY");
     if (!resendKey) {
       return new Response(JSON.stringify({ error: "Email not configured. Set the RESEND_API_KEY secret." }), {
