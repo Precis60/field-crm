@@ -481,37 +481,78 @@ create trigger sites_active_sync
   before insert or update on sites
   for each row execute function sites_set_active();
 
--- Task and site permissions for staff/managers to assign and acknowledge
+-- Maps the signed-in auth user to their people.id, the same pattern as
+-- is_manager() — used to scope "my own" rows for workers.
+create or replace function current_person_id() returns text
+language sql stable security definer set search_path = public as $$
+  select id from people where auth_user_id = auth.uid() limit 1;
+$$;
+
+-- Task and site permissions for staff/managers to assign and acknowledge.
+-- Workers read tasks/sites and update their own task status/acknowledgements,
+-- but only managers create, assign, or delete.
 alter table tasks enable row level security;
 grant select, insert, update, delete on tasks to authenticated;
 drop policy if exists tasks_all on tasks;
-create policy tasks_all on tasks
-  for all using (auth.uid() is not null)
-  with check (auth.uid() is not null);
+drop policy if exists tasks_select on tasks;
+drop policy if exists tasks_insert on tasks;
+drop policy if exists tasks_update on tasks;
+drop policy if exists tasks_delete on tasks;
+create policy tasks_select on tasks for select using (auth.uid() is not null);
+create policy tasks_insert on tasks for insert with check (is_manager());
+create policy tasks_update on tasks for update using (auth.uid() is not null) with check (auth.uid() is not null);
+create policy tasks_delete on tasks for delete using (is_manager());
 
 alter table task_assignees enable row level security;
 grant select, insert, update, delete on task_assignees to authenticated;
 drop policy if exists task_assignees_all on task_assignees;
-create policy task_assignees_all on task_assignees
-  for all using (auth.uid() is not null)
-  with check (auth.uid() is not null);
+drop policy if exists task_assignees_select on task_assignees;
+drop policy if exists task_assignees_insert on task_assignees;
+drop policy if exists task_assignees_update on task_assignees;
+drop policy if exists task_assignees_delete on task_assignees;
+create policy task_assignees_select on task_assignees for select using (auth.uid() is not null);
+create policy task_assignees_insert on task_assignees for insert with check (is_manager());
+create policy task_assignees_update on task_assignees for update using (is_manager()) with check (is_manager());
+create policy task_assignees_delete on task_assignees for delete using (is_manager());
 
 alter table assigned_tasks enable row level security;
 grant select, insert, update, delete on assigned_tasks to authenticated;
 drop policy if exists assigned_tasks_all on assigned_tasks;
-create policy assigned_tasks_all on assigned_tasks
-  for all using (auth.uid() is not null)
-  with check (auth.uid() is not null);
+drop policy if exists assigned_tasks_select on assigned_tasks;
+drop policy if exists assigned_tasks_insert on assigned_tasks;
+drop policy if exists assigned_tasks_update on assigned_tasks;
+drop policy if exists assigned_tasks_delete on assigned_tasks;
+create policy assigned_tasks_select on assigned_tasks for select using (auth.uid() is not null);
+create policy assigned_tasks_update on assigned_tasks for update using (auth.uid() is not null) with check (auth.uid() is not null);
+create policy assigned_tasks_insert on assigned_tasks for insert with check (is_manager());
+create policy assigned_tasks_delete on assigned_tasks for delete using (is_manager());
 
 alter table sites enable row level security;
 grant select, insert, update, delete on sites to authenticated;
-
 drop policy if exists sites_all on sites;
-create policy sites_all on sites
-  for all using (auth.uid() is not null)
-  with check (auth.uid() is not null);
+drop policy if exists sites_select on sites;
+drop policy if exists sites_insert on sites;
+drop policy if exists sites_update on sites;
+drop policy if exists sites_delete on sites;
+create policy sites_select on sites for select using (auth.uid() is not null);
+create policy sites_insert on sites for insert with check (is_manager());
+create policy sites_update on sites for update using (is_manager()) with check (is_manager());
+create policy sites_delete on sites for delete using (is_manager());
 
-grant select on site_assignments to authenticated;
+-- site_assignments previously had RLS enabled with NO policy at all, which
+-- silently denied everyone (including the "which sites is this worker
+-- assigned to" lookup the app depends on). Managers see/manage every
+-- assignment; workers can see their own.
+grant select, insert, update, delete on site_assignments to authenticated;
+drop policy if exists site_assignments_all on site_assignments;
+drop policy if exists site_assignments_select on site_assignments;
+drop policy if exists site_assignments_write on site_assignments;
+drop policy if exists site_assignments_update on site_assignments;
+drop policy if exists site_assignments_delete on site_assignments;
+create policy site_assignments_select on site_assignments for select using (is_manager() or person_id = current_person_id());
+create policy site_assignments_write on site_assignments for insert with check (is_manager());
+create policy site_assignments_update on site_assignments for update using (is_manager()) with check (is_manager());
+create policy site_assignments_delete on site_assignments for delete using (is_manager());
 
 -- `roster` is a plain view over `people`, so it runs with the privileges of
 -- its owner and bypasses `people`'s row-level security (this is intentional
