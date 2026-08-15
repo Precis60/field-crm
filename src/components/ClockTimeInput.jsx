@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const HOURS = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 const MINUTES = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
@@ -39,8 +39,21 @@ export default function ClockTimeInput({ value, onChange, className = "", ...res
   const [ampm, setAmpm] = useState(parsed.ampm);
   const [selHour, setSelHour] = useState(parsed.hour12);
   const [selMinute, setSelMinute] = useState(parsed.minute);
+  // On touch devices, closing the overlay on tap can let the same tap
+  // "fall through" as a synthetic click on whatever is now underneath —
+  // which is this same input — reopening the picker instantly and making
+  // it look permanently stuck open. Suppress re-opening for a moment after
+  // any close.
+  const suppressReopenRef = useRef(false);
+
+  function closeAndSuppress() {
+    setOpen(false);
+    suppressReopenRef.current = true;
+    setTimeout(() => { suppressReopenRef.current = false; }, 400);
+  }
 
   function openPicker() {
+    if (suppressReopenRef.current) return;
     setMode("hour");
     setAmpm(parsed.ampm);
     setSelHour(parsed.hour12);
@@ -51,7 +64,7 @@ export default function ClockTimeInput({ value, onChange, className = "", ...res
   useEffect(() => {
     if (!open) return;
     function onKey(e) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") closeAndSuppress();
     }
     document.addEventListener("keydown", onKey);
     return () => {
@@ -62,7 +75,7 @@ export default function ClockTimeInput({ value, onChange, className = "", ...res
   function commit(h = selHour, a = ampm, m = selMinute) {
     const v = to24(h, a, m);
     if (onChange) onChange({ target: { value: v } });
-    setOpen(false);
+    closeAndSuppress();
   }
 
   function selectHour(h) {
@@ -96,7 +109,7 @@ export default function ClockTimeInput({ value, onChange, className = "", ...res
       />
       {open && (
         <div
-          onClick={() => setOpen(false)}
+          onClick={closeAndSuppress}
           style={{
             position: "fixed",
             inset: 0,
@@ -223,7 +236,7 @@ export default function ClockTimeInput({ value, onChange, className = "", ...res
             </div>
 
             <div style={{ marginTop: 22, display: "flex", gap: 10, justifyContent: "center" }}>
-              <button type="button" className="lp-btn-ghost" onClick={() => setOpen(false)}>
+              <button type="button" className="lp-btn-ghost" onClick={closeAndSuppress}>
                 Cancel
               </button>
               <button

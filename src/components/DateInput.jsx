@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"];
 const MONTH_NAMES = [
@@ -49,8 +49,21 @@ export default function DateInput({ value, onChange, className = "", placeholder
   const today = todayParts();
   const [viewYear, setViewYear] = useState((parsed || today).year);
   const [viewMonth, setViewMonth] = useState((parsed || today).month);
+  // On touch devices, closing the overlay on tap can let the same tap
+  // "fall through" as a synthetic click on whatever is now underneath —
+  // which is this same input — reopening the picker instantly and making
+  // it look permanently stuck open. Suppress re-opening for a moment after
+  // any close.
+  const suppressReopenRef = useRef(false);
+
+  function closeAndSuppress() {
+    setOpen(false);
+    suppressReopenRef.current = true;
+    setTimeout(() => { suppressReopenRef.current = false; }, 400);
+  }
 
   function openPicker() {
+    if (suppressReopenRef.current) return;
     const p = parseISODate(value) || today;
     setViewYear(p.year);
     setViewMonth(p.month);
@@ -60,7 +73,7 @@ export default function DateInput({ value, onChange, className = "", placeholder
   useEffect(() => {
     if (!open) return;
     function onKey(e) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") closeAndSuppress();
     }
     document.addEventListener("keydown", onKey);
     return () => {
@@ -80,7 +93,7 @@ export default function DateInput({ value, onChange, className = "", placeholder
   function pick(day) {
     const v = toISODate(viewYear, viewMonth, day);
     if (onChange) onChange({ target: { value: v } });
-    setOpen(false);
+    closeAndSuppress();
   }
 
   function goToday() {
@@ -88,12 +101,12 @@ export default function DateInput({ value, onChange, className = "", placeholder
     setViewMonth(today.month);
     const v = toISODate(today.year, today.month, today.day);
     if (onChange) onChange({ target: { value: v } });
-    setOpen(false);
+    closeAndSuppress();
   }
 
   function clear() {
     if (onChange) onChange({ target: { value: "" } });
-    setOpen(false);
+    closeAndSuppress();
   }
 
   const cells = useMemo(() => {
@@ -122,7 +135,7 @@ export default function DateInput({ value, onChange, className = "", placeholder
       />
       {open && (
         <div
-          onClick={() => setOpen(false)}
+          onClick={closeAndSuppress}
           style={{
             position: "fixed",
             inset: 0,
@@ -226,7 +239,7 @@ export default function DateInput({ value, onChange, className = "", placeholder
                 </button>
               ) : <span />}
               <div style={{ display: "flex", gap: 10 }}>
-                <button type="button" className="lp-btn-ghost" onClick={() => setOpen(false)}>
+                <button type="button" className="lp-btn-ghost" onClick={closeAndSuppress}>
                   Cancel
                 </button>
                 <button
