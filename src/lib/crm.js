@@ -466,6 +466,39 @@ export function createCrmApi(supabaseFetch, supabaseProjectUrl, supabaseAnonKey)
     return data;
   }
 
+  /* ---------- Password vault ---------- */
+  // Only ciphertext, IVs, and the derivation salt ever pass through here.
+  // No plaintext secret or the master passphrase is ever sent to Supabase.
+
+  async function getVaultConfig() {
+    const rows = await supabaseFetch("/vault_config?id=eq.default&select=*").catch(() => []);
+    return rows?.[0] || null;
+  }
+
+  async function createVaultConfig(config) {
+    await supabaseFetch("/vault_config", { method: "POST", body: [{ id: "default", ...config }] });
+  }
+
+  async function listVaultItems() {
+    return (await supabaseFetch("/vault_items?select=id,title,iv,ciphertext,created_at,updated_at&order=title").catch(() => [])) || [];
+  }
+
+  async function createVaultItem(item) {
+    await supabaseFetch("/vault_items", { method: "POST", body: [item] });
+    return item;
+  }
+
+  async function updateVaultItem(id, patch) {
+    await supabaseFetch(`/vault_items?id=eq.${id}`, {
+      method: "PATCH",
+      body: { ...patch, updated_at: new Date().toISOString() },
+    });
+  }
+
+  async function deleteVaultItem(id) {
+    await supabaseFetch(`/vault_items?id=eq.${id}`, { method: "DELETE" });
+  }
+
   return {
     listCustomers,
     getCustomer,
@@ -532,5 +565,11 @@ export function createCrmApi(supabaseFetch, supabaseProjectUrl, supabaseAnonKey)
     createEvent,
     updateEvent,
     deleteEvent,
+    getVaultConfig,
+    createVaultConfig,
+    listVaultItems,
+    createVaultItem,
+    updateVaultItem,
+    deleteVaultItem,
   };
 }

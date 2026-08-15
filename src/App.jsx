@@ -1760,6 +1760,7 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
         <button className={`lp-tab ${tab === "site_tasks" ? "is-active" : ""}`} onClick={() => setTab("site_tasks")}>Site Tasks</button>
         <button className={`lp-tab ${tab === "suppliers" ? "is-active" : ""}`} onClick={() => setTab("suppliers")}>Suppliers</button>
         <button className={`lp-tab ${tab === "tasks" ? "is-active" : ""}`} onClick={() => setTab("tasks")}>Tasks</button>
+        <button className={`lp-tab ${tab === "passwords" ? "is-active" : ""}`} onClick={() => setTab("passwords")} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><Lock size={13} /> Passwords</button>
       </div>
       {tab === "brief" && <MorningBrief crm={crm} onOpen={(type, id) => { setSelectedId(id); setTab(type); }} />}
       {tab === "tasks" && <TasksPanel currentManager={currentManager} />}
@@ -1786,7 +1787,7 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
       {tab === "schedule" && <ManagerSchedulePanel managers={managers} currentManager={currentManager} />}
       {tab === "log" && <FullLog monthsIndex={monthsIndex} getMonths={getMonths} cacheVersion={cacheVersion} onDeleteReport={onDeleteReport} />}
       {tab === "sites" && <AdminPanel />}
-      {["customers", "contacts", "projects", "calendar", "suppliers", "site_notes", "site_tasks", "invoices"].includes(tab) && (
+      {["customers", "contacts", "projects", "calendar", "suppliers", "site_notes", "site_tasks", "invoices", "passwords"].includes(tab) && (
         <CrmTabContent tab={tab} crm={crm} uid={uid} sites={sites} selectedId={selectedId} />
       )}
       {tab === "settings" && <ManagerSettings onRestored={onRestored} />}

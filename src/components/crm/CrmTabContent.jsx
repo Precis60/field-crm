@@ -2,11 +2,13 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Check, X, AlertTriangle, Plus, Trash2, Search, Building2, Users,
   Pencil, ChevronRight, ArrowLeft, Settings, Clock, CalendarDays, Mail,
+  Lock, Eye, EyeOff, Copy, ShieldCheck, KeyRound,
 } from "lucide-react";
 import AddressInput from "../AddressInput.jsx";
 import ClockTimeInput from "../ClockTimeInput.jsx";
 import DateTimeClockInput from "../DateTimeClockInput.jsx";
 import DateInput from "../DateInput.jsx";
+import { createVault, unlockVault, encryptItem, decryptItem } from "../../lib/vaultCrypto.js";
 import { APP_TIME_ZONE, zonedISODate, zonedDateToUTC, zonedParts } from "../../lib/time.js";
 
 const CUSTOMER_STATUSES = ["active", "prospect", "inactive"];
@@ -137,6 +139,7 @@ export default function CrmTabContent({ tab, crm, uid, sites = [], selectedId = 
   if (tab === "site_tasks") return <SiteTasksPanel crm={crm} uid={uid} sites={sites} selectedId={selectedId} />;
   if (tab === "site_notes") return <SiteNotesPanel crm={crm} uid={uid} sites={sites} />;
   if (tab === "invoices") return <InvoicesPanel crm={crm} uid={uid} selectedId={selectedId} />;
+  if (tab === "passwords") return <PasswordVaultPanel crm={crm} uid={uid} />;
   return null;
 }
 
@@ -4733,6 +4736,344 @@ function SiteNotesPanel({ crm, uid, sites = [] }) {
               );
             })}
           </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================== */
+/*  Password vault — zero-knowledge: the master passphrase never leaves */
+/*  this component, and nothing is decrypted until the vault is unlocked. */
+/* ================================================================== */
+
+function PasswordVaultPanel({ crm, uid }) {
+  const [loading, setLoading] = useState(true);
+  const [config, setConfig] = useState(null);
+  const [vaultKey, setVaultKey] = useState(null);
+  const [items, setItems] = useState([]);
+  const [revealed, setRevealed] = useState({}); // id -> { username, password, url, notes }
+  const [visiblePasswordIds, setVisiblePasswordIds] = useState({});
+  const [passphrase, setPassphrase] = useState("");
+  const [confirmPassphrase, setConfirmPassphrase] = useState("");
+  const [err, setErr] = useState("");
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const empty = () => ({ title: "", username: "", password: "", url: "", notes: "" });
+  const [draft, setDraft] = useState(empty);
+
+  async function refresh() {
+    const [cfg, rows] = await Promise.all([crm.getVaultConfig(), crm.listVaultItems()]);
+    setConfig(cfg);
+    setItems(rows || []);
+  }
+
+  useEffect(() => {
+    refresh().finally(() => setLoading(false));
+    // Locking on unmount (e.g. switching tabs) means the derived key never
+    // lingers in memory longer than the vault is actually open.
+    return () => {
+      setVaultKey(null);
+      setRevealed({});
+    };
+  }, [crm]);
+
+  function lock() {
+    setVaultKey(null);
+    setRevealed({});
+    setVisiblePasswordIds({});
+    setPassphrase("");
+    setMsg("");
+    setErr("");
+  }
+
+  async function handleCreateVault() {
+    setErr("");
+    if (passphrase.length < 10) { setErr("Use a master password of at least 10 characters."); return; }
+    if (passphrase !== confirmPassphrase) { setErr("Passwords don't match."); return; }
+    setBusy(true);
+    try {
+      const { salt, verifier_iv, verifier_ciphertext, key } = await createVault(passphrase);
+      await crm.createVaultConfig({ salt, verifier_iv, verifier_ciphertext });
+      setVaultKey(key);
+      setPassphrase("");
+      setConfirmPassphrase("");
+      await refresh();
+    } catch (e) {
+      setErr(e.message || "Couldn't create the vault.");
+    }
+    setBusy(false);
+  }
+
+  async function handleUnlock() {
+    setErr("");
+    setBusy(true);
+    try {
+      const key = await unlockVault(passphrase, config);
+      if (!key) { setErr("Incorrect master password."); setBusy(false); return; }
+      setVaultKey(key);
+      setPassphrase("");
+    } catch (e) {
+      setErr("Couldn't unlock the vault.");
+    }
+    setBusy(false);
+  }
+
+  async function reveal(item) {
+    if (revealed[item.id]) return;
+    try {
+      const data = await decryptItem(vaultKey, item.iv, item.ciphertext);
+      setRevealed((r) => ({ ...r, [item.id]: data }));
+    } catch {
+      setErr("Couldn't decrypt that item — the vault may be out of sync.");
+    }
+  }
+
+  async function copyValue(value) {
+    try {
+      await navigator.clipboard.writeText(value || "");
+      setMsg("Copied to clipboard.");
+      setTimeout(() => setMsg(""), 1500);
+    } catch {
+      setErr("Couldn't copy to clipboard.");
+    }
+  }
+
+  function startAdd() {
+    setDraft(empty());
+    setEditingId(null);
+    setAdding(true);
+    setErr("");
+  }
+
+  async function startEdit(item) {
+    setErr("");
+    try {
+      const data = revealed[item.id] || (await decryptItem(vaultKey, item.iv, item.ciphertext));
+      setRevealed((r) => ({ ...r, [item.id]: data }));
+      setDraft({ title: item.title, ...data });
+      setEditingId(item.id);
+      setAdding(true);
+    } catch {
+      setErr("Couldn't decrypt that item.");
+    }
+  }
+
+  async function saveItem() {
+    if (!draft.title.trim()) { setErr("Give this item a title."); return; }
+    setErr("");
+    setBusy(true);
+    try {
+      const { iv, ciphertext } = await encryptItem(vaultKey, draft);
+      if (editingId) {
+        await crm.updateVaultItem(editingId, { title: draft.title.trim(), iv, ciphertext });
+        setRevealed((r) => ({ ...r, [editingId]: { username: draft.username, password: draft.password, url: draft.url, notes: draft.notes } }));
+      } else {
+        const id = uid();
+        await crm.createVaultItem({
+          id,
+          title: draft.title.trim(),
+          iv,
+          ciphertext,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+      }
+      setAdding(false);
+      setEditingId(null);
+      setDraft(empty());
+      await refresh();
+    } catch (e) {
+      setErr(e.message || "Couldn't save that item.");
+    }
+    setBusy(false);
+  }
+
+  async function removeItem(id) {
+    if (!confirm("Delete this password entry? This can't be undone.")) return;
+    setBusy(true);
+    setErr("");
+    try {
+      await crm.deleteVaultItem(id);
+      setRevealed((r) => { const next = { ...r }; delete next[id]; return next; });
+      await refresh();
+    } catch (e) {
+      setErr(e.message || "Couldn't delete that item.");
+    }
+    setBusy(false);
+  }
+
+  if (loading) return <div className="lp-settings lp-settings--wide"><p className="lp-hint">Loading vault…</p></div>;
+
+  // ---------- Not yet set up: create the vault ----------
+  if (!config) {
+    return (
+      <div className="lp-settings lp-settings--wide">
+        <h3><Lock size={16} /> Passwords</h3>
+        <p className="lp-hint">Store usernames, passwords, URLs, and notes — encrypted in your browser before it ever reaches the database.</p>
+        <div className="lp-person-row" style={{ marginTop: 16, maxWidth: 420 }}>
+          <h4 style={{ marginTop: 0 }}><ShieldCheck size={15} /> Create the vault</h4>
+          <p className="lp-hint">
+            Choose a master password. It encrypts everything you store here and is <strong>never sent to the server or saved anywhere</strong> —
+            if you forget it, there is no way to recover the data. Write it down somewhere safe.
+          </p>
+          <Field label="Master password">
+            <input className="lp-input" type="password" value={passphrase} onChange={(e) => setPassphrase(e.target.value)} autoComplete="new-password" />
+          </Field>
+          <Field label="Confirm master password">
+            <input className="lp-input" type="password" value={confirmPassphrase} onChange={(e) => setConfirmPassphrase(e.target.value)} autoComplete="new-password" />
+          </Field>
+          {err && <p className="lp-error">{err}</p>}
+          <div className="lp-person-actions">
+            <button className="lp-btn-ghost" onClick={handleCreateVault} disabled={busy}>
+              <KeyRound size={13} /> {busy ? "Creating…" : "Create vault"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- Locked: unlock with master password ----------
+  if (!vaultKey) {
+    return (
+      <div className="lp-settings lp-settings--wide">
+        <h3><Lock size={16} /> Passwords</h3>
+        <p className="lp-hint">Enter your master password to unlock the vault.</p>
+        <div className="lp-person-row" style={{ marginTop: 16, maxWidth: 420 }}>
+          <Field label="Master password">
+            <input
+              className="lp-input"
+              type="password"
+              value={passphrase}
+              onChange={(e) => setPassphrase(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleUnlock(); }}
+              autoComplete="current-password"
+              autoFocus
+            />
+          </Field>
+          {err && <p className="lp-error">{err}</p>}
+          <div className="lp-person-actions">
+            <button className="lp-btn-ghost" onClick={handleUnlock} disabled={busy || !passphrase}>
+              <Lock size={13} /> {busy ? "Unlocking…" : "Unlock"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- Unlocked ----------
+  return (
+    <div className="lp-settings lp-settings--wide">
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <h3><ShieldCheck size={16} color="#4C7A54" /> Passwords</h3>
+          <p className="lp-hint">Unlocked for this session — locks automatically if you leave this tab.</p>
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button className="lp-btn-ghost" onClick={() => (adding ? setAdding(false) : startAdd())}>
+            <Plus size={15} /> {adding ? "Cancel" : "Add item"}
+          </button>
+          <button className="lp-btn-ghost" onClick={lock}>
+            <Lock size={13} /> Lock vault
+          </button>
+        </div>
+      </div>
+
+      {err && <p className="lp-error">{err}</p>}
+      {msg && <p className="lp-saved"><Check size={13} /> {msg}</p>}
+
+      {adding && (
+        <div className="lp-person-row" style={{ marginTop: 16 }}>
+          <h4 style={{ marginTop: 0 }}>{editingId ? "Edit item" : "New item"}</h4>
+          <Field label="Title *">
+            <input className="lp-input" value={draft.title} onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))} placeholder="e.g. Xero login" />
+          </Field>
+          <div className="lp-row2">
+            <Field label="Username">
+              <input className="lp-input" value={draft.username} onChange={(e) => setDraft((d) => ({ ...d, username: e.target.value }))} autoComplete="off" />
+            </Field>
+            <Field label="Password">
+              <input className="lp-input" type="text" value={draft.password} onChange={(e) => setDraft((d) => ({ ...d, password: e.target.value }))} autoComplete="off" />
+            </Field>
+          </div>
+          <Field label="URL">
+            <input className="lp-input" value={draft.url} onChange={(e) => setDraft((d) => ({ ...d, url: e.target.value }))} placeholder="https://" />
+          </Field>
+          <Field label="Notes">
+            <textarea className="lp-textarea" rows={3} value={draft.notes} onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))} />
+          </Field>
+          <div className="lp-person-actions">
+            <button className="lp-btn-ghost" onClick={saveItem} disabled={busy}><Check size={13} /> {busy ? "Saving…" : "Save"}</button>
+            <button className="lp-btn-ghost" onClick={() => { setAdding(false); setEditingId(null); setDraft(empty()); }}><X size={13} /> Cancel</button>
+          </div>
+        </div>
+      )}
+
+      <div className="lp-person-list" style={{ marginTop: 16 }}>
+        {items.length === 0 ? (
+          <EmptyState icon={<Lock size={28} />} text="No passwords stored yet." compact />
+        ) : (
+          items.map((item) => {
+            const data = revealed[item.id];
+            const showPw = visiblePasswordIds[item.id];
+            return (
+              <div key={item.id} className="lp-person-row">
+                <div className="lp-person-head" style={{ alignItems: "flex-start" }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <strong>{item.title}</strong>
+                    {!data ? (
+                      <p className="lp-hint" style={{ marginTop: 4 }}>••••••••</p>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8, fontSize: 13 }}>
+                        {data.username && (
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span className="lp-hint" style={{ minWidth: 70 }}>Username</span>
+                            <span>{data.username}</span>
+                            <button className="lp-btn-ghost" style={{ padding: "3px 8px" }} onClick={() => copyValue(data.username)}><Copy size={12} /></button>
+                          </div>
+                        )}
+                        {data.password && (
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span className="lp-hint" style={{ minWidth: 70 }}>Password</span>
+                            <span style={{ fontFamily: "monospace" }}>{showPw ? data.password : "•".repeat(Math.min(data.password.length, 14))}</span>
+                            <button className="lp-btn-ghost" style={{ padding: "3px 8px" }} onClick={() => setVisiblePasswordIds((v) => ({ ...v, [item.id]: !v[item.id] }))}>
+                              {showPw ? <EyeOff size={12} /> : <Eye size={12} />}
+                            </button>
+                            <button className="lp-btn-ghost" style={{ padding: "3px 8px" }} onClick={() => copyValue(data.password)}><Copy size={12} /></button>
+                          </div>
+                        )}
+                        {data.url && (
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span className="lp-hint" style={{ minWidth: 70 }}>URL</span>
+                            <a href={data.url} target="_blank" rel="noreferrer noopener" style={{ wordBreak: "break-all" }}>{data.url}</a>
+                          </div>
+                        )}
+                        {data.notes && (
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <span className="lp-hint" style={{ minWidth: 70 }}>Notes</span>
+                            <span style={{ whiteSpace: "pre-wrap" }}>{data.notes}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="lp-person-actions" style={{ marginTop: 0 }}>
+                    {!data ? (
+                      <button className="lp-btn-ghost" onClick={() => reveal(item)}><Eye size={13} /> Reveal</button>
+                    ) : (
+                      <button className="lp-btn-ghost" onClick={() => setRevealed((r) => { const next = { ...r }; delete next[item.id]; return next; })}><EyeOff size={13} /> Hide</button>
+                    )}
+                    <button className="lp-btn-ghost" onClick={() => startEdit(item)}><Pencil size={13} /> Edit</button>
+                    <button className="lp-btn-ghost lp-btn-danger" onClick={() => removeItem(item.id)} disabled={busy}><Trash2 size={13} /> Delete</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
     </div>

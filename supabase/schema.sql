@@ -607,3 +607,52 @@ drop policy if exists events_all on events;
 create policy events_all on events
   for all using (auth.uid() is not null)
   with check (auth.uid() is not null);
+
+-- ========== Password vault ==========
+-- Zero-knowledge design: the server (and anyone with DB access, including a
+-- leaked service-role key or a Supabase support engineer) never sees a
+-- plaintext password, username, URL, or note. Every item is encrypted in the
+-- browser with AES-GCM before it is ever sent over the network, using a key
+-- derived (PBKDF2, 300k iterations) from a master passphrase that is never
+-- stored or transmitted anywhere. Only `title` stays in plaintext so the
+-- list can be browsed without unlocking the vault.
+--
+-- If the master passphrase is lost, the data is unrecoverable by design —
+-- there is no reset path, since a reset path would be a backdoor.
+
+create table if not exists vault_config (
+  id text primary key default 'default',
+  salt text not null,
+  verifier_iv text not null,
+  verifier_ciphertext text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists vault_items (
+  id text primary key,
+  title text not null,
+  iv text not null,
+  ciphertext text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists vault_items_title_idx on vault_items (title);
+
+alter table vault_config enable row level security;
+alter table vault_items enable row level security;
+grant select, insert, update, delete on vault_config to authenticated;
+grant select, insert, update, delete on vault_items to authenticated;
+-- Supabase grants new tables to `anon` by default; RLS already blocks
+-- unauthenticated access, but revoke the grant anyway for defense in depth.
+revoke all on vault_config from anon;
+revoke all on vault_items from anon;
+
+drop policy if exists vault_config_manager_all on vault_config;
+create policy vault_config_manager_all on vault_config
+  for all using (is_manager()) with check (is_manager());
+
+drop policy if exists vault_items_manager_all on vault_items;
+create policy vault_items_manager_all on vault_items
+  for all using (is_manager()) with check (is_manager());
