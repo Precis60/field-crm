@@ -2069,7 +2069,7 @@ function CalendarPanel({ crm, uid, selectedId = null }) {
     setBusy(true); setErr("");
     try {
       const payload = {
-        id: uid(),
+        ...(editing ? {} : { id: uid() }),
         title: draft.title.trim() || null,
         site_id: draft.siteId.trim() || null,
         site_name: draft.siteName.trim() || null,
