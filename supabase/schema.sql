@@ -283,7 +283,12 @@ create or replace function is_manager() returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (
     select 1 from people
-    where auth_user_id = auth.uid() and role = 'manager' and active = true
+    where active = true
+      and role = 'manager'
+      and (
+        auth_user_id = auth.uid()
+        or email = auth.jwt()->>'email'
+      )
   );
 $$;
 
@@ -485,7 +490,13 @@ create trigger sites_active_sync
 -- is_manager() — used to scope "my own" rows for workers.
 create or replace function current_person_id() returns text
 language sql stable security definer set search_path = public as $$
-  select id from people where auth_user_id = auth.uid() limit 1;
+  select id from people
+  where active = true
+    and (
+      auth_user_id = auth.uid()
+      or email = auth.jwt()->>'email'
+    )
+  limit 1;
 $$;
 
 -- Task and site permissions for staff/managers to assign and acknowledge.
