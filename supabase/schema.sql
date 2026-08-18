@@ -554,6 +554,34 @@ create policy site_assignments_write on site_assignments for insert with check (
 create policy site_assignments_update on site_assignments for update using (is_manager()) with check (is_manager());
 create policy site_assignments_delete on site_assignments for delete using (is_manager());
 
+-- manager_schedule previously had RLS enabled with NO policy at all, which
+-- silently denied everyone (the manager schedule feature was broken).
+-- Manager-only: only managers use the manager schedule.
+alter table manager_schedule enable row level security;
+grant select, insert, update, delete on manager_schedule to authenticated;
+drop policy if exists manager_schedule_select on manager_schedule;
+drop policy if exists manager_schedule_insert on manager_schedule;
+drop policy if exists manager_schedule_update on manager_schedule;
+drop policy if exists manager_schedule_delete on manager_schedule;
+create policy manager_schedule_select on manager_schedule for select to authenticated using (is_manager());
+create policy manager_schedule_insert on manager_schedule for insert to authenticated with check (is_manager());
+create policy manager_schedule_update on manager_schedule for update to authenticated using (is_manager()) with check (is_manager());
+create policy manager_schedule_delete on manager_schedule for delete to authenticated using (is_manager());
+
+-- reports previously had RLS enabled with NO policy at all, which silently
+-- denied everyone (workers could not submit reports, managers could not view
+-- them). Workers can submit/read/edit reports; only managers can delete.
+alter table reports enable row level security;
+grant select, insert, update, delete on reports to authenticated;
+drop policy if exists reports_select on reports;
+drop policy if exists reports_insert on reports;
+drop policy if exists reports_update on reports;
+drop policy if exists reports_delete on reports;
+create policy reports_select on reports for select to authenticated using (auth.uid() is not null);
+create policy reports_insert on reports for insert to authenticated with check (auth.uid() is not null);
+create policy reports_update on reports for update to authenticated using (auth.uid() is not null) with check (auth.uid() is not null);
+create policy reports_delete on reports for delete to authenticated using (is_manager());
+
 -- `roster` is a plain view over `people`, so it runs with the privileges of
 -- its owner and bypasses `people`'s row-level security (this is intentional
 -- — it only exposes id/name/role/active/sort_order, so unprivileged staff
