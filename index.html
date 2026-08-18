@@ -12,7 +12,9 @@
     <div id="root"></div>
     <script>
       if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.register("./sw.js");
+        // updateViaCache: "none" stops the browser reusing an HTTP-cached
+        // copy of sw.js itself, so a new deploy's worker is always noticed.
+        navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" });
       }
     </script>
     <script type="module" src="/src/main.jsx"></script>
