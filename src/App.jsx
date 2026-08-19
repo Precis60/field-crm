@@ -1782,6 +1782,7 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
         <button className={`lp-tab ${tab === "sites" ? "is-active" : ""}`} onClick={() => setTab("sites")}>Admin</button>
         <button className={`lp-tab ${tab === "calendar" ? "is-active" : ""}`} onClick={() => setTab("calendar")}>Calendar</button>
         <button className={`lp-tab ${tab === "projects" ? "is-active" : ""}`} onClick={() => setTab("projects")}>Projects</button>
+        <button className={`lp-tab ${tab === "invoices" ? "is-active" : ""}`} onClick={() => setTab("invoices")}>Invoices</button>
         <button className={`lp-tab ${tab === "contacts" ? "is-active" : ""}`} onClick={() => setTab("contacts")}>Contacts</button>
         <button className={`lp-tab ${tab === "customers" ? "is-active" : ""}`} onClick={() => setTab("customers")}>Customers</button>
         <button className={`lp-tab ${tab === "site_tasks" ? "is-active" : ""}`} onClick={() => setTab("site_tasks")}>Site Tasks</button>
@@ -1791,7 +1792,6 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
         <button className={`lp-tab ${tab === "tasks" ? "is-active" : ""}`} onClick={() => setTab("tasks")}>Tasks</button>
         <button className={`lp-tab ${tab === "assign" ? "is-active" : ""}`} onClick={() => setTab("assign")}>Assign tasks</button>
         {/* Financial */}
-        <button className={`lp-tab ${tab === "invoices" ? "is-active" : ""}`} onClick={() => setTab("invoices")}>Invoices</button>
         <button className={`lp-tab ${tab === "reports" ? "is-active" : ""}`} onClick={() => setTab("reports")}>Reports</button>
         <button className={`lp-tab ${tab === "inventory" ? "is-active" : ""}`} onClick={() => setTab("inventory")}>Inventory</button>
         {/* Operations */}
