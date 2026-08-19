@@ -395,7 +395,7 @@ export function createCrmApi(supabaseFetch, supabaseProjectUrl, supabaseAnonKey,
   async function listTimesheetsByEvent(eventId) {
     return (
       (await supabaseFetch(
-        `/timesheets?event_id=eq.${eventId}&select=*,people(id,name)&order=created_at.desc`
+        `/timesheets?event_id=eq.${eventId}&select=*&order=created_at.desc`
       ).catch(() => [])) || []
     );
   }

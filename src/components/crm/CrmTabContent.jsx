@@ -2186,7 +2186,7 @@ function CalendarPanel({ crm, uid, selectedId = null }) {
       await crm.createTimesheet({
         id: uid(),
         project_id: p.id,
-        person_id: uid,
+        person_id: null,
         start_at: fromLocalInputMelbourne(draft.startAt).toISOString(),
         end_at: draft.endAt ? fromLocalInputMelbourne(draft.endAt).toISOString() : null,
         notes: noteParts.join("\n\n") || null,
