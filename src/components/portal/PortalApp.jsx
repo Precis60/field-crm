@@ -763,7 +763,7 @@ function PortalProjects({ crm }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    crm.listMyProjects().then((data) => { setProjects(data); setLoading(false); });
+    crm.listMyProjects().then((data) => { setProjects((data || []).slice().sort((a, b) => (a.name || "").localeCompare(b.name || "", "en", { sensitivity: "base" }))); setLoading(false); });
   }, []);
 
   if (loading) return <p className="portal-empty">Loading…</p>;

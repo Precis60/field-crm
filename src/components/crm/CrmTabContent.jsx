@@ -750,7 +750,7 @@ function ProjectsPanel({ crm, uid, sites }) {
 
   async function refresh() {
     const [p, c] = await Promise.all([crm.listProjects(), crm.listCustomers()]);
-    setProjects(p);
+    setProjects((p || []).slice().sort((a, b) => (a.name || "").localeCompare(b.name || "", "en", { sensitivity: "base" })));
     setCustomers(c);
   }
 
