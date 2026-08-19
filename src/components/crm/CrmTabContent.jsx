@@ -53,6 +53,7 @@ const EVENT_STATUSES = [
   { value: "confirmed", label: "Confirmed", color: "#22c55e" },
   { value: "in_progress", label: "In Progress", color: "#C97A2B" },
   { value: "completed", label: "Completed", color: "#4C7A54" },
+  { value: "completed_follow_up", label: "Completed / Follow Up Required", color: "#a16207" },
   { value: "project_connected", label: "Project Connected", color: "#8b5cf6" },
   { value: "project_connect_follow_up", label: "Project Connect / Follow Up Required", color: "#d946ef" },
   { value: "internal_works", label: "Internal Works", color: "#0d9488" },
