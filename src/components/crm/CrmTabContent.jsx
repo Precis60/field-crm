@@ -2523,7 +2523,7 @@ function CalendarPanel({ crm, uid, selectedId = null }) {
           </div>
 
           {!editing && (
-            <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: "var(--lp-bg)" }}>
+            <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: "var(--stone)" }}>
               <h4 style={{ marginBottom: 8 }}>Recurrence</h4>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8 }}>
                 <Field label="Repeat">

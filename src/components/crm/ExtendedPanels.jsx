@@ -95,7 +95,7 @@ export function ReportsPanel({ crm }) {
   if (loading) return <div className="lp-panel"><p className="lp-hint">Loading reports…</p></div>;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div className="lp-stack">
       <div className="lp-tabs">
         <button className={`lp-tab ${view === "overview" ? "is-active" : ""}`} onClick={() => setView("overview")}>Overview</button>
         <button className={`lp-tab ${view === "revenue" ? "is-active" : ""}`} onClick={() => setView("revenue")}>Revenue</button>
@@ -105,35 +105,35 @@ export function ReportsPanel({ crm }) {
       </div>
 
       {view === "overview" && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
-          <div className="lp-panel" style={{ padding: 16 }}>
-            <TrendingUp size={20} style={{ color: "#22c55e" }} />
-            <h3 style={{ margin: "8px 0 4px" }}>Total Revenue (Paid)</h3>
-            <p style={{ fontSize: 28, fontWeight: 700, color: "#22c55e" }}>{fmtMoney(totalRevenue)}</p>
-            <p className="lp-hint">{revenue.filter((i) => i.status === "paid").length} paid invoice(s)</p>
+        <div className="lp-grid lp-grid-4">
+          <div className="lp-stat-card">
+            <TrendingUp size={20} style={{ color: "#4C7A54" }} />
+            <h3>Total Revenue (Paid)</h3>
+            <p className="lp-stat-value">{fmtMoney(totalRevenue)}</p>
+            <p className="lp-stat-hint">{revenue.filter((i) => i.status === "paid").length} paid invoice(s)</p>
           </div>
-          <div className="lp-panel" style={{ padding: 16 }}>
-            <AlertTriangle size={20} style={{ color: "#f59e0b" }} />
-            <h3 style={{ margin: "8px 0 4px" }}>Outstanding</h3>
-            <p style={{ fontSize: 28, fontWeight: 700, color: "#f59e0b" }}>{fmtMoney(outstandingRevenue)}</p>
-            <p className="lp-hint">{receivables.length} unpaid invoice(s) · {overdueCount} overdue</p>
+          <div className="lp-stat-card">
+            <AlertTriangle size={20} style={{ color: "#C97A2B" }} />
+            <h3>Outstanding</h3>
+            <p className="lp-stat-value">{fmtMoney(outstandingRevenue)}</p>
+            <p className="lp-stat-hint">{receivables.length} unpaid · {overdueCount} overdue</p>
           </div>
-          <div className="lp-panel" style={{ padding: 16 }}>
-            <BarChart3 size={20} style={{ color: "#3b82f6" }} />
-            <h3 style={{ margin: "8px 0 4px" }}>Active Projects</h3>
-            <p style={{ fontSize: 28, fontWeight: 700, color: "#3b82f6" }}>{profitability.filter((p) => p.status === "in_progress").length}</p>
-            <p className="lp-hint">{profitability.length} total project(s)</p>
+          <div className="lp-stat-card">
+            <BarChart3 size={20} style={{ color: "#3D5A80" }} />
+            <h3>Active Projects</h3>
+            <p className="lp-stat-value">{profitability.filter((p) => p.status === "in_progress").length}</p>
+            <p className="lp-stat-hint">{profitability.length} total project(s)</p>
           </div>
-          <div className="lp-panel" style={{ padding: 16 }}>
-            <Clock size={20} style={{ color: "#8b5cf6" }} />
-            <h3 style={{ margin: "8px 0 4px" }}>Timesheet Hours</h3>
-            <p style={{ fontSize: 28, fontWeight: 700, color: "#8b5cf6" }}>
+          <div className="lp-stat-card">
+            <Clock size={20} style={{ color: "#6B4E8C" }} />
+            <h3>Timesheet Hours</h3>
+            <p className="lp-stat-value">
               {Math.round(utilization.reduce((s, t) => {
                 if (!t.start_at || !t.end_at) return s;
                 return s + (new Date(t.end_at) - new Date(t.start_at)) / 3600000;
               }, 0))}h
             </p>
-            <p className="lp-hint">{utilization.filter((t) => t.billable).length} billable entries</p>
+            <p className="lp-stat-hint">{utilization.filter((t) => t.billable).length} billable entries</p>
           </div>
         </div>
       )}
@@ -178,11 +178,11 @@ export function ReportsPanel({ crm }) {
           <div className="lp-panel-head">
             <h4><AlertTriangle size={15} /> Aged Receivables</h4>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 16 }}>
+          <div className="lp-grid lp-grid-4" style={{ marginBottom: 16 }}>
             {Object.entries(agedBuckets).map(([bucket, amount]) => (
-              <div key={bucket} style={{ padding: 12, borderRadius: 8, background: "var(--lp-bg)", textAlign: "center" }}>
-                <p style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase" }}>{bucket} days</p>
-                <p style={{ fontSize: 18, fontWeight: 700 }}>{fmtMoney(amount)}</p>
+              <div key={bucket} className="lp-stat-card" style={{ textAlign: "center", padding: 12 }}>
+                <p className="lp-stat-hint" style={{ textTransform: "uppercase" }}>{bucket} days</p>
+                <p className="lp-stat-value" style={{ fontSize: 18 }}>{fmtMoney(amount)}</p>
               </div>
             ))}
           </div>
@@ -199,7 +199,7 @@ export function ReportsPanel({ crm }) {
                     <td>{r.customers?.name || "—"}</td>
                     <td>{fmtDate(r.due_at)}</td>
                     <td>{fmtMoney(r.total)}</td>
-                    <td style={{ color: days > 0 ? "#ef4444" : "var(--muted)" }}>{days > 0 ? `${days} days` : "—"}</td>
+                    <td style={{ color: days > 0 ? "#B4483A" : "var(--muted)" }}>{days > 0 ? `${days} days` : "—"}</td>
                   </tr>
                 );
               })}
@@ -231,7 +231,7 @@ export function ReportsPanel({ crm }) {
                     <td><span className={`lp-status lp-status--${p.status}`}>{p.status}</span></td>
                     <td>{fmtMoney(p.budget)}</td>
                     <td>{fmtMoney(costs)}</td>
-                    <td style={{ color: margin >= 0 ? "#22c55e" : "#ef4444", fontWeight: 600 }}>{fmtMoney(margin)}</td>
+                    <td style={{ color: margin >= 0 ? "#4C7A54" : "#B4483A", fontWeight: 600 }}>{fmtMoney(margin)}</td>
                   </tr>
                 );
               })}
@@ -267,7 +267,7 @@ export function ReportsPanel({ crm }) {
                     <td>{data.billable.toFixed(1)}h</td>
                     <td>{data.nonBillable.toFixed(1)}h</td>
                     <td>{total.toFixed(1)}h</td>
-                    <td style={{ fontWeight: 600, color: pct >= 70 ? "#22c55e" : pct >= 50 ? "#f59e0b" : "#ef4444" }}>{pct}%</td>
+                    <td style={{ fontWeight: 600, color: pct >= 70 ? "#4C7A54" : pct >= 50 ? "#C97A2B" : "#B4483A" }}>{pct}%</td>
                   </tr>
                 );
               })}
@@ -316,7 +316,7 @@ export function InventoryPanel({ crm }) {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div className="lp-stack">
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <div className="lp-search" style={{ flex: 1, minWidth: 200 }}>
           <Search size={14} />
@@ -326,8 +326,8 @@ export function InventoryPanel({ crm }) {
       </div>
 
       {lowStock.length > 0 && (
-        <div className="lp-panel" style={{ padding: 12, borderLeft: "3px solid #f59e0b" }}>
-          <AlertTriangle size={14} style={{ color: "#f59e0b" }} />
+        <div className="lp-panel" style={{ padding: 12, borderLeft: "3px solid #C97A2B" }}>
+          <AlertTriangle size={14} style={{ color: "#C97A2B" }} />
           <strong> {lowStock.length} item(s) at or below minimum stock level</strong>
         </div>
       )}
@@ -363,7 +363,7 @@ export function InventoryPanel({ crm }) {
                 <td><strong>{i.name}</strong></td>
                 <td>{i.sku || "—"}</td>
                 <td>{i.category || "—"}</td>
-                <td style={{ color: Number(i.stock_level) <= Number(i.min_stock) ? "#ef4444" : "inherit", fontWeight: 600 }}>{i.stock_level} {i.unit}</td>
+                <td style={{ color: Number(i.stock_level) <= Number(i.min_stock) ? "#B4483A" : "inherit", fontWeight: 600 }}>{i.stock_level} {i.unit}</td>
                 <td>{i.min_stock}</td>
                 <td>{fmtMoney(i.cost)}</td>
                 <td>{fmtMoney(i.price)}</td>
@@ -417,7 +417,7 @@ export function CommunicationsPanel({ crm }) {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div className="lp-stack">
       <div className="lp-tabs">
         <button className={`lp-tab ${view === "templates" ? "is-active" : ""}`} onClick={() => setView("templates")}>Email Templates</button>
         <button className={`lp-tab ${view === "email_logs" ? "is-active" : ""}`} onClick={() => setView("email_logs")}>Email Logs</button>
@@ -431,7 +431,7 @@ export function CommunicationsPanel({ crm }) {
             <button className="lp-btn lp-btn-sm" onClick={() => setAdding(!adding)}><Plus size={13} /> New Template</button>
           </div>
           {adding && (
-            <div style={{ padding: 12, marginBottom: 12, borderRadius: 8, background: "var(--lp-bg)" }}>
+            <div style={{ padding: 12, marginBottom: 12, borderRadius: 8, background: "var(--stone)" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
                 <Field label="Name"><input className="lp-input" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></Field>
                 <Field label="Category"><input className="lp-input" value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} /></Field>
@@ -528,7 +528,7 @@ export function AuditLogPanel({ crm }) {
   const tables = useMemo(() => [...new Set(logs.map((l) => l.table_name))].sort(), [logs]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div className="lp-stack">
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <div className="lp-search" style={{ flex: 1 }}>
           <Search size={14} />
@@ -601,11 +601,11 @@ export function TimeClockPanel({ crm, currentManager }) {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div className="lp-stack">
       <div className="lp-panel" style={{ padding: 16, textAlign: "center" }}>
         {activeEntry ? (
           <>
-            <Clock size={32} style={{ color: "#22c55e" }} />
+            <Clock size={32} style={{ color: "#4C7A54" }} />
             <h3>Clocked In</h3>
             <p className="lp-hint">Since {fmtDateTime(activeEntry.clock_in)}</p>
             <button className="lp-btn lp-btn-primary" style={{ marginTop: 12 }} onClick={clockOut}>
@@ -637,7 +637,7 @@ export function TimeClockPanel({ crm, currentManager }) {
                   <tr key={e.id}>
                     <td>{e.people?.name || "—"}</td>
                     <td style={{ fontSize: 12 }}>{fmtDateTime(e.clock_in)}</td>
-                    <td style={{ fontSize: 12 }}>{e.clock_out ? fmtDateTime(e.clock_out) : <span style={{ color: "#22c55e" }}>Active</span>}</td>
+                    <td style={{ fontSize: 12 }}>{e.clock_out ? fmtDateTime(e.clock_out) : <span style={{ color: "#4C7A54" }}>Active</span>}</td>
                     <td>{duration.toFixed(2)}h</td>
                   </tr>
                 );
@@ -680,7 +680,7 @@ export function MarketingPanel({ crm }) {
   useEffect(() => { refresh(); }, []);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div className="lp-stack">
       <div className="lp-tabs">
         <button className={`lp-tab ${view === "campaigns" ? "is-active" : ""}`} onClick={() => setView("campaigns")}>Campaigns</button>
         <button className={`lp-tab ${view === "referrals" ? "is-active" : ""}`} onClick={() => setView("referrals")}>Referrals</button>
@@ -882,7 +882,7 @@ export function IntegrationsPanel({ crm }) {
   if (loading) return <div className="lp-panel"><p className="lp-hint">Loading integrations…</p></div>;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div className="lp-stack">
       <div className="lp-panel" style={{ padding: 16 }}>
         <h4><Settings size={15} /> Calendar Sync</h4>
         <p className="lp-hint">Sync your Field CRM calendar with Google Calendar, Outlook, or iCal.</p>
@@ -908,7 +908,7 @@ export function IntegrationsPanel({ crm }) {
           <button className="lp-btn lp-btn-sm" onClick={() => setAddingWebhook(!addingWebhook)}><Plus size={13} /> Add Webhook</button>
         </div>
         {addingWebhook && (
-          <div style={{ padding: 12, marginBottom: 12, borderRadius: 8, background: "var(--lp-bg)" }}>
+          <div style={{ padding: 12, marginBottom: 12, borderRadius: 8, background: "var(--stone)" }}>
             <Field label="URL"><input className="lp-input" value={webhookDraft.url} onChange={(e) => setWebhookDraft({ ...webhookDraft, url: e.target.value })} placeholder="https://…" /></Field>
             <div style={{ marginTop: 8 }}>
               <Field label="Events (comma-separated)"><input className="lp-input" value={webhookDraft.events} onChange={(e) => setWebhookDraft({ ...webhookDraft, events: e.target.value })} placeholder="invoice.paid, event.created" /></Field>

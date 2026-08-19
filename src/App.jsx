@@ -1776,32 +1776,39 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
         }
       />
       <div className="lp-tabs no-print">
-        <button className={`lp-tab ${tab === "sites" ? "is-active" : ""}`} onClick={() => setTab("sites")}>Admin</button>
-        <button className={`lp-tab ${tab === "assign" ? "is-active" : ""}`} onClick={() => setTab("assign")}>Assign tasks</button>
-        <button className={`lp-tab ${tab === "calendar" ? "is-active" : ""}`} onClick={() => setTab("calendar")}>Calendar</button>
-        <button className={`lp-tab ${tab === "contacts" ? "is-active" : ""}`} onClick={() => setTab("contacts")}>Contacts</button>
-        <button className={`lp-tab ${tab === "customers" ? "is-active" : ""}`} onClick={() => setTab("customers")}>Customers</button>
-        <button className={`lp-tab ${tab === "myreport" ? "is-active" : ""}`} onClick={() => { setReportSaved(false); setTab("myreport"); }}>Daily Work Report</button>
-        <button className={`lp-tab ${tab === "log" ? "is-active" : ""}`} onClick={() => setTab("log")}>Full log</button>
-        <button className={`lp-tab ${tab === "invoices" ? "is-active" : ""}`} onClick={() => setTab("invoices")}>Invoices</button>
-        <button className={`lp-tab ${tab === "schedule" ? "is-active" : ""}`} onClick={() => setTab("schedule")}>Manager schedule</button>
+        {/* Core operations */}
         <button className={`lp-tab ${tab === "brief" ? "is-active" : ""}`} onClick={() => setTab("brief")}>Morning brief</button>
-        <button className={`lp-tab ${tab === "projects" ? "is-active" : ""}`} onClick={() => setTab("projects")}>Projects</button>
-        <button className={`lp-tab ${tab === "settings" ? "is-active" : ""}`} onClick={() => setTab("settings")}>Settings</button>
-        <button className={`lp-tab ${tab === "site_notes" ? "is-active" : ""}`} onClick={() => setTab("site_notes")}>Site Notes</button>
-        <button className={`lp-tab ${tab === "site_tasks" ? "is-active" : ""}`} onClick={() => setTab("site_tasks")}>Site Tasks</button>
-        <button className={`lp-tab ${tab === "suppliers" ? "is-active" : ""}`} onClick={() => setTab("suppliers")}>Suppliers</button>
+        <button className={`lp-tab ${tab === "calendar" ? "is-active" : ""}`} onClick={() => setTab("calendar")}>Calendar</button>
+        <button className={`lp-tab ${tab === "schedule" ? "is-active" : ""}`} onClick={() => setTab("schedule")}>Schedule</button>
         <button className={`lp-tab ${tab === "tasks" ? "is-active" : ""}`} onClick={() => setTab("tasks")}>Tasks</button>
-        <button className={`lp-tab ${tab === "passwords" ? "is-active" : ""}`} onClick={() => setTab("passwords")} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><Lock size={13} /> Passwords</button>
+        <button className={`lp-tab ${tab === "assign" ? "is-active" : ""}`} onClick={() => setTab("assign")}>Assign tasks</button>
+        {/* CRM entities */}
+        <button className={`lp-tab ${tab === "customers" ? "is-active" : ""}`} onClick={() => setTab("customers")}>Customers</button>
+        <button className={`lp-tab ${tab === "contacts" ? "is-active" : ""}`} onClick={() => setTab("contacts")}>Contacts</button>
+        <button className={`lp-tab ${tab === "projects" ? "is-active" : ""}`} onClick={() => setTab("projects")}>Projects</button>
+        <button className={`lp-tab ${tab === "suppliers" ? "is-active" : ""}`} onClick={() => setTab("suppliers")}>Suppliers</button>
+        <button className={`lp-tab ${tab === "site_tasks" ? "is-active" : ""}`} onClick={() => setTab("site_tasks")}>Site Tasks</button>
+        <button className={`lp-tab ${tab === "site_notes" ? "is-active" : ""}`} onClick={() => setTab("site_notes")}>Site Notes</button>
+        {/* Financial */}
+        <button className={`lp-tab ${tab === "invoices" ? "is-active" : ""}`} onClick={() => setTab("invoices")}>Invoices</button>
         <button className={`lp-tab ${tab === "reports" ? "is-active" : ""}`} onClick={() => setTab("reports")}>Reports</button>
         <button className={`lp-tab ${tab === "inventory" ? "is-active" : ""}`} onClick={() => setTab("inventory")}>Inventory</button>
-        <button className={`lp-tab ${tab === "communications" ? "is-active" : ""}`} onClick={() => setTab("communications")}>Comms</button>
+        {/* Operations */}
         <button className={`lp-tab ${tab === "time_clock" ? "is-active" : ""}`} onClick={() => setTab("time_clock")}>Time Clock</button>
-        <button className={`lp-tab ${tab === "marketing" ? "is-active" : ""}`} onClick={() => setTab("marketing")}>Marketing</button>
-        <button className={`lp-tab ${tab === "notifications" ? "is-active" : ""}`} onClick={() => setTab("notifications")}>Notifications</button>
-        <button className={`lp-tab ${tab === "integrations" ? "is-active" : ""}`} onClick={() => setTab("integrations")}>Integrations</button>
-        <button className={`lp-tab ${tab === "audit_log" ? "is-active" : ""}`} onClick={() => setTab("audit_log")}>Audit Log</button>
+        <button className={`lp-tab ${tab === "myreport" ? "is-active" : ""}`} onClick={() => { setReportSaved(false); setTab("myreport"); }}>Daily Report</button>
+        <button className={`lp-tab ${tab === "log" ? "is-active" : ""}`} onClick={() => setTab("log")}>Full log</button>
+        {/* Communication & support */}
         <button className={`lp-tab ${tab === "support" ? "is-active" : ""}`} onClick={() => setTab("support")} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><MessageSquare size={13} /> Support</button>
+        <button className={`lp-tab ${tab === "communications" ? "is-active" : ""}`} onClick={() => setTab("communications")}>Comms</button>
+        <button className={`lp-tab ${tab === "notifications" ? "is-active" : ""}`} onClick={() => setTab("notifications")}>Notifications</button>
+        {/* Growth & integrations */}
+        <button className={`lp-tab ${tab === "marketing" ? "is-active" : ""}`} onClick={() => setTab("marketing")}>Marketing</button>
+        <button className={`lp-tab ${tab === "integrations" ? "is-active" : ""}`} onClick={() => setTab("integrations")}>Integrations</button>
+        {/* Admin */}
+        <button className={`lp-tab ${tab === "audit_log" ? "is-active" : ""}`} onClick={() => setTab("audit_log")}>Audit Log</button>
+        <button className={`lp-tab ${tab === "sites" ? "is-active" : ""}`} onClick={() => setTab("sites")}>Admin</button>
+        <button className={`lp-tab ${tab === "settings" ? "is-active" : ""}`} onClick={() => setTab("settings")}>Settings</button>
+        <button className={`lp-tab ${tab === "passwords" ? "is-active" : ""}`} onClick={() => setTab("passwords")} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><Lock size={13} /> Passwords</button>
       </div>
       {tab === "brief" && <MorningBrief crm={crm} onOpen={(type, id) => { setSelectedId(id); setTab(type); }} />}
       {tab === "tasks" && <TasksPanel currentManager={currentManager} />}
@@ -3899,8 +3906,12 @@ body{margin:0;}
 .lp-subtabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:12px;}
 .lp-subtabs .lp-tab{display:flex;align-items:center;gap:6px;padding:8px 12px;}
 
-.lp-tabs{position:sticky;top:49px;z-index:99;background:var(--paper);display:flex;gap:6px;padding:12px 16px 0;border-bottom:1px solid var(--line);overflow-x:auto;}
-.lp-tab{background:none;border:none;padding:10px 14px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;}
+.lp-tabs{position:sticky;top:49px;z-index:99;background:var(--paper);display:flex;gap:4px;padding:12px 16px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent;}
+.lp-tabs::-webkit-scrollbar{height:4px;}
+.lp-tabs::-webkit-scrollbar-track{background:transparent;}
+.lp-tabs::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px;}
+.lp-tab{background:none;border:none;padding:8px 13px;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color .15s ease,border-color .15s ease;font-family:'Public Sans',sans-serif;}
+.lp-tab:hover{color:var(--ink);}
 .lp-tab.is-active{color:var(--ink);border-color:var(--brass);}
 
 .lp-brief{padding:20px 16px 0;}
@@ -4003,5 +4014,82 @@ body{margin:0;}
 .lp-cost-stat strong{display:block;font-size:16px;margin-top:4px;}
 .lp-qb-steps{font-size:13px;line-height:1.6;padding-left:18px;color:var(--muted);}
 .lp-submit--inline{width:auto;display:inline-flex;}
+
+/* ---- Shared component classes (used by ExtendedPanels, SupportPanel, Portal) ---- */
+.lp-btn{display:inline-flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:8px 13px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'Public Sans',sans-serif;transition:border-color .15s ease,background .15s ease;}
+.lp-btn:hover{border-color:var(--brass);background:var(--stone);}
+.lp-btn:disabled{opacity:.5;cursor:default;}
+.lp-btn-sm{padding:5px 9px;font-size:11.5px;border-radius:7px;}
+.lp-btn-primary{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+.lp-btn-primary:hover{background:var(--brass-dark);border-color:var(--brass-dark);}
+.lp-btn-danger{background:rgba(180,72,58,0.06);border-color:var(--rust);color:var(--rust);}
+.lp-btn-danger:hover{background:rgba(180,72,58,0.12);}
+
+.lp-search{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:8px 12px;color:var(--muted);}
+.lp-search input{border:none;background:none;flex:1;font-size:13px;font-family:'Public Sans',sans-serif;color:var(--ink);outline:none;}
+.lp-search select{border:none;background:none;font-size:13px;font-family:'Public Sans',sans-serif;color:var(--ink);outline:none;cursor:pointer;}
+
+.lp-table{width:100%;border-collapse:collapse;font-size:13px;}
+.lp-table thead th{text-align:left;padding:9px 12px;background:var(--stone);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;border-bottom:1px solid var(--line);}
+.lp-table thead th:first-child{border-radius:6px 0 0 0;}
+.lp-table thead th:last-child{border-radius:0 6px 0 0;}
+.lp-table tbody tr{border-bottom:1px solid var(--line);transition:background .1s ease;}
+.lp-table tbody tr:hover{background:var(--paper);}
+.lp-table td{padding:10px 12px;vertical-align:middle;}
+.lp-table tbody tr:last-child{border-bottom:none;}
+
+.lp-status{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.03em;text-transform:capitalize;background:var(--stone);color:var(--muted);white-space:nowrap;}
+.lp-status--paid{background:#E4EFE5;color:var(--green);}
+.lp-status--sent{background:#E8EDF5;color:#3D5A80;}
+.lp-status--overdue{background:#FBEAE7;color:var(--rust);}
+.lp-status--void{background:var(--stone);color:var(--muted);}
+.lp-status--new{background:#E8EDF5;color:#3D5A80;}
+.lp-status--open{background:#FBF0E2;color:var(--amber);}
+.lp-status--in_progress{background:#EDE6F2;color:#6B4E8C;}
+.lp-status--awaiting_customer{background:#FBF0E2;color:var(--amber);}
+.lp-status--resolved{background:#E4EFE5;color:var(--green);}
+.lp-status--closed{background:var(--stone);color:var(--muted);}
+.lp-status--draft{background:var(--stone);color:var(--muted);}
+.lp-status--lead{background:var(--stone);color:var(--muted);}
+.lp-status--approved{background:#E4EFE5;color:var(--green);}
+.lp-status--complete{background:#E4EFE5;color:var(--green);}
+.lp-status--cancelled{background:#FBEAE7;color:var(--rust);}
+.lp-status--on_hold{background:#FBF0E2;color:var(--amber);}
+.lp-status--active{background:#E4EFE5;color:var(--green);}
+.lp-status--inactive{background:var(--stone);color:var(--muted);}
+.lp-status--sent{background:#E8EDF5;color:#3D5A80;}
+.lp-status--failed{background:#FBEAE7;color:var(--rust);}
+.lp-status--insert{background:#E4EFE5;color:var(--green);}
+.lp-status--update{background:#E8EDF5;color:#3D5A80;}
+.lp-status--delete{background:#FBEAE7;color:var(--rust);}
+
+.lp-grid{display:grid;gap:12px;}
+.lp-grid-2{grid-template-columns:repeat(auto-fit,minmax(200px,1fr));}
+.lp-grid-3{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));}
+.lp-grid-4{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));}
+
+.lp-stat-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,0.03);}
+.lp-stat-card h3{font-family:'Fraunces',serif;font-size:13px;font-weight:600;margin:0 0 4px;color:var(--muted);}
+.lp-stat-card .lp-stat-value{font-family:'Fraunces',serif;font-size:26px;font-weight:600;margin:0;color:var(--ink);}
+.lp-stat-card .lp-stat-hint{font-size:11.5px;color:var(--muted);margin:4px 0 0;}
+
+.lp-section-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px;}
+.lp-section-card h4{display:flex;align-items:center;gap:7px;font-family:'Fraunces',serif;font-size:14px;font-weight:600;margin:0 0 8px;}
+
+.lp-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;}
+.lp-form-grid .lp-field{margin-bottom:0;}
+
+.lp-alert{padding:12px 14px;border-radius:10px;font-size:13px;display:flex;align-items:center;gap:8px;}
+.lp-alert--warn{background:#FBF0E2;border:1px solid #E8D5B8;color:var(--amber);}
+.lp-alert--error{background:#FBEAE7;border:1px solid #EFC6BE;color:var(--rust);}
+.lp-alert--success{background:#E4EFE5;border:1px solid #C5DCC8;color:var(--green);}
+.lp-alert--info{background:#E8EDF5;border:1px solid #C5D2E6;color:#3D5A80;}
+
+.lp-stack{display:flex;flex-direction:column;gap:16px;}
+.lp-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.lp-row-end{justify-content:flex-end;}
+.lp-grow{flex:1;}
+
+.lp-divider{border:none;border-top:1px solid var(--line);margin:16px 0;}
 
 `;

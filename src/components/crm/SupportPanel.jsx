@@ -12,26 +12,26 @@ import {
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 
 const TICKET_TYPES = [
-  { value: "service_request", label: "Service Request", color: "#3b82f6" },
-  { value: "sales_enquiry", label: "Sales Enquiry", color: "#22c55e" },
-  { value: "support", label: "Support", color: "#f59e0b" },
-  { value: "complaint", label: "Complaint", color: "#ef4444" },
+  { value: "service_request", label: "Service Request", color: "#3D5A80" },
+  { value: "sales_enquiry", label: "Sales Enquiry", color: "#4C7A54" },
+  { value: "support", label: "Support", color: "#C97A2B" },
+  { value: "complaint", label: "Complaint", color: "#B4483A" },
 ];
 
 const TICKET_STATUSES = [
-  { value: "new", label: "New", color: "#3b82f6" },
-  { value: "open", label: "Open", color: "#f59e0b" },
-  { value: "in_progress", label: "In Progress", color: "#8b5cf6" },
-  { value: "awaiting_customer", label: "Awaiting Customer", color: "#f97316" },
-  { value: "resolved", label: "Resolved", color: "#22c55e" },
-  { value: "closed", label: "Closed", color: "#64748b" },
+  { value: "new", label: "New", color: "#3D5A80" },
+  { value: "open", label: "Open", color: "#C97A2B" },
+  { value: "in_progress", label: "In Progress", color: "#6B4E8C" },
+  { value: "awaiting_customer", label: "Awaiting Customer", color: "#C97A2B" },
+  { value: "resolved", label: "Resolved", color: "#4C7A54" },
+  { value: "closed", label: "Closed", color: "#6B7268" },
 ];
 
 const TICKET_PRIORITIES = [
-  { value: "low", label: "Low", color: "#94a3b8" },
-  { value: "normal", label: "Normal", color: "#3b82f6" },
-  { value: "high", label: "High", color: "#f59e0b" },
-  { value: "urgent", label: "Urgent", color: "#ef4444" },
+  { value: "low", label: "Low", color: "#DED8C8" },
+  { value: "normal", label: "Normal", color: "#3D5A80" },
+  { value: "high", label: "High", color: "#C97A2B" },
+  { value: "urgent", label: "Urgent", color: "#B4483A" },
 ];
 
 function fmtDateTime(d) {
@@ -101,23 +101,23 @@ export function SupportPanel({ crm, currentManager }) {
   const urgentCount = tickets.filter((t) => t.priority === "urgent" && t.status !== "closed" && t.status !== "resolved").length;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div className="lp-stack">
       {/* Summary */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8 }}>
-        <div className="lp-panel" style={{ padding: 12, textAlign: "center" }}>
-          <MessageSquare size={16} style={{ color: "#3b82f6" }} />
-          <p style={{ fontSize: 20, fontWeight: 700, margin: "4px 0 0" }}>{openCount}</p>
-          <p className="lp-hint">Open tickets</p>
+      <div className="lp-grid lp-grid-3">
+        <div className="lp-stat-card" style={{ textAlign: "center" }}>
+          <MessageSquare size={16} style={{ color: "#3D5A80" }} />
+          <p className="lp-stat-value">{openCount}</p>
+          <p className="lp-stat-hint">Open tickets</p>
         </div>
-        <div className="lp-panel" style={{ padding: 12, textAlign: "center" }}>
-          <AlertTriangle size={16} style={{ color: "#ef4444" }} />
-          <p style={{ fontSize: 20, fontWeight: 700, margin: "4px 0 0" }}>{urgentCount}</p>
-          <p className="lp-hint">Urgent</p>
+        <div className="lp-stat-card" style={{ textAlign: "center" }}>
+          <AlertTriangle size={16} style={{ color: "#B4483A" }} />
+          <p className="lp-stat-value">{urgentCount}</p>
+          <p className="lp-stat-hint">Urgent</p>
         </div>
-        <div className="lp-panel" style={{ padding: 12, textAlign: "center" }}>
-          <Users size={16} style={{ color: "#22c55e" }} />
-          <p style={{ fontSize: 20, fontWeight: 700, margin: "4px 0 0" }}>{portalUsers.length}</p>
-          <p className="lp-hint">Portal users</p>
+        <div className="lp-stat-card" style={{ textAlign: "center" }}>
+          <Users size={16} style={{ color: "#4C7A54" }} />
+          <p className="lp-stat-value">{portalUsers.length}</p>
+          <p className="lp-stat-hint">Portal users</p>
         </div>
       </div>
 
@@ -194,7 +194,7 @@ export function SupportPanel({ crm, currentManager }) {
                   <td><strong>{u.email}</strong>{u.name && <p className="lp-hint" style={{ margin: 0 }}>{u.name}</p>}</td>
                   <td>{u.customers?.name || "—"}</td>
                   <td style={{ fontSize: 12 }}>{fmtDateTime(u.invited_at)}</td>
-                  <td style={{ fontSize: 12 }}>{u.last_login_at ? fmtDateTime(u.last_login_at) : <span style={{ color: "#94a3b8" }}>Never</span>}</td>
+                  <td style={{ fontSize: 12 }}>{u.last_login_at ? fmtDateTime(u.last_login_at) : <span style={{ color: "#DED8C8" }}>Never</span>}</td>
                   <td>
                     <button className="lp-btn lp-btn-sm lp-btn-danger" onClick={async () => {
                       if (confirm(`Remove portal access for ${u.email}?`)) {
@@ -273,7 +273,7 @@ function InvitePortalUser({ crm, customers, onDone, onCancel }) {
           <input className="lp-input" value={name} onChange={(e) => setName(e.target.value)} />
         </label>
       </div>
-      {err && <p style={{ color: "#ef4444", fontSize: 13, marginTop: 8 }}>{err}</p>}
+      {err && <p style={{ color: "#B4483A", fontSize: 13, marginTop: 8 }}>{err}</p>}
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
         <button className="lp-btn lp-btn-primary" onClick={submit} disabled={busy}>
           <Check size={14} /> {busy ? "Inviting…" : "Send Invite"}
@@ -357,7 +357,7 @@ function TicketDetail({ crm, ticketId, onBack, currentManager }) {
   if (!ticket) return <p className="lp-hint">Ticket not found.</p>;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div className="lp-stack">
       <button className="lp-btn-ghost" onClick={onBack} style={{ width: "fit-content" }}>
         <ArrowLeft size={13} /> Back to tickets
       </button>
@@ -376,7 +376,7 @@ function TicketDetail({ crm, ticketId, onBack, currentManager }) {
           </div>
         </div>
         {ticket.description && (
-          <p style={{ fontSize: 14, color: "#475569", margin: "12px 0 0", lineHeight: 1.5 }}>{ticket.description}</p>
+          <p style={{ fontSize: 14, color: "#4A4A44", margin: "12px 0 0", lineHeight: 1.5 }}>{ticket.description}</p>
         )}
         <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
           {!ticket.assigned_to && (
@@ -414,15 +414,15 @@ function TicketDetail({ crm, ticketId, onBack, currentManager }) {
           {messages.map((m) => (
             <div key={m.id} style={{
               padding: 12, borderRadius: 8,
-              background: m.internal_note ? "#fef3c7" : m.author_type === "customer" ? "#dbeafe" : "#f0fdf4",
-              border: m.internal_note ? "1px solid #fde68a" : m.author_type === "customer" ? "1px solid #bfdbfe" : "1px solid #bbf7d0",
+              background: m.internal_note ? "#FBF0E2" : m.author_type === "customer" ? "#E8EDF5" : "#E4EFE5",
+              border: m.internal_note ? "1px solid #E8D5B8" : m.author_type === "customer" ? "1px solid #D5DDE8" : "1px solid #C5DCC8",
             }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                 <strong style={{ fontSize: 13 }}>
-                  {m.internal_note && <span style={{ color: "#f59e0b" }}>🔒 Internal · </span>}
+                  {m.internal_note && <span style={{ color: "#C97A2B" }}>🔒 Internal · </span>}
                   {m.author_type === "customer" ? "Customer" : m.author_name || "Staff"}
                 </strong>
-                <span style={{ fontSize: 11, color: "#64748b" }}>{fmtDateTime(m.created_at)}</span>
+                <span style={{ fontSize: 11, color: "#6B7268" }}>{fmtDateTime(m.created_at)}</span>
               </div>
               <p style={{ fontSize: 14, margin: 0, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{m.body}</p>
             </div>
