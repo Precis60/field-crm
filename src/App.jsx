@@ -3078,7 +3078,7 @@ function AdminPanel() {
 
   async function refresh() {
     const [s, p, a, c, cs] = await Promise.all([loadAllSites(), loadAllPeople(), loadSiteAssignments(), crm.listCustomers({ activeOnly: false }), crm.listCustomerSitesAll()]);
-    setSites(s); setPeople(p); setAssignments(a); setCustomers(c); setCustomerSites(cs);
+    setSites(s.slice().sort((a, b) => (a.name || "").localeCompare(b.name || "", "en", { sensitivity: "base" }))); setPeople(p); setAssignments(a); setCustomers(c); setCustomerSites(cs);
   }
 
   useEffect(() => { (async () => { await refresh(); setLoading(false); })(); }, []);
