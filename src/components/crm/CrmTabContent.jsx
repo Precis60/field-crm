@@ -2163,6 +2163,47 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
           }
         }
       }
+
+      // Auto-create a timesheet entry when the event status is set to
+      // "Project Connected" or "Project Connect / Follow Up Required".
+      // This ensures billable time is captured the moment work is linked
+      // to a project, without the user needing to click "Add to time entries".
+      const eventId = editing || payload.id;
+      if ((draft.status === "project_connected" || draft.status === "project_connect_follow_up") && draft.startAt) {
+        const p = draft.projectId
+          ? projects.find((pr) => pr.id === draft.projectId)
+          : projects.find((pr) => pr.name === draft.projectName.trim());
+        if (p) {
+          // Check if a timesheet entry already exists for this event to
+          // avoid creating duplicates when the event is edited.
+          const existing = await crm.listTimesheetsByEvent(eventId).catch(() => []);
+          if (!existing || existing.length === 0) {
+            const noteParts = [
+              draft.notes.trim() || null,
+              draft.plannedWorks.trim() ? `Planned works:\n${draft.plannedWorks.trim()}` : null,
+              draft.worksCompleted.trim() ? `Works completed:\n${draft.worksCompleted.trim()}` : null,
+              draft.followUp.trim() ? `Follow up:\n${draft.followUp.trim()}` : null,
+            ].filter(Boolean);
+            await crm.createTimesheet({
+              id: uid(),
+              project_id: p.id,
+              person_id: null,
+              start_at: fromLocalInputMelbourne(draft.startAt).toISOString(),
+              end_at: draft.endAt ? fromLocalInputMelbourne(draft.endAt).toISOString() : null,
+              notes: noteParts.join("\n\n") || null,
+              expenses: [],
+              follow_ups: [],
+              billable: true,
+              invoiced: false,
+              event_id: eventId,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            });
+            setMsg(`Time entry automatically added to ${p.name}.`);
+          }
+        }
+      }
+
       setDraft(empty());
       setAdding(false);
       setSelectedTaskIds([]);
