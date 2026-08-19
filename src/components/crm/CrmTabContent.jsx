@@ -143,7 +143,7 @@ export default function CrmTabContent({ tab, crm, uid, sites = [], selectedId = 
   if (tab === "contacts") return <ContactsPanel crm={crm} />;
   if (tab === "suppliers") return <SuppliersPanel crm={crm} uid={uid} />;
   if (tab === "projects") return <ProjectsPanel crm={crm} uid={uid} sites={sites} />;
-  if (tab === "calendar") return <CalendarPanel crm={crm} uid={uid} selectedId={selectedId} />;
+  if (tab === "calendar") return <CalendarPanel crm={crm} uid={uid} sites={sites} selectedId={selectedId} />;
   if (tab === "site_tasks") return <SiteTasksPanel crm={crm} uid={uid} sites={sites} selectedId={selectedId} />;
   if (tab === "site_notes") return <SiteNotesPanel crm={crm} uid={uid} sites={sites} />;
   if (tab === "invoices") return <InvoicesPanel crm={crm} uid={uid} selectedId={selectedId} />;
@@ -1994,7 +1994,7 @@ function addMonthsToDate(d, n) {
 // blocks all share the same scale.
 const HOUR_HEIGHT = 40;
 
-function CalendarPanel({ crm, uid, selectedId = null }) {
+function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
   const [selectedDay, setSelectedDay] = useState(new Date());
   const [view, setView] = useState("week");
   const [events, setEvents] = useState([]);
@@ -2030,6 +2030,7 @@ function CalendarPanel({ crm, uid, selectedId = null }) {
   const [contacts, setContacts] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [siteTaskCategories, setSiteTaskCategories] = useState([]);
+  const [allSites, setAllSites] = useState([]);
   const [creatingSiteTask, setCreatingSiteTask] = useState(false);
   const [taskCategoryId, setTaskCategoryId] = useState("");
   const [taskName, setTaskName] = useState("");
@@ -2255,10 +2256,18 @@ function CalendarPanel({ crm, uid, selectedId = null }) {
     const matched = e.project_name ? projects.find((p) => p.name === e.project_name) : null;
     setEditing(e.id);
     setAdding(true);
+    // Auto-fill site ID and name from the matched project if the event
+    // doesn't already have them stored. Fall back to the sites list
+    // if the PostgREST embedded join didn't return site data.
+    const projSiteId = matched ? (matched.site_id || "") : "";
+    const autoSiteId = e.site_id || projSiteId || "";
+    const siteFromJoin = matched?.sites?.name;
+    const siteFromList = projSiteId ? sites.find((s) => s.id === projSiteId)?.name : null;
+    const autoSiteName = e.site_name || siteFromJoin || siteFromList || "";
     setDraft({
       title: e.title || "",
-      siteId: e.site_id || "",
-      siteName: e.site_name || "",
+      siteId: autoSiteId,
+      siteName: autoSiteName,
       projectId: matched ? matched.id : "",
       projectName: e.project_name || e.projectName || "",
       siteAddress: e.site_address || "",
@@ -2402,12 +2411,19 @@ function CalendarPanel({ crm, uid, selectedId = null }) {
                 onChange={(e) => {
                   const pid = e.target.value;
                   const p = projects.find((pr) => pr.id === pid);
+                  // Look up site from the embedded join first, then fall
+                  // back to the sites list passed from the parent.
+                  const siteId = p ? (p.site_id || "") : "";
+                  const siteFromJoin = p?.sites?.name;
+                  const siteFromList = siteId ? sites.find((s) => s.id === siteId)?.name : null;
+                  const siteName = siteFromJoin || siteFromList || "";
                   setDraft((d) => ({
                     ...d,
                     projectId: pid,
                     projectName: p ? p.name : d.projectName,
-                    siteId: p ? p.site_id || "" : d.siteId,
-                    siteName: p ? (p.sites?.name || "") : d.siteName,
+                    // Always auto-fill site ID and name from the selected project
+                    siteId: p ? siteId : d.siteId,
+                    siteName: p ? siteName : d.siteName,
                   }));
                 }}
               >
