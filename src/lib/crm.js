@@ -253,6 +253,35 @@ export function createCrmApi(supabaseFetch, supabaseProjectUrl, supabaseAnonKey,
     });
   }
 
+  async function deleteQuote(id) {
+    await supabaseFetch(`/quotes?id=eq.${id}`, { method: "DELETE" });
+  }
+
+  /* ---------- Proposals ---------- */
+
+  async function listProposals({ projectId, customerId } = {}) {
+    let path = `/proposals?select=*,customers(id,name),projects(id,name)&order=created_at.desc`;
+    if (projectId) path += `&project_id=eq.${projectId}`;
+    if (customerId) path += `&customer_id=eq.${customerId}`;
+    return (await supabaseFetch(path).catch(() => [])) || [];
+  }
+
+  async function createProposal(proposal) {
+    await supabaseFetch("/proposals", { method: "POST", body: [proposal] });
+    return proposal;
+  }
+
+  async function updateProposal(id, patch) {
+    await supabaseFetch(`/proposals?id=eq.${id}`, {
+      method: "PATCH",
+      body: { ...patch, updated_at: new Date().toISOString() },
+    });
+  }
+
+  async function deleteProposal(id) {
+    await supabaseFetch(`/proposals?id=eq.${id}`, { method: "DELETE" });
+  }
+
   /* ---------- Settings ---------- */
 
   async function listSettings() {
@@ -1219,6 +1248,11 @@ export function createCrmApi(supabaseFetch, supabaseProjectUrl, supabaseAnonKey,
     listQuotes,
     createQuote,
     updateQuote,
+    deleteQuote,
+    listProposals,
+    createProposal,
+    updateProposal,
+    deleteProposal,
     listInvoices,
     getInvoice,
     sendInvoice,

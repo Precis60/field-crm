@@ -15,6 +15,7 @@ import {
   TimeClockPanel, MarketingPanel, NotificationsPanel, IntegrationsPanel,
 } from "./ExtendedPanels.jsx";
 import { SupportPanel } from "./SupportPanel.jsx";
+import { QuotesPanel, ProposalsPanel } from "./QuotesProposalsPanel.jsx";
 
 const CUSTOMER_STATUSES = ["active", "prospect", "inactive"];
 const PROJECT_STATUSES = [
@@ -146,6 +147,8 @@ export default function CrmTabContent({ tab, crm, uid, sites = [], selectedId = 
   if (tab === "site_tasks") return <SiteTasksPanel crm={crm} uid={uid} sites={sites} selectedId={selectedId} />;
   if (tab === "site_notes") return <SiteNotesPanel crm={crm} uid={uid} sites={sites} />;
   if (tab === "invoices") return <InvoicesPanel crm={crm} uid={uid} selectedId={selectedId} />;
+  if (tab === "quotes") return <QuotesPanel crm={crm} uid={uid} selectedId={selectedId} />;
+  if (tab === "proposals") return <ProposalsPanel crm={crm} uid={uid} />;
   if (tab === "passwords") return <PasswordVaultPanel crm={crm} uid={uid} />;
   if (tab === "reports") return <ReportsPanel crm={crm} />;
   if (tab === "inventory") return <InventoryPanel crm={crm} />;

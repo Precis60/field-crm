@@ -1783,6 +1783,8 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
         <button className={`lp-tab ${tab === "calendar" ? "is-active" : ""}`} onClick={() => setTab("calendar")}>Calendar</button>
         <button className={`lp-tab ${tab === "projects" ? "is-active" : ""}`} onClick={() => setTab("projects")}>Projects</button>
         <button className={`lp-tab ${tab === "invoices" ? "is-active" : ""}`} onClick={() => setTab("invoices")}>Invoices</button>
+        <button className={`lp-tab ${tab === "quotes" ? "is-active" : ""}`} onClick={() => setTab("quotes")}>Quotes</button>
+        <button className={`lp-tab ${tab === "proposals" ? "is-active" : ""}`} onClick={() => setTab("proposals")}>Proposals</button>
         <button className={`lp-tab ${tab === "contacts" ? "is-active" : ""}`} onClick={() => setTab("contacts")}>Contacts</button>
         <button className={`lp-tab ${tab === "customers" ? "is-active" : ""}`} onClick={() => setTab("customers")}>Customers</button>
         <button className={`lp-tab ${tab === "site_tasks" ? "is-active" : ""}`} onClick={() => setTab("site_tasks")}>Site Tasks</button>
@@ -1835,7 +1837,7 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
       {tab === "schedule" && <ManagerSchedulePanel managers={managers} currentManager={currentManager} />}
       {tab === "log" && <FullLog monthsIndex={monthsIndex} getMonths={getMonths} cacheVersion={cacheVersion} onDeleteReport={onDeleteReport} />}
       {tab === "sites" && <AdminPanel />}
-      {["customers", "contacts", "projects", "calendar", "suppliers", "site_notes", "site_tasks", "invoices", "passwords", "reports", "inventory", "communications", "audit_log", "time_clock", "marketing", "notifications", "integrations", "support"].includes(tab) && (
+      {["customers", "contacts", "projects", "calendar", "suppliers", "site_notes", "site_tasks", "invoices", "quotes", "proposals", "passwords", "reports", "inventory", "communications", "audit_log", "time_clock", "marketing", "notifications", "integrations", "support"].includes(tab) && (
         <CrmTabContent tab={tab} crm={crm} uid={uid} sites={sites} selectedId={selectedId} currentManager={currentManager} />
       )}
       {tab === "settings" && <ManagerSettings onRestored={onRestored} />}
