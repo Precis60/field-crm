@@ -10,6 +10,10 @@ import DateTimeClockInput from "../DateTimeClockInput.jsx";
 import DateInput from "../DateInput.jsx";
 import { createVault, unlockVault, encryptItem, decryptItem } from "../../lib/vaultCrypto.js";
 import { APP_TIME_ZONE, zonedISODate, zonedDateToUTC, zonedParts } from "../../lib/time.js";
+import {
+  ReportsPanel, InventoryPanel, CommunicationsPanel, AuditLogPanel,
+  TimeClockPanel, MarketingPanel, NotificationsPanel, IntegrationsPanel,
+} from "./ExtendedPanels.jsx";
 
 const CUSTOMER_STATUSES = ["active", "prospect", "inactive"];
 const PROJECT_STATUSES = [
@@ -132,7 +136,7 @@ function EmptyState({ icon, text, compact }) {
   );
 }
 
-export default function CrmTabContent({ tab, crm, uid, sites = [], selectedId = null }) {
+export default function CrmTabContent({ tab, crm, uid, sites = [], selectedId = null, currentManager = null }) {
   if (tab === "customers") return <CustomersPanel crm={crm} uid={uid} sites={sites} />;
   if (tab === "contacts") return <ContactsPanel crm={crm} />;
   if (tab === "suppliers") return <SuppliersPanel crm={crm} uid={uid} />;
@@ -142,6 +146,14 @@ export default function CrmTabContent({ tab, crm, uid, sites = [], selectedId = 
   if (tab === "site_notes") return <SiteNotesPanel crm={crm} uid={uid} sites={sites} />;
   if (tab === "invoices") return <InvoicesPanel crm={crm} uid={uid} selectedId={selectedId} />;
   if (tab === "passwords") return <PasswordVaultPanel crm={crm} uid={uid} />;
+  if (tab === "reports") return <ReportsPanel crm={crm} />;
+  if (tab === "inventory") return <InventoryPanel crm={crm} />;
+  if (tab === "communications") return <CommunicationsPanel crm={crm} />;
+  if (tab === "audit_log") return <AuditLogPanel crm={crm} />;
+  if (tab === "time_clock") return <TimeClockPanel crm={crm} currentManager={currentManager} />;
+  if (tab === "marketing") return <MarketingPanel crm={crm} />;
+  if (tab === "notifications") return <NotificationsPanel crm={crm} currentManager={currentManager} />;
+  if (tab === "integrations") return <IntegrationsPanel crm={crm} />;
   return null;
 }
 
@@ -2001,6 +2013,9 @@ function CalendarPanel({ crm, uid, selectedId = null }) {
     status: EVENT_STATUSES[0].value,
     startAt: "",
     endAt: "",
+    recurrenceRule: "none",
+    recurrenceEndDate: "",
+    recurrenceInterval: 1,
   });
   const [draft, setDraft] = useState(empty);
   const [hiddenCategories, setHiddenCategories] = useState([]);
@@ -2091,6 +2106,11 @@ function CalendarPanel({ crm, uid, selectedId = null }) {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         ...(draft.contactId ? { contact_id: draft.contactId } : {}),
+        ...(draft.recurrenceRule && draft.recurrenceRule !== "none" ? {
+          recurrence_rule: draft.recurrenceRule,
+          recurrence_interval: Number(draft.recurrenceInterval) || 1,
+          recurrence_end_date: draft.recurrenceEndDate || null,
+        } : {}),
       };
       if (selectedTaskIds.length > 0) {
         const linked = selectedTaskIds.map((id) => tasks.find((t) => t.id === id)).filter(Boolean);
@@ -2103,6 +2123,37 @@ function CalendarPanel({ crm, uid, selectedId = null }) {
         setEditing(null);
       } else {
         await crm.createEvent(payload);
+        // Generate recurring events if a recurrence rule is set
+        if (draft.recurrenceRule && draft.recurrenceRule !== "none" && draft.recurrenceEndDate) {
+          const interval = Number(draft.recurrenceInterval) || 1;
+          const endDate = new Date(draft.recurrenceEndDate);
+          const baseStart = fromLocalInputMelbourne(draft.startAt);
+          const baseEnd = draft.endAt ? fromLocalInputMelbourne(draft.endAt) : null;
+          const duration = baseEnd ? baseEnd - baseStart : 0;
+          let nextStart = new Date(baseStart);
+          const stepMs = {
+            daily: 86400000,
+            weekly: 604800000,
+            fortnightly: 1209600000,
+            monthly: 2592000000,
+          }[draft.recurrenceRule] * interval;
+          nextStart = new Date(nextStart.getTime() + stepMs);
+          while (nextStart <= endDate) {
+            const nextEnd = duration ? new Date(nextStart.getTime() + duration) : null;
+            await crm.createEvent({
+              ...payload,
+              id: uid(),
+              start_at: nextStart.toISOString(),
+              end_at: nextEnd ? nextEnd.toISOString() : null,
+              parent_event_id: payload.id,
+              recurrence_rule: draft.recurrenceRule,
+              recurrence_interval: interval,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            });
+            nextStart = new Date(nextStart.getTime() + stepMs);
+          }
+        }
       }
       setDraft(empty());
       setAdding(false);
@@ -2466,6 +2517,33 @@ function CalendarPanel({ crm, uid, selectedId = null }) {
               <textarea className="lp-textarea" rows={2} value={draft.followUp} onChange={(e) => setDraft((d) => ({ ...d, followUp: e.target.value }))} />
             </Field>
           </div>
+
+          {!editing && (
+            <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: "var(--lp-bg)" }}>
+              <h4 style={{ marginBottom: 8 }}>Recurrence</h4>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8 }}>
+                <Field label="Repeat">
+                  <select className="lp-input" value={draft.recurrenceRule} onChange={(e) => setDraft((d) => ({ ...d, recurrenceRule: e.target.value }))}>
+                    <option value="none">Does not repeat</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="fortnightly">Fortnightly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                </Field>
+                {draft.recurrenceRule !== "none" && (
+                  <>
+                    <Field label="Every">
+                      <input className="lp-input" type="number" min="1" value={draft.recurrenceInterval} onChange={(e) => setDraft((d) => ({ ...d, recurrenceInterval: Number(e.target.value) }))} />
+                    </Field>
+                    <Field label="End date">
+                      <input className="lp-input" type="date" value={draft.recurrenceEndDate} onChange={(e) => setDraft((d) => ({ ...d, recurrenceEndDate: e.target.value }))} />
+                    </Field>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="lp-person-actions">
             <button className="lp-btn-ghost" onClick={save} disabled={busy}><Check size={13} /> {busy ? "Saving…" : editing ? "Update event" : "Add event"}</button>

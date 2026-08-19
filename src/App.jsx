@@ -1761,6 +1761,14 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
         <button className={`lp-tab ${tab === "suppliers" ? "is-active" : ""}`} onClick={() => setTab("suppliers")}>Suppliers</button>
         <button className={`lp-tab ${tab === "tasks" ? "is-active" : ""}`} onClick={() => setTab("tasks")}>Tasks</button>
         <button className={`lp-tab ${tab === "passwords" ? "is-active" : ""}`} onClick={() => setTab("passwords")} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><Lock size={13} /> Passwords</button>
+        <button className={`lp-tab ${tab === "reports" ? "is-active" : ""}`} onClick={() => setTab("reports")}>Reports</button>
+        <button className={`lp-tab ${tab === "inventory" ? "is-active" : ""}`} onClick={() => setTab("inventory")}>Inventory</button>
+        <button className={`lp-tab ${tab === "communications" ? "is-active" : ""}`} onClick={() => setTab("communications")}>Comms</button>
+        <button className={`lp-tab ${tab === "time_clock" ? "is-active" : ""}`} onClick={() => setTab("time_clock")}>Time Clock</button>
+        <button className={`lp-tab ${tab === "marketing" ? "is-active" : ""}`} onClick={() => setTab("marketing")}>Marketing</button>
+        <button className={`lp-tab ${tab === "notifications" ? "is-active" : ""}`} onClick={() => setTab("notifications")}>Notifications</button>
+        <button className={`lp-tab ${tab === "integrations" ? "is-active" : ""}`} onClick={() => setTab("integrations")}>Integrations</button>
+        <button className={`lp-tab ${tab === "audit_log" ? "is-active" : ""}`} onClick={() => setTab("audit_log")}>Audit Log</button>
       </div>
       {tab === "brief" && <MorningBrief crm={crm} onOpen={(type, id) => { setSelectedId(id); setTab(type); }} />}
       {tab === "tasks" && <TasksPanel currentManager={currentManager} />}
@@ -1787,8 +1795,8 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
       {tab === "schedule" && <ManagerSchedulePanel managers={managers} currentManager={currentManager} />}
       {tab === "log" && <FullLog monthsIndex={monthsIndex} getMonths={getMonths} cacheVersion={cacheVersion} onDeleteReport={onDeleteReport} />}
       {tab === "sites" && <AdminPanel />}
-      {["customers", "contacts", "projects", "calendar", "suppliers", "site_notes", "site_tasks", "invoices", "passwords"].includes(tab) && (
-        <CrmTabContent tab={tab} crm={crm} uid={uid} sites={sites} selectedId={selectedId} />
+      {["customers", "contacts", "projects", "calendar", "suppliers", "site_notes", "site_tasks", "invoices", "passwords", "reports", "inventory", "communications", "audit_log", "time_clock", "marketing", "notifications", "integrations"].includes(tab) && (
+        <CrmTabContent tab={tab} crm={crm} uid={uid} sites={sites} selectedId={selectedId} currentManager={currentManager} />
       )}
       {tab === "settings" && <ManagerSettings onRestored={onRestored} />}
     </div>

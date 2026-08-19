@@ -742,3 +742,590 @@ create policy vault_config_manager_all on vault_config
 drop policy if exists vault_items_manager_all on vault_items;
 create policy vault_items_manager_all on vault_items
   for all using (is_manager()) with check (is_manager());
+
+-- ========== Extended CRM features ==========
+
+-- Events: recurring event support
+alter table events add column if not exists recurrence_rule text;
+alter table events add column if not exists recurrence_end_date date;
+alter table events add column if not exists parent_event_id text;
+alter table events add column if not exists recurrence_interval int default 1;
+
+-- Sites: access details
+alter table sites add column if not exists access_code text;
+alter table sites add column if not exists key_location text;
+alter table sites add column if not exists parking_notes text;
+alter table sites add column if not exists alarm_instructions text;
+alter table sites add column if not exists site_map_url text;
+
+-- Invoices: deposits, late fees, recurring, Stripe, split billing
+alter table invoices add column if not exists deposit_amount numeric default 0;
+alter table invoices add column if not exists deposit_paid_at timestamptz;
+alter table invoices add column if not exists late_fee_amount numeric default 0;
+alter table invoices add column if not exists late_fee_applied_at timestamptz;
+alter table invoices add column if not exists recurring boolean default false;
+alter table invoices add column if not exists recurring_frequency text;
+alter table invoices add column if not exists parent_invoice_id text;
+alter table invoices add column if not exists stripe_payment_intent_id text;
+alter table invoices add column if not exists stripe_paid_at timestamptz;
+alter table invoices add column if not exists split_info jsonb;
+alter table invoices add column if not exists tax_rate numeric default 0.1;
+
+-- Quotes: online approval, versioning, tiers
+alter table quotes add column if not exists approval_token text;
+alter table quotes add column if not exists approved_at timestamptz;
+alter table quotes add column if not exists approved_by text;
+alter table quotes add column if not exists version int default 1;
+alter table quotes add column if not exists parent_quote_id text;
+alter table quotes add column if not exists tiers jsonb;
+alter table quotes add column if not exists follow_up_sent_at timestamptz;
+
+-- Timesheets: approval workflow
+alter table timesheets add column if not exists approval_status text default 'pending'
+  check (approval_status in ('pending', 'approved', 'rejected'));
+alter table timesheets add column if not exists approved_by text;
+alter table timesheets add column if not exists approved_at timestamptz;
+alter table timesheets add column if not exists break_minutes int default 0;
+
+-- Customers: tags, satisfaction, referrals
+alter table customers add column if not exists tags text[] default '{}';
+alter table customers add column if not exists satisfaction_rating int;
+alter table customers add column if not exists referred_by text;
+
+-- Projects: actual costs, templates, permits
+alter table projects add column if not exists actual_cost numeric default 0;
+alter table projects add column if not exists template_id text;
+alter table projects add column if not exists permit_number text;
+alter table projects add column if not exists permit_expiry date;
+alter table projects add column if not exists inspection_date date;
+
+-- People: hourly rates
+alter table people add column if not exists hourly_rate numeric;
+alter table people add column if not exists overtime_rate numeric;
+
+-- Customer communication timeline
+create table if not exists customer_communications (
+  id text primary key,
+  customer_id text not null references customers(id) on delete cascade,
+  type text not null default 'note' check (type in ('email', 'phone', 'sms', 'meeting', 'note', 'visit')),
+  direction text check (direction in ('inbound', 'outbound')),
+  subject text,
+  body text,
+  event_id text references events(id) on delete set null,
+  created_by text references people(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+create index if not exists customer_communications_customer_idx on customer_communications (customer_id);
+create index if not exists customer_communications_created_idx on customer_communications (created_at desc);
+alter table customer_communications enable row level security;
+grant select, insert, update, delete on customer_communications to authenticated;
+drop policy if exists customer_communications_all on customer_communications;
+create policy customer_communications_all on customer_communications
+  for all using (is_manager()) with check (is_manager());
+
+-- Customer tags
+create table if not exists customer_tags (
+  id text primary key,
+  name text not null unique,
+  color text default '#64748b',
+  created_at timestamptz not null default now()
+);
+alter table customer_tags enable row level security;
+grant select, insert, update, delete on customer_tags to authenticated;
+drop policy if exists customer_tags_all on customer_tags;
+create policy customer_tags_all on customer_tags
+  for all using (is_manager()) with check (is_manager());
+
+-- Customer documents
+create table if not exists customer_documents (
+  id text primary key,
+  customer_id text not null references customers(id) on delete cascade,
+  name text not null,
+  file_url text not null,
+  file_type text,
+  file_size bigint,
+  uploaded_at timestamptz not null default now()
+);
+create index if not exists customer_documents_customer_idx on customer_documents (customer_id);
+alter table customer_documents enable row level security;
+grant select, insert, update, delete on customer_documents to authenticated;
+drop policy if exists customer_documents_all on customer_documents;
+create policy customer_documents_all on customer_documents
+  for all using (is_manager()) with check (is_manager());
+
+-- Project milestones
+create table if not exists project_milestones (
+  id text primary key,
+  project_id text not null references projects(id) on delete cascade,
+  name text not null,
+  description text,
+  due_date date,
+  completed boolean default false,
+  completed_at timestamptz,
+  sort_order int default 0,
+  created_at timestamptz not null default now()
+);
+create index if not exists project_milestones_project_idx on project_milestones (project_id);
+alter table project_milestones enable row level security;
+grant select, insert, update, delete on project_milestones to authenticated;
+drop policy if exists project_milestones_all on project_milestones;
+create policy project_milestones_all on project_milestones
+  for all using (is_manager()) with check (is_manager());
+
+-- Project templates
+create table if not exists project_templates (
+  id text primary key,
+  name text not null,
+  description text,
+  default_budget numeric,
+  default_status text default 'lead',
+  template_data jsonb default '{}',
+  created_at timestamptz not null default now()
+);
+alter table project_templates enable row level security;
+grant select, insert, update, delete on project_templates to authenticated;
+drop policy if exists project_templates_all on project_templates;
+create policy project_templates_all on project_templates
+  for all using (is_manager()) with check (is_manager());
+
+-- Change orders
+create table if not exists change_orders (
+  id text primary key,
+  project_id text not null references projects(id) on delete cascade,
+  description text not null,
+  reason text,
+  cost_impact numeric default 0,
+  status text default 'pending' check (status in ('pending', 'approved', 'rejected', 'implemented')),
+  approved_by text references people(id) on delete set null,
+  approved_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists change_orders_project_idx on change_orders (project_id);
+alter table change_orders enable row level security;
+grant select, insert, update, delete on change_orders to authenticated;
+drop policy if exists change_orders_all on change_orders;
+create policy change_orders_all on change_orders
+  for all using (is_manager()) with check (is_manager());
+
+-- Quote line items
+create table if not exists quote_lines (
+  id text primary key,
+  quote_id text not null references quotes(id) on delete cascade,
+  description text not null,
+  quantity numeric default 1,
+  unit_rate numeric default 0,
+  amount numeric default 0,
+  tier text default 'standard',
+  cost_type text,
+  sort_order int default 0
+);
+create index if not exists quote_lines_quote_idx on quote_lines (quote_id);
+alter table quote_lines enable row level security;
+grant select, insert, update, delete on quote_lines to authenticated;
+drop policy if exists quote_lines_all on quote_lines;
+create policy quote_lines_all on quote_lines
+  for all using (is_manager()) with check (is_manager());
+
+-- Site photos gallery
+create table if not exists site_photos (
+  id text primary key,
+  site_id text not null references sites(id) on delete cascade,
+  url text not null,
+  caption text,
+  area text,
+  taken_at date,
+  created_at timestamptz not null default now()
+);
+create index if not exists site_photos_site_idx on site_photos (site_id);
+alter table site_photos enable row level security;
+grant select, insert, update, delete on site_photos to authenticated;
+drop policy if exists site_photos_all on site_photos;
+create policy site_photos_all on site_photos for all using (is_manager()) with check (is_manager());
+
+-- Inspection templates
+create table if not exists inspection_templates (
+  id text primary key,
+  name text not null,
+  items jsonb not null default '[]',
+  active boolean default true,
+  created_at timestamptz not null default now()
+);
+alter table inspection_templates enable row level security;
+grant select, insert, update, delete on inspection_templates to authenticated;
+drop policy if exists inspection_templates_all on inspection_templates;
+create policy inspection_templates_all on inspection_templates for all using (is_manager()) with check (is_manager());
+
+-- Inspections
+create table if not exists inspections (
+  id text primary key,
+  site_id text not null references sites(id) on delete cascade,
+  template_id text references inspection_templates(id) on delete set null,
+  inspector text,
+  inspected_at timestamptz not null default now(),
+  results jsonb not null default '[]',
+  status text default 'pending' check (status in ('pending', 'passed', 'failed', 'needs_review')),
+  notes text,
+  created_at timestamptz not null default now()
+);
+create index if not exists inspections_site_idx on inspections (site_id);
+alter table inspections enable row level security;
+grant select, insert, update, delete on inspections to authenticated;
+drop policy if exists inspections_all on inspections;
+create policy inspections_all on inspections for all using (is_manager()) with check (is_manager());
+
+-- Site assets / equipment tracking
+create table if not exists site_assets (
+  id text primary key,
+  site_id text not null references sites(id) on delete cascade,
+  name text not null,
+  category text,
+  model text,
+  serial text,
+  manufacturer text,
+  install_date date,
+  warranty_expiry date,
+  service_history jsonb default '[]',
+  notes text,
+  active boolean default true,
+  created_at timestamptz not null default now()
+);
+create index if not exists site_assets_site_idx on site_assets (site_id);
+alter table site_assets enable row level security;
+grant select, insert, update, delete on site_assets to authenticated;
+drop policy if exists site_assets_all on site_assets;
+create policy site_assets_all on site_assets for all using (is_manager()) with check (is_manager());
+
+-- Maintenance contracts
+create table if not exists maintenance_contracts (
+  id text primary key,
+  site_id text references sites(id) on delete set null,
+  customer_id text references customers(id) on delete cascade,
+  name text not null,
+  start_date date,
+  end_date date,
+  frequency text check (frequency in ('weekly', 'fortnightly', 'monthly', 'quarterly', 'biannual', 'annual')),
+  amount numeric default 0,
+  terms text,
+  active boolean default true,
+  created_at timestamptz not null default now()
+);
+create index if not exists maintenance_contracts_site_idx on maintenance_contracts (site_id);
+create index if not exists maintenance_contracts_customer_idx on maintenance_contracts (customer_id);
+alter table maintenance_contracts enable row level security;
+grant select, insert, update, delete on maintenance_contracts to authenticated;
+drop policy if exists maintenance_contracts_all on maintenance_contracts;
+create policy maintenance_contracts_all on maintenance_contracts for all using (is_manager()) with check (is_manager());
+
+-- Violation tracking
+create table if not exists violations (
+  id text primary key,
+  site_id text not null references sites(id) on delete cascade,
+  date date not null,
+  description text not null,
+  photo_url text,
+  status text default 'open' check (status in ('open', 'notified', 'resolved', 'appealed')),
+  resolved_at timestamptz,
+  resolution_notes text,
+  created_at timestamptz not null default now()
+);
+create index if not exists violations_site_idx on violations (site_id);
+alter table violations enable row level security;
+grant select, insert, update, delete on violations to authenticated;
+drop policy if exists violations_all on violations;
+create policy violations_all on violations for all using (is_manager()) with check (is_manager());
+
+-- Time clock entries
+create table if not exists time_clock_entries (
+  id text primary key,
+  person_id text not null references people(id) on delete cascade,
+  clock_in timestamptz not null,
+  clock_out timestamptz,
+  gps_lat_in numeric,
+  gps_lng_in numeric,
+  gps_lat_out numeric,
+  gps_lng_out numeric,
+  break_minutes int default 0,
+  notes text,
+  created_at timestamptz not null default now()
+);
+create index if not exists time_clock_person_idx on time_clock_entries (person_id);
+create index if not exists time_clock_clock_in_idx on time_clock_entries (clock_in desc);
+alter table time_clock_entries enable row level security;
+grant select, insert, update, delete on time_clock_entries to authenticated;
+drop policy if exists time_clock_select on time_clock_entries;
+drop policy if exists time_clock_insert on time_clock_entries;
+drop policy if exists time_clock_update on time_clock_entries;
+drop policy if exists time_clock_delete on time_clock_entries;
+create policy time_clock_select on time_clock_entries for select using (is_manager() or person_id = current_person_id());
+create policy time_clock_insert on time_clock_entries for insert with check (auth.uid() is not null);
+create policy time_clock_update on time_clock_entries for update using (is_manager() or person_id = current_person_id()) with check (auth.uid() is not null);
+create policy time_clock_delete on time_clock_entries for delete using (is_manager());
+
+-- Email templates
+create table if not exists email_templates (
+  id text primary key,
+  name text not null,
+  subject text,
+  body text,
+  category text default 'general',
+  created_at timestamptz not null default now()
+);
+alter table email_templates enable row level security;
+grant select, insert, update, delete on email_templates to authenticated;
+drop policy if exists email_templates_all on email_templates;
+create policy email_templates_all on email_templates for all using (is_manager()) with check (is_manager());
+
+-- Email logs
+create table if not exists email_logs (
+  id text primary key,
+  customer_id text references customers(id) on delete set null,
+  template_id text references email_templates(id) on delete set null,
+  subject text,
+  body text,
+  to_email text,
+  status text default 'sent' check (status in ('sent', 'failed', 'bounced', 'opened')),
+  sent_at timestamptz not null default now()
+);
+create index if not exists email_logs_customer_idx on email_logs (customer_id);
+alter table email_logs enable row level security;
+grant select, insert, update, delete on email_logs to authenticated;
+drop policy if exists email_logs_all on email_logs;
+create policy email_logs_all on email_logs for all using (is_manager()) with check (is_manager());
+
+-- SMS logs
+create table if not exists sms_logs (
+  id text primary key,
+  customer_id text references customers(id) on delete set null,
+  to_phone text,
+  message text,
+  status text default 'sent' check (status in ('sent', 'failed', 'delivered')),
+  sent_at timestamptz not null default now()
+);
+create index if not exists sms_logs_customer_idx on sms_logs (customer_id);
+alter table sms_logs enable row level security;
+grant select, insert, update, delete on sms_logs to authenticated;
+drop policy if exists sms_logs_all on sms_logs;
+create policy sms_logs_all on sms_logs for all using (is_manager()) with check (is_manager());
+
+-- In-app notifications
+create table if not exists notifications (
+  id text primary key,
+  person_id text references people(id) on delete cascade,
+  type text not null,
+  title text,
+  message text,
+  link text,
+  read boolean default false,
+  created_at timestamptz not null default now()
+);
+create index if not exists notifications_person_idx on notifications (person_id);
+create index if not exists notifications_unread_idx on notifications (person_id) where read = false;
+alter table notifications enable row level security;
+grant select, insert, update, delete on notifications to authenticated;
+drop policy if exists notifications_all on notifications;
+create policy notifications_select on notifications for select using (is_manager() or person_id = current_person_id());
+create policy notifications_insert on notifications for insert with check (is_manager());
+create policy notifications_update on notifications for update using (is_manager() or person_id = current_person_id()) with check (auth.uid() is not null);
+create policy notifications_delete on notifications for delete using (is_manager());
+
+-- Inventory items
+create table if not exists inventory_items (
+  id text primary key,
+  name text not null,
+  sku text,
+  category text,
+  supplier_id text references suppliers(id) on delete set null,
+  cost numeric default 0,
+  price numeric default 0,
+  stock_level numeric default 0,
+  min_stock numeric default 0,
+  unit text default 'each',
+  location text,
+  active boolean default true,
+  created_at timestamptz not null default now()
+);
+create index if not exists inventory_name_idx on inventory_items (name);
+create index if not exists inventory_sku_idx on inventory_items (sku);
+alter table inventory_items enable row level security;
+grant select, insert, update, delete on inventory_items to authenticated;
+drop policy if exists inventory_items_all on inventory_items;
+create policy inventory_items_all on inventory_items for all using (is_manager()) with check (is_manager());
+
+-- Purchase orders
+create table if not exists purchase_orders (
+  id text primary key,
+  po_number text,
+  supplier_id text references suppliers(id) on delete set null,
+  status text default 'draft' check (status in ('draft', 'sent', 'partial', 'received', 'cancelled')),
+  total numeric default 0,
+  notes text,
+  ordered_at timestamptz,
+  received_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists purchase_orders_supplier_idx on purchase_orders (supplier_id);
+alter table purchase_orders enable row level security;
+grant select, insert, update, delete on purchase_orders to authenticated;
+drop policy if exists purchase_orders_all on purchase_orders;
+create policy purchase_orders_all on purchase_orders for all using (is_manager()) with check (is_manager());
+
+-- Purchase order items
+create table if not exists purchase_order_items (
+  id text primary key,
+  po_id text not null references purchase_orders(id) on delete cascade,
+  inventory_id text references inventory_items(id) on delete set null,
+  description text,
+  quantity numeric default 1,
+  unit_cost numeric default 0,
+  amount numeric default 0
+);
+create index if not exists purchase_order_items_po_idx on purchase_order_items (po_id);
+alter table purchase_order_items enable row level security;
+grant select, insert, update, delete on purchase_order_items to authenticated;
+drop policy if exists purchase_order_items_all on purchase_order_items;
+create policy purchase_order_items_all on purchase_order_items for all using (is_manager()) with check (is_manager());
+
+-- Material usage per project
+create table if not exists material_usage (
+  id text primary key,
+  project_id text not null references projects(id) on delete cascade,
+  inventory_id text references inventory_items(id) on delete set null,
+  description text,
+  quantity numeric default 1,
+  unit_cost numeric default 0,
+  amount numeric default 0,
+  used_at timestamptz not null default now()
+);
+create index if not exists material_usage_project_idx on material_usage (project_id);
+alter table material_usage enable row level security;
+grant select, insert, update, delete on material_usage to authenticated;
+drop policy if exists material_usage_all on material_usage;
+create policy material_usage_all on material_usage for all using (is_manager()) with check (is_manager());
+
+-- Audit log
+create table if not exists audit_log (
+  id text primary key,
+  table_name text not null,
+  record_id text,
+  action text not null check (action in ('insert', 'update', 'delete')),
+  old_data jsonb,
+  new_data jsonb,
+  user_id uuid,
+  user_email text,
+  created_at timestamptz not null default now()
+);
+create index if not exists audit_log_table_idx on audit_log (table_name);
+create index if not exists audit_log_record_idx on audit_log (record_id);
+create index if not exists audit_log_created_idx on audit_log (created_at desc);
+alter table audit_log enable row level security;
+grant select, insert, update, delete on audit_log to authenticated;
+drop policy if exists audit_log_select on audit_log;
+drop policy if exists audit_log_insert on audit_log;
+drop policy if exists audit_log_delete on audit_log;
+create policy audit_log_select on audit_log for select using (is_manager());
+create policy audit_log_insert on audit_log for insert with check (auth.uid() is not null);
+create policy audit_log_delete on audit_log for delete using (is_manager());
+
+-- Email campaigns
+create table if not exists email_campaigns (
+  id text primary key,
+  name text not null,
+  subject text,
+  body text,
+  recipient_tags text[],
+  status text default 'draft' check (status in ('draft', 'sending', 'sent', 'scheduled')),
+  sent_count int default 0,
+  open_count int default 0,
+  sent_at timestamptz,
+  created_at timestamptz not null default now()
+);
+alter table email_campaigns enable row level security;
+grant select, insert, update, delete on email_campaigns to authenticated;
+drop policy if exists email_campaigns_all on email_campaigns;
+create policy email_campaigns_all on email_campaigns for all using (is_manager()) with check (is_manager());
+
+-- Referrals
+create table if not exists referrals (
+  id text primary key,
+  referrer_customer_id text references customers(id) on delete set null,
+  referred_customer_id text references customers(id) on delete set null,
+  date date not null default current_date,
+  reward text,
+  status text default 'pending' check (status in ('pending', 'rewarded', 'expired')),
+  created_at timestamptz not null default now()
+);
+alter table referrals enable row level security;
+grant select, insert, update, delete on referrals to authenticated;
+drop policy if exists referrals_all on referrals;
+create policy referrals_all on referrals for all using (is_manager()) with check (is_manager());
+
+-- Loyalty program
+create table if not exists loyalty_programs (
+  id text primary key,
+  customer_id text not null references customers(id) on delete cascade,
+  points int default 0,
+  tier text default 'bronze' check (tier in ('bronze', 'silver', 'gold', 'platinum')),
+  enrolled_at timestamptz not null default now()
+);
+create index if not exists loyalty_customer_idx on loyalty_programs (customer_id);
+alter table loyalty_programs enable row level security;
+grant select, insert, update, delete on loyalty_programs to authenticated;
+drop policy if exists loyalty_programs_all on loyalty_programs;
+create policy loyalty_programs_all on loyalty_programs for all using (is_manager()) with check (is_manager());
+
+-- Lead capture forms
+create table if not exists lead_capture_forms (
+  id text primary key,
+  name text not null,
+  fields jsonb default '[]',
+  redirect_url text,
+  active boolean default true,
+  created_at timestamptz not null default now()
+);
+alter table lead_capture_forms enable row level security;
+grant select, insert, update, delete on lead_capture_forms to authenticated;
+drop policy if exists lead_capture_forms_all on lead_capture_forms;
+create policy lead_capture_forms_all on lead_capture_forms for all using (is_manager()) with check (is_manager());
+
+-- Lead submissions
+create table if not exists lead_submissions (
+  id text primary key,
+  form_id text references lead_capture_forms(id) on delete set null,
+  data jsonb not null default '{}',
+  status text default 'new' check (status in ('new', 'contacted', 'qualified', 'converted', 'rejected')),
+  converted_customer_id text references customers(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+create index if not exists lead_submissions_form_idx on lead_submissions (form_id);
+alter table lead_submissions enable row level security;
+grant select, insert, update, delete on lead_submissions to authenticated;
+drop policy if exists lead_submissions_all on lead_submissions;
+create policy lead_submissions_all on lead_submissions for all using (is_manager()) with check (is_manager());
+
+-- Calendar sync config
+create table if not exists calendar_sync_config (
+  id text primary key default 'default',
+  provider text check (provider in ('google', 'outlook', 'ical')),
+  sync_token text,
+  last_synced_at timestamptz,
+  enabled boolean default false,
+  updated_at timestamptz not null default now()
+);
+alter table calendar_sync_config enable row level security;
+grant select, insert, update, delete on calendar_sync_config to authenticated;
+drop policy if exists calendar_sync_config_all on calendar_sync_config;
+create policy calendar_sync_config_all on calendar_sync_config for all using (is_manager()) with check (is_manager());
+
+-- Webhook endpoints
+create table if not exists webhook_endpoints (
+  id text primary key,
+  url text not null,
+  events text[] default '{}',
+  secret text,
+  active boolean default true,
+  created_at timestamptz not null default now()
+);
+alter table webhook_endpoints enable row level security;
+grant select, insert, update, delete on webhook_endpoints to authenticated;
+drop policy if exists webhook_endpoints_all on webhook_endpoints;
+create policy webhook_endpoints_all on webhook_endpoints for all using (is_manager()) with check (is_manager());
