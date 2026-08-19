@@ -1409,6 +1409,7 @@ language sql stable security definer set search_path = public as $$
       and id = auth.uid()
   );
 $$;
+revoke execute on function is_portal_user() from anon;
 
 -- Portal helper: get the customer_id for the signed-in portal user
 create or replace function current_portal_customer_id() returns text
@@ -1417,6 +1418,7 @@ language sql stable security definer set search_path = public as $$
   where active = true and id = auth.uid()
   limit 1;
 $$;
+revoke execute on function current_portal_customer_id() from anon;
 
 -- RLS: portal_users
 alter table portal_users enable row level security;
