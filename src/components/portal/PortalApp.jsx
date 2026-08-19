@@ -245,6 +245,42 @@ body{margin:0;background:#F7F5F0;}
 
 .portal-empty{text-align:center;padding:40px;color:#6B7268;}
 .portal-empty svg{color:#DED8C8;}
+
+.portal-stack{display:flex;flex-direction:column;gap:16px;}
+.portal-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.portal-grid-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;}
+.portal-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:520px){.portal-grid-2{grid-template-columns:1fr;}}
+.portal-section-title{font-family:'Fraunces',serif;font-size:15px;font-weight:600;margin:0 0 12px;color:#1B2B22;}
+.portal-field{display:block;margin-bottom:10px;}
+.portal-field-label{display:block;font-size:12px;color:#6B7268;margin-bottom:4px;font-weight:600;}
+.portal-hint{font-size:12px;color:#6B7268;margin:2px 0 0;}
+.portal-error{color:#B4483A;font-size:13px;margin:0;}
+.portal-success{color:#4C7A54;font-size:13px;margin:0;}
+.portal-link{background:none;border:none;color:#3D5A80;cursor:pointer;font-size:13px;font-family:'Public Sans',sans-serif;display:inline-flex;align-items:center;gap:4px;padding:0;width:fit-content;}
+.portal-link:hover{text-decoration:underline;}
+.portal-list-item{padding:14px;border-radius:10px;border:1px solid #DED8C8;cursor:pointer;transition:box-shadow .15s ease,border-color .15s ease;}
+.portal-list-item:hover{box-shadow:0 2px 8px rgba(0,0,0,0.08);border-color:#A67C3D;}
+.portal-list-row{padding:10px 0;border-bottom:1px solid #EFEBDF;display:flex;justify-content:space-between;align-items:center;gap:10px;}
+.portal-list-row:last-child{border-bottom:none;}
+.portal-thread-msg{padding:12px;border-radius:10px;}
+.portal-thread-msg--customer{background:#E8EDF5;border:1px solid #D5DDE8;}
+.portal-thread-msg--staff{background:#E4EFE5;border:1px solid #C5DCC8;}
+.portal-thread-head{display:flex;justify-content:space-between;margin-bottom:4px;}
+.portal-thread-author{font-size:13px;font-weight:700;}
+.portal-thread-time{font-size:11px;color:#6B7268;}
+.portal-thread-body{font-size:14px;margin:0;line-height:1.5;white-space:pre-wrap;}
+.portal-back{background:none;border:none;color:#3D5A80;cursor:pointer;font-size:13px;font-family:'Public Sans',sans-serif;display:inline-flex;align-items:center;gap:4px;padding:0;width:fit-content;}
+.portal-back:hover{text-decoration:underline;}
+.portal-search-wrap{flex:1;position:relative;}
+.portal-search-icon{position:absolute;left:10px;top:10px;color:#DED8C8;}
+.portal-search-input{width:100%;padding:8px 12px 8px 32px;border-radius:8px;border:1px solid #DED8C8;font-size:14px;font-family:'Public Sans',sans-serif;background:#FCFBF8;color:#1B2B22;outline:none;}
+.portal-search-input:focus{border-color:#A67C3D;outline:2px solid #A67C3D;outline-offset:0;}
+
+@media(max-width:640px){
+  .lp-table-responsive{display:block;overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch;}
+  .lp-table-responsive .portal-table{min-width:500px;}
+}
 `;
 
 /* ================================================================== */
@@ -348,45 +384,44 @@ function PortalDashboard({ crm, customer, onOpenTicket }) {
     })();
   }, []);
 
-  if (loading) return <p style={{ color: "#666", textAlign: "center", padding: 20 }}>Loading…</p>;
+  if (loading) return <p className="portal-empty">Loading…</p>;
 
   const openTickets = tickets.filter((t) => t.status !== "resolved" && t.status !== "closed");
   const unpaidInvoices = invoices.filter((i) => i.status !== "paid" && i.status !== "void");
   const activeProjects = projects.filter((p) => p.status === "in_progress" || p.status === "approved");
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div className="portal-stack">
       {/* Summary cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
-        <div style={{ padding: 16, borderRadius: 10, background: "#EFEBDF" }}>
+      <div className="portal-grid-stats">
+        <div className="portal-stat">
           <MessageSquare size={18} style={{ color: "#3D5A80" }} />
-          <p style={{ fontSize: 24, fontWeight: 700, margin: "8px 0 0", color: "#1B2B22" }}>{openTickets.length}</p>
-          <p style={{ fontSize: 12, color: "#6B7268", margin: "2px 0 0" }}>Open tickets</p>
+          <p className="portal-stat-value">{openTickets.length}</p>
+          <p className="portal-stat-label">Open tickets</p>
         </div>
-        <div style={{ padding: 16, borderRadius: 10, background: "#EFEBDF" }}>
+        <div className="portal-stat">
           <FileText size={18} style={{ color: "#C97A2B" }} />
-          <p style={{ fontSize: 24, fontWeight: 700, margin: "8px 0 0", color: "#1B2B22" }}>{unpaidInvoices.length}</p>
-          <p style={{ fontSize: 12, color: "#6B7268", margin: "2px 0 0" }}>Unpaid invoices</p>
+          <p className="portal-stat-value">{unpaidInvoices.length}</p>
+          <p className="portal-stat-label">Unpaid invoices</p>
         </div>
-        <div style={{ padding: 16, borderRadius: 10, background: "#EFEBDF" }}>
+        <div className="portal-stat">
           <Package size={18} style={{ color: "#4C7A54" }} />
-          <p style={{ fontSize: 24, fontWeight: 700, margin: "8px 0 0", color: "#1B2B22" }}>{activeProjects.length}</p>
-          <p style={{ fontSize: 12, color: "#6B7268", margin: "2px 0 0" }}>Active projects</p>
+          <p className="portal-stat-value">{activeProjects.length}</p>
+          <p className="portal-stat-label">Active projects</p>
         </div>
       </div>
 
       {/* Recent tickets */}
-      <div style={{ padding: 16, borderRadius: 10, border: "1px solid #DED8C8" }}>
-        <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 12px", color: "#1B2B22" }}>Recent Tickets</h3>
+      <div className="portal-card">
+        <h3 className="portal-section-title">Recent Tickets</h3>
         {tickets.length === 0 ? (
-          <p style={{ color: "#6B7268", fontSize: 14 }}>No tickets yet. Create one to get started.</p>
+          <p className="portal-hint">No tickets yet. Create one to get started.</p>
         ) : (
           tickets.slice(0, 5).map((t) => (
-            <div key={t.id} onClick={() => onOpenTicket(t.id)}
-              style={{ padding: "10px 0", borderBottom: "1px solid #EFEBDF", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div key={t.id} className="portal-list-row" onClick={() => onOpenTicket(t.id)} style={{ cursor: "pointer" }}>
               <div>
                 <strong style={{ fontSize: 14 }}>{t.subject}</strong>
-                <p style={{ fontSize: 12, color: "#6B7268", margin: "2px 0 0" }}>{t.ticket_number} · {fmtDate(t.created_at)}</p>
+                <p className="portal-hint">{t.ticket_number} · {fmtDate(t.created_at)}</p>
               </div>
               <StatusBadge status={t.status} />
             </div>
@@ -396,13 +431,13 @@ function PortalDashboard({ crm, customer, onOpenTicket }) {
 
       {/* Unpaid invoices */}
       {unpaidInvoices.length > 0 && (
-        <div style={{ padding: 16, borderRadius: 10, border: "1px solid #DED8C8" }}>
-          <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 12px", color: "#1B2B22" }}>Outstanding Invoices</h3>
+        <div className="portal-card">
+          <h3 className="portal-section-title">Outstanding Invoices</h3>
           {unpaidInvoices.map((inv) => (
-            <div key={inv.id} style={{ padding: "10px 0", borderBottom: "1px solid #EFEBDF", display: "flex", justifyContent: "space-between" }}>
+            <div key={inv.id} className="portal-list-row">
               <div>
                 <strong style={{ fontSize: 14 }}>{inv.invoice_number}</strong>
-                <p style={{ fontSize: 12, color: "#6B7268", margin: "2px 0 0" }}>Due {fmtDate(inv.due_at)}</p>
+                <p className="portal-hint">Due {fmtDate(inv.due_at)}</p>
               </div>
               <strong style={{ fontSize: 14, color: "#C97A2B" }}>{fmtMoney(inv.total)}</strong>
             </div>
@@ -437,15 +472,13 @@ function PortalTicketsList({ crm, customerId, onSelect }) {
   );
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <div style={{ flex: 1, position: "relative" }}>
-          <Search size={14} style={{ position: "absolute", left: 10, top: 10, color: "#DED8C8" }} />
-          <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Search tickets…"
-            style={{ width: "100%", padding: "8px 12px 8px 32px", borderRadius: 8, border: "1px solid #DED8C8", fontSize: 14 }} />
+    <div className="portal-stack">
+      <div className="portal-row">
+        <div className="portal-search-wrap">
+          <Search size={14} className="portal-search-icon" />
+          <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Search tickets…" className="portal-search-input" />
         </div>
-        <button onClick={() => setAdding(!adding)}
-          style={{ padding: "8px 14px", borderRadius: 8, border: "none", background: "#1B2B22", color: "white", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+        <button onClick={() => setAdding(!adding)} className="portal-btn portal-btn-primary">
           <Plus size={14} /> New Ticket
         </button>
       </div>
@@ -453,25 +486,22 @@ function PortalTicketsList({ crm, customerId, onSelect }) {
       {adding && <NewTicketForm crm={crm} customerId={customerId} onCreated={() => { setAdding(false); refresh(); }} onCancel={() => setAdding(false)} />}
 
       {loading ? (
-        <p style={{ color: "#666", textAlign: "center", padding: 20 }}>Loading…</p>
+        <p className="portal-empty">Loading…</p>
       ) : filtered.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 40, color: "#6B7268" }}>
-          <MessageSquare size={32} style={{ color: "#DED8C8" }} />
+        <div className="portal-empty">
+          <MessageSquare size={32} />
           <p style={{ marginTop: 12, fontSize: 14 }}>No support tickets yet.</p>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div className="portal-stack" style={{ gap: 8 }}>
           {filtered.map((t) => (
-            <div key={t.id} onClick={() => onSelect(t.id)}
-              style={{ padding: 14, borderRadius: 10, border: "1px solid #DED8C8", cursor: "pointer", transition: "box-shadow 0.15s" }}
-              onMouseEnter={(e) => e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)"}
-              onMouseLeave={(e) => e.currentTarget.style.boxShadow = "none"}>
+            <div key={t.id} className="portal-list-item" onClick={() => onSelect(t.id)}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
                 <div>
                   <strong style={{ fontSize: 14, color: "#1B2B22" }}>{t.subject}</strong>
-                  <p style={{ fontSize: 12, color: "#6B7268", margin: "2px 0 0" }}>{t.ticket_number} · {fmtDateTime(t.created_at)}</p>
+                  <p className="portal-hint">{t.ticket_number} · {fmtDateTime(t.created_at)}</p>
                 </div>
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <div className="portal-row">
                   <TypeBadge type={t.type} />
                   <StatusBadge status={t.status} />
                 </div>
@@ -532,44 +562,36 @@ function NewTicketForm({ crm, customerId, onCreated, onCancel }) {
   }
 
   return (
-    <div style={{ padding: 16, borderRadius: 10, border: "1px solid #DED8C8", display: "flex", flexDirection: "column", gap: 12 }}>
-      <h3 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>New Support Ticket</h3>
-      <div>
-        <label style={{ fontSize: 12, color: "#6B7268", display: "block", marginBottom: 4 }}>Subject *</label>
-        <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Brief summary of your request"
-          style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #DED8C8", fontSize: 14 }} />
+    <div className="portal-card portal-stack">
+      <h3 className="portal-section-title">New Support Ticket</h3>
+      <div className="portal-field">
+        <label className="portal-field-label">Subject *</label>
+        <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Brief summary of your request" className="portal-input" />
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <div>
-          <label style={{ fontSize: 12, color: "#6B7268", display: "block", marginBottom: 4 }}>Type</label>
-          <select value={type} onChange={(e) => setType(e.target.value)}
-            style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #DED8C8", fontSize: 14 }}>
+      <div className="portal-grid-2">
+        <div className="portal-field">
+          <label className="portal-field-label">Type</label>
+          <select value={type} onChange={(e) => setType(e.target.value)} className="portal-input">
             {TICKET_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
         </div>
-        <div>
-          <label style={{ fontSize: 12, color: "#6B7268", display: "block", marginBottom: 4 }}>Priority</label>
-          <select value={priority} onChange={(e) => setPriority(e.target.value)}
-            style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #DED8C8", fontSize: 14 }}>
+        <div className="portal-field">
+          <label className="portal-field-label">Priority</label>
+          <select value={priority} onChange={(e) => setPriority(e.target.value)} className="portal-input">
             {TICKET_PRIORITIES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
           </select>
         </div>
       </div>
-      <div>
-        <label style={{ fontSize: 12, color: "#6B7268", display: "block", marginBottom: 4 }}>Description</label>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={5} placeholder="Describe your request in detail…"
-          style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #DED8C8", fontSize: 14, resize: "vertical" }} />
+      <div className="portal-field">
+        <label className="portal-field-label">Description</label>
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={5} placeholder="Describe your request in detail…" className="portal-input" style={{ resize: "vertical" }} />
       </div>
-      {err && <p style={{ color: "#B4483A", fontSize: 13, margin: 0 }}>{err}</p>}
-      <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={submit} disabled={saving}
-          style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: saving ? "#DED8C8" : "#4C7A54", color: "white", fontSize: 13, fontWeight: 600, cursor: saving ? "not-allowed" : "pointer" }}>
+      {err && <p className="portal-error">{err}</p>}
+      <div className="portal-row">
+        <button onClick={submit} disabled={saving} className="portal-btn portal-btn-success">
           {saving ? "Submitting…" : "Submit Ticket"}
         </button>
-        <button onClick={onCancel}
-          style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid #DED8C8", background: "white", fontSize: 13, cursor: "pointer" }}>
-          Cancel
-        </button>
+        <button onClick={onCancel} className="portal-btn">Cancel</button>
       </div>
     </div>
   );
@@ -620,24 +642,23 @@ function PortalTicketDetail({ crm, ticketId, onBack, user }) {
     setSending(false);
   }
 
-  if (loading) return <p style={{ color: "#666", textAlign: "center", padding: 20 }}>Loading…</p>;
-  if (!ticket) return <p style={{ color: "#666" }}>Ticket not found.</p>;
+  if (loading) return <p className="portal-empty">Loading…</p>;
+  if (!ticket) return <p className="portal-hint">Ticket not found.</p>;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <button onClick={onBack}
-        style={{ background: "none", border: "none", color: "#3D5A80", cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", gap: 4, padding: 0, width: "fit-content" }}>
+    <div className="portal-stack">
+      <button onClick={onBack} className="portal-back">
         <ArrowLeft size={14} /> Back to tickets
       </button>
 
       {/* Ticket header */}
-      <div style={{ padding: 16, borderRadius: 10, border: "1px solid #DED8C8" }}>
+      <div className="portal-card">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", flexWrap: "wrap", gap: 8 }}>
           <div>
-            <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 4px", color: "#1B2B22" }}>{ticket.subject}</h2>
-            <p style={{ fontSize: 13, color: "#6B7268", margin: 0 }}>{ticket.ticket_number} · Created {fmtDateTime(ticket.created_at)}</p>
+            <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 4px", color: "#1B2B22", fontFamily: "'Fraunces', serif" }}>{ticket.subject}</h2>
+            <p className="portal-hint">{ticket.ticket_number} · Created {fmtDateTime(ticket.created_at)}</p>
           </div>
-          <div style={{ display: "flex", gap: 6 }}>
+          <div className="portal-row">
             <TypeBadge type={ticket.type} />
             <StatusBadge status={ticket.status} />
           </div>
@@ -648,33 +669,27 @@ function PortalTicketDetail({ crm, ticketId, onBack, user }) {
       </div>
 
       {/* Message thread */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div className="portal-stack" style={{ gap: 8 }}>
         <h3 style={{ fontSize: 14, fontWeight: 600, margin: 0, color: "#1B2B22" }}>Conversation ({messages.length})</h3>
         {messages.map((m) => (
-          <div key={m.id} style={{
-            padding: 12, borderRadius: 10,
-            background: m.author_type === "customer" ? "#E8EDF5" : "#E4EFE5",
-            border: m.author_type === "customer" ? "1px solid #D5DDE8" : "1px solid #C5DCC8",
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-              <strong style={{ fontSize: 13 }}>
+          <div key={m.id} className={`portal-thread-msg ${m.author_type === "customer" ? "portal-thread-msg--customer" : "portal-thread-msg--staff"}`}>
+            <div className="portal-thread-head">
+              <strong className="portal-thread-author">
                 {m.author_type === "customer" ? "You" : m.author_name || "Support Team"}
               </strong>
-              <span style={{ fontSize: 11, color: "#6B7268" }}>{fmtDateTime(m.created_at)}</span>
+              <span className="portal-thread-time">{fmtDateTime(m.created_at)}</span>
             </div>
-            <p style={{ fontSize: 14, margin: 0, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{m.body}</p>
+            <p className="portal-thread-body">{m.body}</p>
           </div>
         ))}
-        {messages.length === 0 && <p style={{ color: "#6B7268", fontSize: 14 }}>No messages yet.</p>}
+        {messages.length === 0 && <p className="portal-hint">No messages yet.</p>}
       </div>
 
       {/* Reply box */}
       {ticket.status !== "closed" && (
-        <div style={{ padding: 16, borderRadius: 10, border: "1px solid #DED8C8" }}>
-          <textarea value={reply} onChange={(e) => setReply(e.target.value)} rows={4} placeholder="Type your reply…"
-            style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #DED8C8", fontSize: 14, resize: "vertical" }} />
-          <button onClick={sendReply} disabled={sending || !reply.trim()}
-            style={{ marginTop: 8, padding: "8px 16px", borderRadius: 8, border: "none", background: sending || !reply.trim() ? "#DED8C8" : "#1B2B22", color: "white", fontSize: 13, fontWeight: 600, cursor: sending || !reply.trim() ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+        <div className="portal-card">
+          <textarea value={reply} onChange={(e) => setReply(e.target.value)} rows={4} placeholder="Type your reply…" className="portal-input" style={{ resize: "vertical" }} />
+          <button onClick={sendReply} disabled={sending || !reply.trim()} className="portal-btn portal-btn-primary" style={{ marginTop: 8 }}>
             <Send size={14} /> {sending ? "Sending…" : "Send Reply"}
           </button>
         </div>
@@ -695,45 +710,45 @@ function PortalInvoices({ crm }) {
     crm.listMyInvoices().then((data) => { setInvoices(data); setLoading(false); });
   }, []);
 
-  if (loading) return <p style={{ color: "#666", textAlign: "center", padding: 20 }}>Loading…</p>;
+  if (loading) return <p className="portal-empty">Loading…</p>;
 
   return (
     <div>
       {invoices.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 40, color: "#6B7268" }}>
-          <FileText size={32} style={{ color: "#DED8C8" }} />
+        <div className="portal-empty">
+          <FileText size={32} />
           <p style={{ marginTop: 12, fontSize: 14 }}>No invoices found.</p>
         </div>
       ) : (
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+        <div className="lp-table-responsive">
+        <table className="portal-table">
           <thead>
-            <tr style={{ borderBottom: "2px solid #DED8C8", textAlign: "left" }}>
-              <th style={{ padding: "8px 12px" }}>Invoice #</th>
-              <th style={{ padding: "8px 12px" }}>Status</th>
-              <th style={{ padding: "8px 12px" }}>Issued</th>
-              <th style={{ padding: "8px 12px" }}>Due</th>
-              <th style={{ padding: "8px 12px", textAlign: "right" }}>Total</th>
+            <tr>
+              <th>Invoice #</th>
+              <th>Status</th>
+              <th>Issued</th>
+              <th>Due</th>
+              <th style={{ textAlign: "right" }}>Total</th>
             </tr>
           </thead>
           <tbody>
             {invoices.map((inv) => (
-              <tr key={inv.id} style={{ borderBottom: "1px solid #EFEBDF" }}>
-                <td style={{ padding: "10px 12px", fontWeight: 600 }}>{inv.invoice_number}</td>
-                <td style={{ padding: "10px 12px" }}>
-                  <span style={{
-                    padding: "2px 8px", borderRadius: 12, fontSize: 11, fontWeight: 600,
-                    background: inv.status === "paid" ? "#4C7A5420" : inv.status === "overdue" ? "#B4483A20" : "#C97A2B20",
+              <tr key={inv.id}>
+                <td style={{ fontWeight: 600 }}>{inv.invoice_number}</td>
+                <td>
+                  <span className="portal-badge" style={{
+                    background: inv.status === "paid" ? "rgba(76,122,84,0.15)" : inv.status === "overdue" ? "rgba(180,72,58,0.15)" : "rgba(201,122,43,0.15)",
                     color: inv.status === "paid" ? "#4C7A54" : inv.status === "overdue" ? "#B4483A" : "#C97A2B",
-                    textTransform: "capitalize",
                   }}>{inv.status}</span>
                 </td>
-                <td style={{ padding: "10px 12px", color: "#6B7268" }}>{fmtDate(inv.issued_at)}</td>
-                <td style={{ padding: "10px 12px", color: "#6B7268" }}>{fmtDate(inv.due_at)}</td>
-                <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 600 }}>{fmtMoney(inv.total)}</td>
+                <td style={{ color: "#6B7268" }}>{fmtDate(inv.issued_at)}</td>
+                <td style={{ color: "#6B7268" }}>{fmtDate(inv.due_at)}</td>
+                <td style={{ textAlign: "right", fontWeight: 600 }}>{fmtMoney(inv.total)}</td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   );
@@ -751,7 +766,7 @@ function PortalProjects({ crm }) {
     crm.listMyProjects().then((data) => { setProjects(data); setLoading(false); });
   }, []);
 
-  if (loading) return <p style={{ color: "#666", textAlign: "center", padding: 20 }}>Loading…</p>;
+  if (loading) return <p className="portal-empty">Loading…</p>;
 
   const STATUS_COLORS = {
     lead: "#DED8C8", quoted: "#3D5A80", approved: "#4C7A54",
@@ -761,28 +776,26 @@ function PortalProjects({ crm }) {
   return (
     <div>
       {projects.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 40, color: "#6B7268" }}>
-          <Package size={32} style={{ color: "#DED8C8" }} />
+        <div className="portal-empty">
+          <Package size={32} />
           <p style={{ marginTop: 12, fontSize: 14 }}>No projects found.</p>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div className="portal-stack" style={{ gap: 8 }}>
           {projects.map((p) => (
-            <div key={p.id} style={{ padding: 14, borderRadius: 10, border: "1px solid #DED8C8" }}>
+            <div key={p.id} className="portal-card" style={{ padding: 14 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
                 <div>
                   <strong style={{ fontSize: 14 }}>{p.name}</strong>
                   {p.description && <p style={{ fontSize: 13, color: "#4A4A44", margin: "4px 0 0" }}>{p.description}</p>}
                 </div>
-                <span style={{
-                  padding: "2px 8px", borderRadius: 12, fontSize: 11, fontWeight: 600,
+                <span className="portal-badge" style={{
                   background: (STATUS_COLORS[p.status] || "#DED8C8") + "20",
-                  color: STATUS_COLORS[p.status] || "#DED8C8",
-                  textTransform: "capitalize",
+                  color: STATUS_COLORS[p.status] || "#6B7268",
                 }}>{p.status.replace(/_/g, " ")}</span>
               </div>
               {p.budget != null && (
-                <p style={{ fontSize: 12, color: "#6B7268", margin: "8px 0 0" }}>Budget: {fmtMoney(p.budget)}</p>
+                <p className="portal-hint" style={{ margin: "8px 0 0" }}>Budget: {fmtMoney(p.budget)}</p>
               )}
             </div>
           ))}
@@ -827,42 +840,36 @@ function PortalAccount({ crm, supabaseClient, customer, user }) {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ padding: 16, borderRadius: 10, border: "1px solid #DED8C8" }}>
-        <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 12px" }}>Profile</h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <div>
-            <label style={{ fontSize: 12, color: "#6B7268", display: "block", marginBottom: 4 }}>Name</label>
-            <input value={name} onChange={(e) => setName(e.target.value)}
-              style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #DED8C8", fontSize: 14 }} />
+    <div className="portal-stack" style={{ gap: 20 }}>
+      <div className="portal-card">
+        <h3 className="portal-section-title">Profile</h3>
+        <div className="portal-stack" style={{ gap: 10 }}>
+          <div className="portal-field">
+            <label className="portal-field-label">Name</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} className="portal-input" />
           </div>
-          <div>
-            <label style={{ fontSize: 12, color: "#6B7268", display: "block", marginBottom: 4 }}>Email</label>
-            <input value={user?.email || ""} disabled
-              style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #DED8C8", fontSize: 14, background: "#FCFBF8", color: "#DED8C8" }} />
+          <div className="portal-field">
+            <label className="portal-field-label">Email</label>
+            <input value={user?.email || ""} disabled className="portal-input" style={{ background: "#FCFBF8", color: "#6B7268" }} />
           </div>
-          <div>
-            <label style={{ fontSize: 12, color: "#6B7268", display: "block", marginBottom: 4 }}>Phone</label>
-            <input value={phone} onChange={(e) => setPhone(e.target.value)}
-              style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #DED8C8", fontSize: 14 }} />
+          <div className="portal-field">
+            <label className="portal-field-label">Phone</label>
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} className="portal-input" />
           </div>
-          <button onClick={saveProfile} disabled={saving}
-            style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: saving ? "#DED8C8" : "#1B2B22", color: "white", fontSize: 13, fontWeight: 600, cursor: saving ? "not-allowed" : "pointer", width: "fit-content" }}>
+          <button onClick={saveProfile} disabled={saving} className="portal-btn portal-btn-primary" style={{ width: "fit-content" }}>
             {saving ? "Saving…" : "Save Profile"}
           </button>
-          {saved && <p style={{ color: "#4C7A54", fontSize: 13, margin: 0 }}>Saved!</p>}
+          {saved && <p className="portal-success">Saved!</p>}
         </div>
       </div>
 
-      <div style={{ padding: 16, borderRadius: 10, border: "1px solid #DED8C8" }}>
-        <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 12px" }}><KeyRound size={15} style={{ display: "inline", marginRight: 6 }} />Change Password</h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="New password"
-            style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #DED8C8", fontSize: 14 }} />
-          {pwdErr && <p style={{ color: "#B4483A", fontSize: 13, margin: 0 }}>{pwdErr}</p>}
-          {pwdMsg && <p style={{ color: "#4C7A54", fontSize: 13, margin: 0 }}>{pwdMsg}</p>}
-          <button onClick={changePassword}
-            style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: "#1B2B22", color: "white", fontSize: 13, fontWeight: 600, cursor: "pointer", width: "fit-content" }}>
+      <div className="portal-card">
+        <h3 className="portal-section-title"><KeyRound size={15} style={{ display: "inline", marginRight: 6 }} />Change Password</h3>
+        <div className="portal-stack" style={{ gap: 10 }}>
+          <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="New password" className="portal-input" />
+          {pwdErr && <p className="portal-error">{pwdErr}</p>}
+          {pwdMsg && <p className="portal-success">{pwdMsg}</p>}
+          <button onClick={changePassword} className="portal-btn portal-btn-primary" style={{ width: "fit-content" }}>
             Update Password
           </button>
         </div>

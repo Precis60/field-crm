@@ -154,7 +154,7 @@ export function ReportsPanel({ crm }) {
               a.click();
             }}><Download size={13} /> Export CSV</button>
           </div>
-          <table className="lp-table" style={{ width: "100%" }}>
+          <div className="lp-table-responsive"><table className="lp-table" style={{ width: "100%" }}>
             <thead>
               <tr><th>Invoice</th><th>Customer</th><th>Status</th><th>Total</th><th>Issued</th></tr>
             </thead>
@@ -169,7 +169,7 @@ export function ReportsPanel({ crm }) {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
 
@@ -186,7 +186,7 @@ export function ReportsPanel({ crm }) {
               </div>
             ))}
           </div>
-          <table className="lp-table" style={{ width: "100%" }}>
+          <div className="lp-table-responsive"><table className="lp-table" style={{ width: "100%" }}>
             <thead>
               <tr><th>Invoice</th><th>Customer</th><th>Due</th><th>Total</th><th>Days Overdue</th></tr>
             </thead>
@@ -207,7 +207,7 @@ export function ReportsPanel({ crm }) {
                 <tr><td colSpan={5}><EmptyState compact icon={<Check size={16} />} text="No outstanding receivables." /></td></tr>
               )}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
 
@@ -216,7 +216,7 @@ export function ReportsPanel({ crm }) {
           <div className="lp-panel-head">
             <h4><BarChart3 size={15} /> Project Profitability</h4>
           </div>
-          <table className="lp-table" style={{ width: "100%" }}>
+          <div className="lp-table-responsive"><table className="lp-table" style={{ width: "100%" }}>
             <thead>
               <tr><th>Project</th><th>Customer</th><th>Status</th><th>Budget</th><th>Costs</th><th>Margin</th></tr>
             </thead>
@@ -236,7 +236,7 @@ export function ReportsPanel({ crm }) {
                 );
               })}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
 
@@ -245,7 +245,7 @@ export function ReportsPanel({ crm }) {
           <div className="lp-panel-head">
             <h4><Clock size={15} /> Utilization Report</h4>
           </div>
-          <table className="lp-table" style={{ width: "100%" }}>
+          <div className="lp-table-responsive"><table className="lp-table" style={{ width: "100%" }}>
             <thead>
               <tr><th>Person</th><th>Billable Hours</th><th>Non-Billable Hours</th><th>Total</th><th>Billable %</th></tr>
             </thead>
@@ -272,7 +272,7 @@ export function ReportsPanel({ crm }) {
                 );
               })}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
     </div>
@@ -353,7 +353,7 @@ export function InventoryPanel({ crm }) {
       )}
 
       <div className="lp-panel">
-        <table className="lp-table" style={{ width: "100%" }}>
+        <div className="lp-table-responsive"><table className="lp-table" style={{ width: "100%" }}>
           <thead>
             <tr><th>Name</th><th>SKU</th><th>Category</th><th>Stock</th><th>Min</th><th>Cost</th><th>Price</th><th></th></tr>
           </thead>
@@ -374,7 +374,7 @@ export function InventoryPanel({ crm }) {
               <tr><td colSpan={8}><EmptyState compact icon={<Package size={16} />} text={loading ? "Loading…" : "No inventory items yet."} /></td></tr>
             )}
           </tbody>
-        </table>
+        </table></div>
       </div>
     </div>
   );
@@ -466,7 +466,7 @@ export function CommunicationsPanel({ crm }) {
         <div className="lp-panel">
           <div className="lp-panel-head"><h4><Mail size={15} /> Email History</h4></div>
           {emailLogs.length === 0 ? <EmptyState icon={<Mail size={20} />} text="No emails sent yet." /> : (
-            <table className="lp-table" style={{ width: "100%" }}>
+            <div className="lp-table-responsive"><table className="lp-table" style={{ width: "100%" }}>
               <thead><tr><th>To</th><th>Subject</th><th>Status</th><th>Sent</th></tr></thead>
               <tbody>
                 {emailLogs.map((l) => (
@@ -478,7 +478,7 @@ export function CommunicationsPanel({ crm }) {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
         </div>
       )}
@@ -487,7 +487,7 @@ export function CommunicationsPanel({ crm }) {
         <div className="lp-panel">
           <div className="lp-panel-head"><h4><Mail size={15} /> SMS History</h4></div>
           {smsLogs.length === 0 ? <EmptyState icon={<Mail size={20} />} text="No SMS sent yet." /> : (
-            <table className="lp-table" style={{ width: "100%" }}>
+            <div className="lp-table-responsive"><table className="lp-table" style={{ width: "100%" }}>
               <thead><tr><th>To</th><th>Message</th><th>Status</th><th>Sent</th></tr></thead>
               <tbody>
                 {smsLogs.map((l) => (
@@ -499,7 +499,7 @@ export function CommunicationsPanel({ crm }) {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
         </div>
       )}
@@ -542,7 +542,7 @@ export function AuditLogPanel({ crm }) {
       <div className="lp-panel">
         <div className="lp-panel-head"><h4><ShieldCheck size={15} /> Audit Log</h4></div>
         {logs.length === 0 ? <EmptyState icon={<ShieldCheck size={20} />} text={loading ? "Loading…" : "No audit entries yet."} /> : (
-          <table className="lp-table" style={{ width: "100%" }}>
+          <div className="lp-table-responsive"><table className="lp-table" style={{ width: "100%" }}>
             <thead><tr><th>Time</th><th>Table</th><th>Action</th><th>Record ID</th><th>User</th></tr></thead>
             <tbody>
               {logs.map((l) => (
@@ -555,7 +555,7 @@ export function AuditLogPanel({ crm }) {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
     </div>
@@ -626,7 +626,7 @@ export function TimeClockPanel({ crm, currentManager }) {
       <div className="lp-panel">
         <div className="lp-panel-head"><h4><Clock size={15} /> Time Clock History</h4></div>
         {entries.length === 0 ? <EmptyState icon={<Clock size={20} />} text={loading ? "Loading…" : "No time clock entries yet."} /> : (
-          <table className="lp-table" style={{ width: "100%" }}>
+          <div className="lp-table-responsive"><table className="lp-table" style={{ width: "100%" }}>
             <thead><tr><th>Person</th><th>Clock In</th><th>Clock Out</th><th>Duration</th></tr></thead>
             <tbody>
               {entries.map((e) => {
@@ -643,7 +643,7 @@ export function TimeClockPanel({ crm, currentManager }) {
                 );
               })}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
     </div>
@@ -711,7 +711,7 @@ export function MarketingPanel({ crm }) {
         <div className="lp-panel">
           <div className="lp-panel-head"><h4><Users size={15} /> Referrals</h4></div>
           {referrals.length === 0 ? <EmptyState icon={<Users size={20} />} text={loading ? "Loading…" : "No referrals tracked yet."} /> : (
-            <table className="lp-table" style={{ width: "100%" }}>
+            <div className="lp-table-responsive"><table className="lp-table" style={{ width: "100%" }}>
               <thead><tr><th>Referrer</th><th>Referred</th><th>Date</th><th>Reward</th><th>Status</th></tr></thead>
               <tbody>
                 {referrals.map((r) => (
@@ -724,7 +724,7 @@ export function MarketingPanel({ crm }) {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
         </div>
       )}
@@ -733,7 +733,7 @@ export function MarketingPanel({ crm }) {
         <div className="lp-panel">
           <div className="lp-panel-head"><h4><Award size={15} /> Loyalty Programs</h4></div>
           {loyalty.length === 0 ? <EmptyState icon={<Award size={20} />} text={loading ? "Loading…" : "No loyalty enrollments yet."} /> : (
-            <table className="lp-table" style={{ width: "100%" }}>
+            <div className="lp-table-responsive"><table className="lp-table" style={{ width: "100%" }}>
               <thead><tr><th>Customer</th><th>Points</th><th>Tier</th><th>Enrolled</th></tr></thead>
               <tbody>
                 {loyalty.map((l) => (
@@ -745,7 +745,7 @@ export function MarketingPanel({ crm }) {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
         </div>
       )}
@@ -754,7 +754,7 @@ export function MarketingPanel({ crm }) {
         <div className="lp-panel">
           <div className="lp-panel-head"><h4><FileText size={15} /> Lead Submissions</h4></div>
           {leads.length === 0 ? <EmptyState icon={<FileText size={20} />} text={loading ? "Loading…" : "No lead submissions yet."} /> : (
-            <table className="lp-table" style={{ width: "100%" }}>
+            <div className="lp-table-responsive"><table className="lp-table" style={{ width: "100%" }}>
               <thead><tr><th>Date</th><th>Data</th><th>Status</th></tr></thead>
               <tbody>
                 {leads.map((l) => (
@@ -767,7 +767,7 @@ export function MarketingPanel({ crm }) {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
         </div>
       )}
@@ -805,7 +805,7 @@ export function NotificationsPanel({ crm, currentManager }) {
           <div key={n.id} style={{
             padding: 12,
             borderBottom: "1px solid var(--lp-border)",
-            background: n.read ? "transparent" : "rgba(59, 130, 246, 0.05)",
+            background: n.read ? "transparent" : "rgba(61, 90, 128, 0.06)",
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>

@@ -150,7 +150,7 @@ export function SupportPanel({ crm, currentManager }) {
         ) : filtered.length === 0 ? (
           <div className="lp-empty"><MessageSquare size={20} /><p>No support tickets yet.</p></div>
         ) : (
-          <table className="lp-table" style={{ width: "100%" }}>
+          <div className="lp-table-responsive"><table className="lp-table" style={{ width: "100%" }}>
             <thead>
               <tr>
                 <th>Ticket</th><th>Customer</th><th>Type</th><th>Priority</th><th>Status</th><th>Created</th>
@@ -171,7 +171,7 @@ export function SupportPanel({ crm, currentManager }) {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
 
@@ -184,7 +184,7 @@ export function SupportPanel({ crm, currentManager }) {
         {portalUsers.length === 0 ? (
           <div className="lp-empty"><Users size={20} /><p>No portal users invited yet.</p></div>
         ) : (
-          <table className="lp-table" style={{ width: "100%" }}>
+          <div className="lp-table-responsive"><table className="lp-table" style={{ width: "100%" }}>
             <thead>
               <tr><th>Email</th><th>Customer</th><th>Invited</th><th>Last Login</th><th></th></tr>
             </thead>
@@ -206,7 +206,7 @@ export function SupportPanel({ crm, currentManager }) {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
     </div>
