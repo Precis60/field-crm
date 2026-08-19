@@ -1329,3 +1329,173 @@ alter table webhook_endpoints enable row level security;
 grant select, insert, update, delete on webhook_endpoints to authenticated;
 drop policy if exists webhook_endpoints_all on webhook_endpoints;
 create policy webhook_endpoints_all on webhook_endpoints for all using (is_manager()) with check (is_manager());
+
+-- ========== Customer Support & Service Portal ==========
+
+-- Portal users: links auth.users to customers
+create table if not exists portal_users (
+  id uuid primary key default auth.uid(),
+  customer_id text not null references customers(id) on delete cascade,
+  email text not null,
+  name text,
+  phone text,
+  invited_at timestamptz not null default now(),
+  last_login_at timestamptz,
+  active boolean not null default true,
+  unique(email)
+);
+create index if not exists portal_users_customer_idx on portal_users (customer_id);
+create index if not exists portal_users_email_idx on portal_users (email);
+
+-- Support tickets
+create table if not exists support_tickets (
+  id text primary key,
+  customer_id text not null references customers(id) on delete cascade,
+  portal_user_id uuid references portal_users(id) on delete set null,
+  ticket_number text unique not null default 'TCK-' || to_char(nextval('invoice_number_seq'), 'FM000000'),
+  subject text not null,
+  description text,
+  type text not null default 'support' check (type in ('service_request', 'sales_enquiry', 'support', 'complaint')),
+  priority text not null default 'normal' check (priority in ('low', 'normal', 'high', 'urgent')),
+  status text not null default 'new' check (status in ('new', 'open', 'in_progress', 'awaiting_customer', 'resolved', 'closed')),
+  assigned_to text references people(id) on delete set null,
+  related_project_id text references projects(id) on delete set null,
+  related_site_id text references sites(id) on delete set null,
+  related_invoice_id text references invoices(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  resolved_at timestamptz,
+  closed_at timestamptz
+);
+create index if not exists support_tickets_customer_idx on support_tickets (customer_id);
+create index if not exists support_tickets_status_idx on support_tickets (status);
+create index if not exists support_tickets_assigned_idx on support_tickets (assigned_to);
+
+-- Ticket messages (conversation thread)
+create table if not exists ticket_messages (
+  id text primary key,
+  ticket_id text not null references support_tickets(id) on delete cascade,
+  author_id uuid,
+  author_type text not null default 'customer' check (author_type in ('customer', 'staff', 'manager')),
+  author_name text,
+  body text not null,
+  attachments jsonb not null default '[]',
+  internal_note boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create index if not exists ticket_messages_ticket_idx on ticket_messages (ticket_id);
+create index if not exists ticket_messages_created_idx on ticket_messages (created_at);
+
+-- Ticket attachments metadata
+create table if not exists ticket_attachments (
+  id text primary key,
+  ticket_id text not null references support_tickets(id) on delete cascade,
+  message_id text references ticket_messages(id) on delete cascade,
+  file_url text not null,
+  file_name text not null,
+  file_size bigint,
+  file_type text,
+  uploaded_by uuid,
+  created_at timestamptz not null default now()
+);
+create index if not exists ticket_attachments_ticket_idx on ticket_attachments (ticket_id);
+
+-- Portal helper: is the signed-in user a portal user?
+create or replace function is_portal_user() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from portal_users
+    where active = true
+      and id = auth.uid()
+  );
+$$;
+
+-- Portal helper: get the customer_id for the signed-in portal user
+create or replace function current_portal_customer_id() returns text
+language sql stable security definer set search_path = public as $$
+  select customer_id from portal_users
+  where active = true and id = auth.uid()
+  limit 1;
+$$;
+
+-- RLS: portal_users
+alter table portal_users enable row level security;
+grant select, insert, update, delete on portal_users to authenticated;
+revoke all on portal_users from anon;
+drop policy if exists portal_users_select on portal_users;
+drop policy if exists portal_users_insert on portal_users;
+drop policy if exists portal_users_update on portal_users;
+drop policy if exists portal_users_delete on portal_users;
+create policy portal_users_select on portal_users for select using (is_manager() or id = auth.uid());
+create policy portal_users_insert on portal_users for insert with check (is_manager());
+create policy portal_users_update on portal_users for update using (is_manager() or id = auth.uid()) with check (is_manager() or id = auth.uid());
+create policy portal_users_delete on portal_users for delete using (is_manager());
+
+-- RLS: support_tickets
+alter table support_tickets enable row level security;
+grant select, insert, update, delete on support_tickets to authenticated;
+revoke all on support_tickets from anon;
+drop policy if exists support_tickets_select on support_tickets;
+drop policy if exists support_tickets_insert on support_tickets;
+drop policy if exists support_tickets_update on support_tickets;
+drop policy if exists support_tickets_delete on support_tickets;
+create policy support_tickets_select on support_tickets for select using (is_manager() or customer_id = current_portal_customer_id());
+create policy support_tickets_insert on support_tickets for insert with check (is_manager() or customer_id = current_portal_customer_id());
+create policy support_tickets_update on support_tickets for update using (is_manager()) with check (is_manager());
+create policy support_tickets_delete on support_tickets for delete using (is_manager());
+
+-- RLS: ticket_messages
+alter table ticket_messages enable row level security;
+grant select, insert, update, delete on ticket_messages to authenticated;
+revoke all on ticket_messages from anon;
+drop policy if exists ticket_messages_select on ticket_messages;
+drop policy if exists ticket_messages_insert on ticket_messages;
+drop policy if exists ticket_messages_update on ticket_messages;
+drop policy if exists ticket_messages_delete on ticket_messages;
+create policy ticket_messages_select on ticket_messages for select
+  using (
+    is_manager()
+    or (
+      internal_note = false
+      and ticket_id in (select id from support_tickets where customer_id = current_portal_customer_id())
+    )
+  );
+create policy ticket_messages_insert on ticket_messages for insert
+  with check (
+    is_manager()
+    or (
+      internal_note = false
+      and ticket_id in (select id from support_tickets where customer_id = current_portal_customer_id())
+    )
+  );
+create policy ticket_messages_update on ticket_messages for update using (is_manager()) with check (is_manager());
+create policy ticket_messages_delete on ticket_messages for delete using (is_manager());
+
+-- RLS: ticket_attachments
+alter table ticket_attachments enable row level security;
+grant select, insert, update, delete on ticket_attachments to authenticated;
+revoke all on ticket_attachments from anon;
+drop policy if exists ticket_attachments_select on ticket_attachments;
+drop policy if exists ticket_attachments_insert on ticket_attachments;
+drop policy if exists ticket_attachments_update on ticket_attachments;
+drop policy if exists ticket_attachments_delete on ticket_attachments;
+create policy ticket_attachments_select on ticket_attachments for select
+  using (is_manager() or ticket_id in (select id from support_tickets where customer_id = current_portal_customer_id()));
+create policy ticket_attachments_insert on ticket_attachments for insert
+  with check (is_manager() or ticket_id in (select id from support_tickets where customer_id = current_portal_customer_id()));
+create policy ticket_attachments_update on ticket_attachments for update using (is_manager()) with check (is_manager());
+create policy ticket_attachments_delete on ticket_attachments for delete using (is_manager());
+
+-- Portal users get read-only access to their own customer/invoice/project records
+drop policy if exists customers_portal_select on customers;
+create policy customers_portal_select on customers
+  for select using (is_manager() or id = current_portal_customer_id());
+drop policy if exists invoices_portal_select on invoices;
+create policy invoices_portal_select on invoices
+  for select using (is_manager() or customer_id = current_portal_customer_id());
+drop policy if exists projects_portal_select on projects;
+create policy projects_portal_select on projects
+  for select using (is_manager() or customer_id = current_portal_customer_id());
+drop policy if exists invoice_lines_portal_select on invoice_lines;
+create policy invoice_lines_portal_select on invoice_lines
+  for select using (is_manager() or invoice_id in (select id from invoices where customer_id = current_portal_customer_id()));

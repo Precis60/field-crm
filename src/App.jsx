@@ -1,12 +1,14 @@
-import { useState, useEffect, useRef, useContext, createContext } from "react";
+import { useState, useEffect, useRef, useContext, createContext, useMemo } from "react";
 import { createClient } from "@supabase/supabase-js";
 import {
   Check, X, AlertTriangle, Clock, Camera, Lock, ChevronRight,
   ChevronDown, ChevronLeft, Plus, Trash2, ArrowLeft, Sun, ClipboardList, Settings,
-  CalendarDays, ImageOff, ShieldCheck, LogOut, Search, Building2, Users, Pencil, Download
+  CalendarDays, ImageOff, ShieldCheck, LogOut, Search, Building2, Users, Pencil, Download,
+  MessageSquare,
 } from "lucide-react";
 import { createCrmApi } from "./lib/crm.js";
 import CrmTabContent from "./components/crm/CrmTabContent.jsx";
+import PortalApp from "./components/portal/PortalApp.jsx";
 import { APP_TIME_ZONE, zonedISODate, zonedDateToUTC } from "./lib/time.js";
 import AddressInput from "./components/AddressInput.jsx";
 import ClockTimeInput from "./components/ClockTimeInput.jsx";
@@ -819,12 +821,42 @@ function NoProfileScreen({ email, onSignOut }) {
   );
 }
 
-export default function App() {
+export default function App({ isPortalRoute = false }) {
+  if (isPortalRoute) {
+    return (
+      <AuthProvider>
+        <PortalShell />
+      </AuthProvider>
+    );
+  }
   return (
     <AuthProvider>
       <AppShell />
     </AuthProvider>
   );
+}
+
+function PortalShell() {
+  const { ready, session } = useAuth();
+  const crm = useMemo(() => createCrmApi(
+    (path, opts) => {
+      const url = `${SUPABASE_URL}${path}`;
+      const headers = { apikey: SUPABASE_KEY };
+      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+      if (opts?.body) headers["Content-Type"] = "application/json";
+      return fetch(url, {
+        ...opts,
+        headers: { ...headers, ...opts?.headers },
+        body: opts?.body ? JSON.stringify(opts.body) : undefined,
+      }).then((r) => r.ok ? (r.status === 204 ? null : r.json()) : r.text().then((t) => { throw new Error(t || `HTTP ${r.status}`); }));
+    },
+    SUPABASE_PROJECT_URL,
+    SUPABASE_KEY,
+    () => session?.access_token,
+  ), [session]);
+
+  if (!ready) return <div style={{ textAlign: "center", padding: 40, fontFamily: "system-ui" }}>Loading…</div>;
+  return <PortalApp supabaseClient={supabase} crm={crm} onLogout={() => window.location.reload()} />;
 }
 
 function AppShell() {
@@ -1769,6 +1801,7 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
         <button className={`lp-tab ${tab === "notifications" ? "is-active" : ""}`} onClick={() => setTab("notifications")}>Notifications</button>
         <button className={`lp-tab ${tab === "integrations" ? "is-active" : ""}`} onClick={() => setTab("integrations")}>Integrations</button>
         <button className={`lp-tab ${tab === "audit_log" ? "is-active" : ""}`} onClick={() => setTab("audit_log")}>Audit Log</button>
+        <button className={`lp-tab ${tab === "support" ? "is-active" : ""}`} onClick={() => setTab("support")} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><MessageSquare size={13} /> Support</button>
       </div>
       {tab === "brief" && <MorningBrief crm={crm} onOpen={(type, id) => { setSelectedId(id); setTab(type); }} />}
       {tab === "tasks" && <TasksPanel currentManager={currentManager} />}
@@ -1795,7 +1828,7 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
       {tab === "schedule" && <ManagerSchedulePanel managers={managers} currentManager={currentManager} />}
       {tab === "log" && <FullLog monthsIndex={monthsIndex} getMonths={getMonths} cacheVersion={cacheVersion} onDeleteReport={onDeleteReport} />}
       {tab === "sites" && <AdminPanel />}
-      {["customers", "contacts", "projects", "calendar", "suppliers", "site_notes", "site_tasks", "invoices", "passwords", "reports", "inventory", "communications", "audit_log", "time_clock", "marketing", "notifications", "integrations"].includes(tab) && (
+      {["customers", "contacts", "projects", "calendar", "suppliers", "site_notes", "site_tasks", "invoices", "passwords", "reports", "inventory", "communications", "audit_log", "time_clock", "marketing", "notifications", "integrations", "support"].includes(tab) && (
         <CrmTabContent tab={tab} crm={crm} uid={uid} sites={sites} selectedId={selectedId} currentManager={currentManager} />
       )}
       {tab === "settings" && <ManagerSettings onRestored={onRestored} />}

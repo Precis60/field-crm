@@ -1066,6 +1066,113 @@ export function createCrmApi(supabaseFetch, supabaseProjectUrl, supabaseAnonKey,
     return (await supabaseFetch(path).catch(() => [])) || [];
   }
 
+  /* ---------- Portal: user management (manager-side) ---------- */
+
+  async function listPortalUsers() {
+    return (await supabaseFetch(
+      `/portal_users?select=*,customers(id,name,company,email)&order=invited_at.desc`
+    ).catch(() => [])) || [];
+  }
+
+  async function createPortalUser(user) {
+    await supabaseFetch("/portal_users", { method: "POST", body: [user] });
+    return user;
+  }
+
+  async function updatePortalUser(id, patch) {
+    await supabaseFetch(`/portal_users?id=eq.${id}`, { method: "PATCH", body: patch });
+  }
+
+  async function deletePortalUser(id) {
+    await supabaseFetch(`/portal_users?id=eq.${id}`, { method: "DELETE" });
+  }
+
+  /* ---------- Portal: support tickets ---------- */
+
+  async function listSupportTickets({ customerId, status, assignedTo } = {}) {
+    let path = `/support_tickets?select=*,customers(id,name,company),portal_users(email,name),assigned_to_people:assigned_to(name)&order=created_at.desc`;
+    if (customerId) path += `&customer_id=eq.${customerId}`;
+    if (status) path += `&status=eq.${status}`;
+    if (assignedTo) path += `&assigned_to=eq.${assignedTo}`;
+    return (await supabaseFetch(path).catch(() => [])) || [];
+  }
+
+  async function getSupportTicket(id) {
+    const rows = await supabaseFetch(
+      `/support_tickets?id=eq.${id}&select=*,customers(*),portal_users(email,name)`
+    ).catch(() => []);
+    return rows?.[0] || null;
+  }
+
+  async function createSupportTicket(ticket) {
+    await supabaseFetch("/support_tickets", { method: "POST", body: [ticket] });
+    return ticket;
+  }
+
+  async function updateSupportTicket(id, patch) {
+    await supabaseFetch(`/support_tickets?id=eq.${id}`, {
+      method: "PATCH",
+      body: { ...patch, updated_at: new Date().toISOString() },
+    });
+  }
+
+  async function deleteSupportTicket(id) {
+    await supabaseFetch(`/support_tickets?id=eq.${id}`, { method: "DELETE" });
+  }
+
+  /* ---------- Portal: ticket messages ---------- */
+
+  async function listTicketMessages(ticketId) {
+    return (await supabaseFetch(
+      `/ticket_messages?ticket_id=eq.${ticketId}&select=*&order=created_at.asc`
+    ).catch(() => [])) || [];
+  }
+
+  async function createTicketMessage(message) {
+    await supabaseFetch("/ticket_messages", { method: "POST", body: [message] });
+    return message;
+  }
+
+  async function deleteTicketMessage(id) {
+    await supabaseFetch(`/ticket_messages?id=eq.${id}`, { method: "DELETE" });
+  }
+
+  /* ---------- Portal: ticket attachments ---------- */
+
+  async function listTicketAttachments(ticketId) {
+    return (await supabaseFetch(
+      `/ticket_attachments?ticket_id=eq.${ticketId}&select=*&order=created_at.desc`
+    ).catch(() => [])) || [];
+  }
+
+  async function createTicketAttachment(att) {
+    await supabaseFetch("/ticket_attachments", { method: "POST", body: [att] });
+    return att;
+  }
+
+  async function deleteTicketAttachment(id) {
+    await supabaseFetch(`/ticket_attachments?id=eq.${id}`, { method: "DELETE" });
+  }
+
+  /* ---------- Portal: customer self-service reads ---------- */
+
+  async function listMyInvoices() {
+    return (await supabaseFetch(
+      `/invoices?select=id,invoice_number,status,total,subtotal,tax,issued_at,due_at,paid_at,notes&active=eq.true&order=created_at.desc`
+    ).catch(() => [])) || [];
+  }
+
+  async function listMyProjects() {
+    return (await supabaseFetch(
+      `/projects?select=id,name,status,description,budget&active=eq.true&order=updated_at.desc`
+    ).catch(() => [])) || [];
+  }
+
+  async function getMyCustomer() {
+    const rows = await supabaseFetch(`/customers?select=*&limit=1`).catch(() => []);
+    return rows?.[0] || null;
+  }
+
   return {
     listCustomers,
     getCustomer,
@@ -1235,5 +1342,24 @@ export function createCrmApi(supabaseFetch, supabaseProjectUrl, supabaseAnonKey,
     getAgedReceivables,
     getProjectProfitability,
     getUtilizationReport,
+    // Portal: support tickets
+    listPortalUsers,
+    createPortalUser,
+    updatePortalUser,
+    deletePortalUser,
+    listSupportTickets,
+    getSupportTicket,
+    createSupportTicket,
+    updateSupportTicket,
+    deleteSupportTicket,
+    listTicketMessages,
+    createTicketMessage,
+    deleteTicketMessage,
+    listTicketAttachments,
+    createTicketAttachment,
+    deleteTicketAttachment,
+    listMyInvoices,
+    listMyProjects,
+    getMyCustomer,
   };
 }

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Field CRM</title>
+    <script>
+      // GitHub Pages SPA fallback: redirect all paths back to index.html
+      // so the React router can handle them (e.g. /portal/).
+      var pathSegmentsToKeep = 1; // repo name segment for project pages
+      var l = window.location;
+      l.replace(
+        l.protocol + "//" + l.hostname + (l.port ? ":" + l.port : "") +
+        l.pathname.split("/").slice(0, 1 + pathSegmentsToKeep).join("/") + "/?" +
+        "p=" + l.pathname.slice(1).split("/").slice(pathSegmentsToKeep).join("/").replace(/&/g, "~and~") +
+        (l.search ? "&" + l.search.slice(1) : "") +
+        (l.hash ? "&" + l.hash.slice(1) : "")
+      );
+    </script>
+  </head>
+  <body></body>
+</html>

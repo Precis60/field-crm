@@ -14,6 +14,7 @@ import {
   ReportsPanel, InventoryPanel, CommunicationsPanel, AuditLogPanel,
   TimeClockPanel, MarketingPanel, NotificationsPanel, IntegrationsPanel,
 } from "./ExtendedPanels.jsx";
+import { SupportPanel } from "./SupportPanel.jsx";
 
 const CUSTOMER_STATUSES = ["active", "prospect", "inactive"];
 const PROJECT_STATUSES = [
@@ -154,6 +155,7 @@ export default function CrmTabContent({ tab, crm, uid, sites = [], selectedId = 
   if (tab === "marketing") return <MarketingPanel crm={crm} />;
   if (tab === "notifications") return <NotificationsPanel crm={crm} currentManager={currentManager} />;
   if (tab === "integrations") return <IntegrationsPanel crm={crm} />;
+  if (tab === "support") return <SupportPanel crm={crm} currentManager={currentManager} />;
   return null;
 }
 
@@ -177,6 +179,7 @@ function CustomersPanel({ crm, uid, sites = [] }) {
   const empty = () => ({
     name: "", position: "", company: "", email: "", phone: "", abn: "",
     billing_address: "", siteContactId: "", notes: "", status: "active",
+    tags: "",
   });
   const [draft, setDraft] = useState(empty);
 
@@ -253,6 +256,7 @@ function CustomersPanel({ crm, uid, sites = [] }) {
           site_contact_id: draft.siteContactId.trim() || null,
           notes: draft.notes.trim() || null,
           status: draft.status,
+          tags: draft.tags.split(",").map((t) => t.trim()).filter(Boolean),
           active: true,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
