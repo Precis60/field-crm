@@ -54,6 +54,7 @@ const EVENT_STATUSES = [
   { value: "in_progress", label: "In Progress", color: "#C97A2B" },
   { value: "completed", label: "Completed", color: "#4C7A54" },
   { value: "project_connected", label: "Project Connected", color: "#8b5cf6" },
+  { value: "project_connect_follow_up", label: "Project Connect / Follow Up Required", color: "#d946ef" },
   { value: "internal_works", label: "Internal Works", color: "#0d9488" },
   { value: "family", label: "Family", color: "#ec4899" },
 ];
@@ -2578,7 +2579,7 @@ function CalendarPanel({ crm, uid, selectedId = null }) {
                   {visible.map(({ e, start, end }) => {
                     const color = EVENT_CATEGORIES.find((c) => c.label === e.category)?.color || "#64748b";
                     const time = start.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", timeZone: APP_TIME_ZONE });
-                    const isProjectConnected = e.status === "project_connected";
+                    const isProjectConnected = e.status === "project_connected" || e.status === "project_connect_follow_up";
                     const isInternalWorks = e.status === "internal_works";
                     const isFamily = e.status === "family";
                     return (
@@ -2715,7 +2716,7 @@ function CalendarPanel({ crm, uid, selectedId = null }) {
 
               return laidOut.map(({ e, portionStart, portionEnd, col, cols }) => {
                 const color = EVENT_CATEGORIES.find((c) => c.label === e.category)?.color || "#64748b";
-                const isProjectConnected = e.status === "project_connected";
+                const isProjectConnected = e.status === "project_connected" || e.status === "project_connect_follow_up";
                 const isInternalWorks = e.status === "internal_works";
                 const isFamily = e.status === "family";
                 // Hour-of-day must be Melbourne's wall-clock hour, not the

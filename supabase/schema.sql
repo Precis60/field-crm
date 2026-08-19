@@ -680,7 +680,7 @@ alter table events add column if not exists status text not null default 'tentat
 
 alter table events drop constraint if exists events_status_check;
 alter table events add constraint events_status_check
-  check (status in ('tentative', 'booked', 'confirmed', 'in_progress', 'completed', 'project_connected', 'internal_works', 'family'));
+  check (status in ('tentative', 'booked', 'confirmed', 'in_progress', 'completed', 'project_connected', 'project_connect_follow_up', 'internal_works', 'family'));
 
 create index if not exists events_start_at_idx on events (start_at);
 
