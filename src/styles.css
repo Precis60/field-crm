@@ -493,7 +493,7 @@ body{margin:0;}
 }
 
 /* ---- Calendar grid: prevent text selection while dragging events ---- */
-.lp-cal-grid,.lp-cal-grid *{
+.lp-cal-grid{
   -webkit-user-select:none;
   -moz-user-select:none;
   -ms-user-select:none;

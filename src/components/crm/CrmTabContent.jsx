@@ -2400,6 +2400,13 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
       });
     };
 
+    // Block selection on the whole document while dragging so the cursor
+    // can leave the calendar grid without highlighting surrounding content.
+    const onSelect = (ev) => {
+      ev.preventDefault();
+    };
+    document.addEventListener("selectstart", onSelect);
+
     const onMove = (ev) => {
       const dx = ev.clientX - startX;
       const dy = ev.clientY - startY;
@@ -2418,6 +2425,7 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
     const onUp = async (ev) => {
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("mouseup", onUp);
+      document.removeEventListener("selectstart", onSelect);
 
       // If the drag never activated, it was just a click — let onClick
       // handle opening the editor. Don't call editEvent here.
