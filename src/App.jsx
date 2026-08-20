@@ -1798,7 +1798,6 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
         <button className={`lp-tab ${tab === "inventory" ? "is-active" : ""}`} onClick={() => setTab("inventory")}>Inventory</button>
         {/* Operations */}
         <button className={`lp-tab ${tab === "time_clock" ? "is-active" : ""}`} onClick={() => setTab("time_clock")}>Time Clock</button>
-        <button className={`lp-tab ${tab === "myreport" ? "is-active" : ""}`} onClick={() => { setReportSaved(false); setTab("myreport"); }}>Daily Report</button>
         {/* Communication & support */}
         <button className={`lp-tab ${tab === "support" ? "is-active" : ""}`} onClick={() => setTab("support")} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><MessageSquare size={13} /> Support</button>
         <button className={`lp-tab ${tab === "communications" ? "is-active" : ""}`} onClick={() => setTab("communications")}>Comms</button>
@@ -1811,28 +1810,9 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
         <button className={`lp-tab ${tab === "settings" ? "is-active" : ""}`} onClick={() => setTab("settings")}>Settings</button>
         <button className={`lp-tab ${tab === "passwords" ? "is-active" : ""}`} onClick={() => setTab("passwords")} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><Lock size={13} /> Passwords</button>
       </div>
-      {tab === "brief" && <BriefAndReports crm={crm} onOpen={(type, id) => { setSelectedId(id); setTab(type); }} monthsIndex={monthsIndex} getMonths={getMonths} cacheVersion={cacheVersion} onDeleteReport={onDeleteReport} />}
+      {tab === "brief" && <BriefAndReports crm={crm} onOpen={(type, id) => { setSelectedId(id); setTab(type); }} monthsIndex={monthsIndex} getMonths={getMonths} cacheVersion={cacheVersion} onDeleteReport={onDeleteReport} currentManager={currentManager} workers={workers} managers={managers} assignedTasks={assignedTasks} onAcknowledge={onAcknowledgeAssignedTask} onAddReport={onAddReport} />}
       {tab === "tasks" && <TasksPanel currentManager={currentManager} />}
       {tab === "assign" && <AssignTasksPanel workers={workers} assignedTasks={assignedTasks} onAdd={onAddAssignedTask} onRemove={onRemoveAssignedTask} onUpdate={onUpdateAssignedTask} />}
-      {tab === "myreport" && (
-        reportSaved ? (
-          <div className="lp-settings">
-            <p className="lp-saved"><Check size={13} /> Report submitted — it's in the Morning brief now.</p>
-            <button className="lp-btn-ghost" onClick={() => setReportSaved(false)}><Plus size={15} /> Write another</button>
-          </div>
-        ) : (
-          <WorkerForm
-            embedded
-            requirePhotos={false}
-            presetName={currentManager?.name || ""}
-            workerNames={[...workers.map((w) => w.name), ...managers.map((m) => m.name)]}
-            assignedTasks={assignedTasks}
-            onAcknowledge={onAcknowledgeAssignedTask}
-            onBack={() => setTab("brief")}
-            onSubmitted={async (report, photos) => { await onAddReport(report, photos); setReportSaved(true); }}
-          />
-        )
-      )}
       {tab === "schedule" && <ManagerSchedulePanel managers={managers} currentManager={currentManager} />}
       {tab === "sites" && <AdminPanel />}
       {["customers", "contacts", "projects", "calendar", "suppliers", "site_notes", "site_tasks", "invoices", "quotes", "proposals", "passwords", "reports", "inventory", "communications", "audit_log", "time_clock", "marketing", "notifications", "integrations", "support"].includes(tab) && (
@@ -2678,8 +2658,9 @@ function BriefTasksPanel({ date, assignedTasks }) {
   );
 }
 
-function BriefAndReports({ crm, onOpen, monthsIndex, getMonths, cacheVersion, onDeleteReport }) {
+function BriefAndReports({ crm, onOpen, monthsIndex, getMonths, cacheVersion, onDeleteReport, currentManager, workers, managers, assignedTasks, onAcknowledge, onAddReport }) {
   const [view, setView] = useState("brief");
+  const [reportSaved, setReportSaved] = useState(false);
 
   return (
     <div>
@@ -2694,10 +2675,33 @@ function BriefAndReports({ crm, onOpen, monthsIndex, getMonths, cacheVersion, on
           onClick={() => setView("log")}
           style={{ fontSize: 13 }}
         >Full Log</button>
+        <button
+          className={`lp-tab ${view === "report" ? "is-active" : ""}`}
+          onClick={() => { setReportSaved(false); setView("report"); }}
+          style={{ fontSize: 13 }}
+        >Daily Report</button>
       </div>
       {view === "brief"
         ? <MorningBrief crm={crm} onOpen={onOpen} />
-        : <FullLog monthsIndex={monthsIndex} getMonths={getMonths} cacheVersion={cacheVersion} onDeleteReport={onDeleteReport} />
+        : view === "log"
+        ? <FullLog monthsIndex={monthsIndex} getMonths={getMonths} cacheVersion={cacheVersion} onDeleteReport={onDeleteReport} />
+        : reportSaved ? (
+          <div className="lp-settings">
+            <p className="lp-saved"><Check size={13} /> Report submitted — it's in the Morning brief now.</p>
+            <button className="lp-btn-ghost" onClick={() => setReportSaved(false)}><Plus size={15} /> Write another</button>
+          </div>
+        ) : (
+          <WorkerForm
+            embedded
+            requirePhotos={false}
+            presetName={currentManager?.name || ""}
+            workerNames={[...workers.map((w) => w.name), ...managers.map((m) => m.name)]}
+            assignedTasks={assignedTasks}
+            onAcknowledge={onAcknowledge}
+            onBack={() => setView("brief")}
+            onSubmitted={async (report, photos) => { await onAddReport(report, photos); setReportSaved(true); }}
+          />
+        )
       }
     </div>
   );
