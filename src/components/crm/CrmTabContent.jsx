@@ -2496,8 +2496,8 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
   const hours = Array.from({ length: 24 }, (_, i) => i);
 
   return (
-    <div className="lp-settings lp-settings--wide" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 160px)" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginTop: 4 }}>
+    <div className="lp-settings lp-settings--wide" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 160px)", padding: 0, maxWidth: "100%" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginTop: 4, padding: "0 16px" }}>
         <div>
           <h3 style={{ marginBottom: 0 }}><CalendarDays size={16} /> Calendar</h3>
           <p className="lp-hint" style={{ marginTop: 4 }}>{view === "week" ? "Weekly" : view === "month" ? "Monthly" : "Daily"} view of events by category. {view !== "month" && "Drag events to move, drag bottom edge to resize."}</p>
@@ -2541,7 +2541,7 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
         )}
       </div>
 
-      <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6, paddingBottom: 4, maxHeight: 72, overflowY: "auto" }}>
+      <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6, paddingBottom: 4, maxHeight: 72, overflowY: "auto", padding: "0 16px" }}>
         {EVENT_CATEGORIES.map((c) => {
           const hidden = hiddenCategories.includes(c.label);
           return (
