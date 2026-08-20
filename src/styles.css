@@ -491,3 +491,18 @@ body{margin:0;}
   .lp-rte-editor{border:none;padding:0;}
   .lp-proposal-content{padding:0;}
 }
+
+/* ---- Calendar grid: prevent text selection while dragging events ---- */
+.lp-cal-grid,.lp-cal-grid *{
+  -webkit-user-select:none;
+  -moz-user-select:none;
+  -ms-user-select:none;
+  user-select:none;
+  -webkit-touch-callout:none;
+}
+.lp-cal-grid button,.lp-cal-grid select,.lp-cal-grid input{
+  -webkit-user-select:auto;
+  -moz-user-select:auto;
+  -ms-user-select:auto;
+  user-select:auto;
+}
