@@ -11,7 +11,7 @@ import DateInput from "../DateInput.jsx";
 import { createVault, unlockVault, encryptItem, decryptItem } from "../../lib/vaultCrypto.js";
 import { APP_TIME_ZONE, zonedISODate, zonedDateToUTC, zonedParts } from "../../lib/time.js";
 import {
-  ReportsPanel, InventoryPanel, CommunicationsPanel, AuditLogPanel,
+  InventoryPanel, CommunicationsPanel, AuditLogPanel,
   TimeClockPanel, MarketingPanel, NotificationsPanel, IntegrationsPanel,
 } from "./ExtendedPanels.jsx";
 import { SupportPanel } from "./SupportPanel.jsx";
@@ -150,7 +150,6 @@ export default function CrmTabContent({ tab, crm, uid, sites = [], selectedId = 
   if (tab === "quotes") return <QuotesPanel crm={crm} uid={uid} selectedId={selectedId} />;
   if (tab === "proposals") return <ProposalsPanel crm={crm} uid={uid} />;
   if (tab === "passwords") return <PasswordVaultPanel crm={crm} uid={uid} />;
-  if (tab === "reports") return <ReportsPanel crm={crm} />;
   if (tab === "inventory") return <InventoryPanel crm={crm} />;
   if (tab === "communications") return <CommunicationsPanel crm={crm} />;
   if (tab === "audit_log") return <AuditLogPanel crm={crm} />;

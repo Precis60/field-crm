@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { createCrmApi } from "./lib/crm.js";
 import CrmTabContent from "./components/crm/CrmTabContent.jsx";
+import { ReportsPanel } from "./components/crm/ExtendedPanels.jsx";
 const PortalApp = lazy(() => import("./components/portal/PortalApp.jsx"));
 import { APP_TIME_ZONE, zonedISODate, zonedDateToUTC } from "./lib/time.js";
 import AddressInput from "./components/AddressInput.jsx";
@@ -1794,7 +1795,6 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
         <button className={`lp-tab ${tab === "tasks" ? "is-active" : ""}`} onClick={() => setTab("tasks")}>Tasks</button>
         <button className={`lp-tab ${tab === "assign" ? "is-active" : ""}`} onClick={() => setTab("assign")}>Assign tasks</button>
         {/* Financial */}
-        <button className={`lp-tab ${tab === "reports" ? "is-active" : ""}`} onClick={() => setTab("reports")}>Reports</button>
         <button className={`lp-tab ${tab === "inventory" ? "is-active" : ""}`} onClick={() => setTab("inventory")}>Inventory</button>
         {/* Operations */}
         <button className={`lp-tab ${tab === "time_clock" ? "is-active" : ""}`} onClick={() => setTab("time_clock")}>Time Clock</button>
@@ -1815,7 +1815,7 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
       {tab === "assign" && <AssignTasksPanel workers={workers} assignedTasks={assignedTasks} onAdd={onAddAssignedTask} onRemove={onRemoveAssignedTask} onUpdate={onUpdateAssignedTask} />}
       {tab === "schedule" && <ManagerSchedulePanel managers={managers} currentManager={currentManager} />}
       {tab === "sites" && <AdminPanel />}
-      {["customers", "contacts", "projects", "calendar", "suppliers", "site_notes", "site_tasks", "invoices", "quotes", "proposals", "passwords", "reports", "inventory", "communications", "audit_log", "time_clock", "marketing", "notifications", "integrations", "support"].includes(tab) && (
+      {["customers", "contacts", "projects", "calendar", "suppliers", "site_notes", "site_tasks", "invoices", "quotes", "proposals", "passwords", "inventory", "communications", "audit_log", "time_clock", "marketing", "notifications", "integrations", "support"].includes(tab) && (
         <CrmTabContent tab={tab} crm={crm} uid={uid} sites={sites} selectedId={selectedId} currentManager={currentManager} />
       )}
       {tab === "settings" && <ManagerSettings onRestored={onRestored} />}
@@ -2664,7 +2664,7 @@ function BriefAndReports({ crm, onOpen, monthsIndex, getMonths, cacheVersion, on
 
   return (
     <div>
-      <div style={{ display: "flex", gap: 6, marginBottom: 12, padding: "0 16px" }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 12, padding: "0 16px", flexWrap: "wrap" }}>
         <button
           className={`lp-tab ${view === "brief" ? "is-active" : ""}`}
           onClick={() => setView("brief")}
@@ -2680,11 +2680,18 @@ function BriefAndReports({ crm, onOpen, monthsIndex, getMonths, cacheVersion, on
           onClick={() => { setReportSaved(false); setView("report"); }}
           style={{ fontSize: 13 }}
         >Daily Report</button>
+        <button
+          className={`lp-tab ${view === "reports" ? "is-active" : ""}`}
+          onClick={() => setView("reports")}
+          style={{ fontSize: 13 }}
+        >Reports</button>
       </div>
       {view === "brief"
         ? <MorningBrief crm={crm} onOpen={onOpen} />
         : view === "log"
         ? <FullLog monthsIndex={monthsIndex} getMonths={getMonths} cacheVersion={cacheVersion} onDeleteReport={onDeleteReport} />
+        : view === "reports"
+        ? <ReportsPanel crm={crm} />
         : reportSaved ? (
           <div className="lp-settings">
             <p className="lp-saved"><Check size={13} /> Report submitted — it's in the Morning brief now.</p>
