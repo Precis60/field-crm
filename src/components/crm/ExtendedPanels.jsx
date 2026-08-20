@@ -272,6 +272,27 @@ export function ReportsPanel({ crm }) {
                     <p className="lp-stat-value" style={{ fontSize: 22 }}>{totalBillable.toFixed(2)}h</p>
                   </div>
                 </div>
+                <div className="lp-stat-card" style={{ marginBottom: 16, padding: 16 }}>
+                  <p className="lp-stat-hint" style={{ textTransform: "uppercase" }}>Projected Income (Uninvoiced Billable Hours)</p>
+                  <div style={{ display: "flex", gap: 24, flexWrap: "wrap", marginTop: 8, alignItems: "baseline" }}>
+                    <div>
+                      <span style={{ fontSize: 13, color: "var(--muted)" }}>Billable hours</span>
+                      <p style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>{totalBillable.toFixed(2)}h × $140.65</p>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: 13, color: "var(--muted)" }}>Subtotal</span>
+                      <p style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>{fmtMoney(totalBillable * 140.65)}</p>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: 13, color: "var(--muted)" }}>GST (10%)</span>
+                      <p style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>{fmtMoney(totalBillable * 140.65 * 0.1)}</p>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: 13, color: "var(--muted)" }}>Total incl. GST</span>
+                      <p style={{ fontSize: 22, fontWeight: 700, margin: 0, color: "#4C7A54" }}>{fmtMoney(totalBillable * 140.65 * 1.1)}</p>
+                    </div>
+                  </div>
+                </div>
                 <div className="lp-table-responsive"><table className="lp-table" style={{ width: "100%" }}>
                   <thead>
                     <tr><th>Project</th><th>Customer</th><th>Status</th><th>Entries</th><th>Billable Hours</th><th>Total Hours</th></tr>
