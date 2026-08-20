@@ -1783,13 +1783,10 @@ function TimesheetsSection({ projectId, customerId, crm, uid }) {
       let invoiceId;
       if (invoiceTarget === "new") {
         invoiceId = uid();
-        const invoiceNumber = `INV-${Date.now().toString().slice(-6)}`;
         await crm.createInvoice({
           id: invoiceId,
           project_id: projectId,
           customer_id: customerId,
-          customer_name: project.customers?.name || null,
-          invoice_number: invoiceNumber,
           status: "draft",
           terms: "Due on Receipt",
           currency: "AUD",
@@ -3798,11 +3795,9 @@ function InvoicesPanel({ crm, uid, selectedId = null }) {
     setErr("");
     try {
       const invoiceId = uid();
-      const customer = customers.find((c) => c.id === draft.customerId);
       const invoice = {
         id: invoiceId,
         customer_id: draft.customerId,
-        customer_name: customer?.name || null,
         invoice_number: draft.invoiceNumber.trim(),
         status: "draft",
         terms: draft.terms.trim() || "Due on Receipt",
