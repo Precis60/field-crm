@@ -2923,8 +2923,8 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
         </div>
       ) : (
         <div ref={gridRef} className="lp-cal-grid" onSelectStart={(e) => e.preventDefault()} style={{ marginTop: 12, border: "1px solid var(--line)", borderRadius: 12, overflow: "auto", flex: "1 1 auto" }}>
-          <div style={{ width: view === "week" ? 760 : 360, minWidth: "100%" }}>
-            <div style={{ display: "grid", gridTemplateColumns: `60px repeat(${days.length}, 1fr)`, borderBottom: "1px solid var(--line)", position: "sticky", top: 0, background: "var(--panel)", zIndex: 2 }}>
+          <div style={{ minWidth: 760 }}>
+            <div style={{ display: "grid", width: "100%", gridTemplateColumns: `60px repeat(${days.length}, 1fr)`, borderBottom: "1px solid var(--line)", position: "sticky", top: 0, background: "var(--panel)", zIndex: 2 }}>
               <div style={{ padding: "10px 4px" }}></div>
               {days.map((day) => (
                 <div key={day.toISOString()} style={{ padding: "10px 4px", textAlign: "center", fontWeight: "bold", borderLeft: "1px solid var(--line)" }}>
@@ -2932,7 +2932,7 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
                 </div>
               ))}
             </div>
-            <div ref={timeGridRef} style={{ display: "grid", gridTemplateColumns: `60px repeat(${days.length}, 1fr)`, gridTemplateRows: `repeat(24, ${HOUR_HEIGHT}px)`, position: "relative", height: 24 * HOUR_HEIGHT }}>
+            <div ref={timeGridRef} style={{ display: "grid", width: "100%", gridTemplateColumns: `60px repeat(${days.length}, 1fr)`, gridTemplateRows: `repeat(24, ${HOUR_HEIGHT}px)`, position: "relative", height: 24 * HOUR_HEIGHT }}>
             {hours.map((h) => {
               const label = h === 0 ? "12am" : h < 12 ? `${h}am` : h === 12 ? "12pm" : `${h - 12}pm`;
               return (
