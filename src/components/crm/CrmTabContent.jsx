@@ -793,6 +793,83 @@ function ProjectsPanel({ crm, uid, sites }) {
   );
 }
 
+function ProjectSummary({ projectId, crm }) {
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [invoices, timesheets, events] = await Promise.all([
+        crm.listInvoices({ projectId }).catch(() => []),
+        crm.listTimesheets(projectId).catch(() => []),
+        crm.listEvents().catch(() => []),
+      ]);
+      if (cancelled) return;
+      const projEvents = (events || []).filter(
+        (e) => e.project_name && e.title && e.title.toLowerCase().includes(String(e.project_name).toLowerCase())
+      );
+      const hours = (timesheets || []).reduce((sum, t) => {
+        if (!t.start_at || !t.end_at) return sum;
+        const ms = new Date(t.end_at) - new Date(t.start_at);
+        return sum + (ms > 0 ? ms / 3600000 : 0);
+      }, 0);
+      const billableHours = (timesheets || []).filter((t) => t.billable).reduce((sum, t) => {
+        if (!t.start_at || !t.end_at) return sum;
+        const ms = new Date(t.end_at) - new Date(t.start_at);
+        return sum + (ms > 0 ? ms / 3600000 : 0);
+      }, 0);
+      const invoicedHours = (timesheets || []).filter((t) => t.invoiced).reduce((sum, t) => {
+        if (!t.start_at || !t.end_at) return sum;
+        const ms = new Date(t.end_at) - new Date(t.start_at);
+        return sum + (ms > 0 ? ms / 3600000 : 0);
+      }, 0);
+      const totalInvoiced = (invoices || []).filter((i) => i.status === "paid" || i.status === "sent").reduce((sum, i) => sum + (Number(i.total) || 0), 0);
+      const paidInvoices = (invoices || []).filter((i) => i.status === "paid").length;
+      const outstandingInvoices = (invoices || []).filter((i) => i.status === "sent").length;
+      const draftInvoices = (invoices || []).filter((i) => i.status === "draft").length;
+      setData({
+        eventCount: projEvents.length,
+        timesheetCount: (timesheets || []).length,
+        hours: Math.round(hours * 100) / 100,
+        billableHours: Math.round(billableHours * 100) / 100,
+        invoicedHours: Math.round(invoicedHours * 100) / 100,
+        invoiceCount: (invoices || []).length,
+        paidInvoices,
+        outstandingInvoices,
+        draftInvoices,
+        totalInvoiced,
+      });
+    })();
+    return () => { cancelled = true; };
+  }, [projectId, crm]);
+
+  if (!data) return <span className="lp-hint" style={{ fontSize: 11 }}>Loading summary…</span>;
+
+  const items = [
+    { label: "Events", value: data.eventCount, icon: <CalendarDays size={11} /> },
+    { label: "Time entries", value: data.timesheetCount, icon: <Clock size={11} /> },
+    { label: "Total hours", value: data.hours.toFixed(2) + "h", icon: <Clock size={11} /> },
+    { label: "Billable", value: data.billableHours.toFixed(2) + "h", icon: <Clock size={11} /> },
+    { label: "Invoiced hrs", value: data.invoicedHours.toFixed(2) + "h", icon: <Clock size={11} /> },
+    { label: "Invoices", value: `${data.invoiceCount} (${data.paidInvoices} paid, ${data.outstandingInvoices} sent, ${data.draftInvoices} draft)`, icon: <Mail size={11} /> },
+    { label: "Invoiced $", value: new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" }).format(data.totalInvoiced), icon: <Mail size={11} /> },
+  ].filter((x) => x.value !== 0 && x.value !== "0h" && x.value !== "0 (0 paid, 0 sent, 0 draft)" && x.value !== "$0.00");
+
+  if (items.length === 0) return <span className="lp-hint" style={{ fontSize: 11 }}>No activity yet.</span>;
+
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 14px", marginTop: 4, fontSize: 11, color: "var(--muted)" }}>
+      {items.map((item) => (
+        <span key={item.label} style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+          {item.icon}
+          <strong style={{ color: "var(--ink)", fontWeight: 600 }}>{item.value}</strong>
+          <span>{item.label}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function ProjectList({ projects, customers, sites, crm, uid, onOpen, onChanged, contacts, siteTaskCategories }) {
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -1058,6 +1135,7 @@ function ProjectList({ projects, customers, sites, crm, uid, onOpen, onChanged, 
                         {p.description}
                       </p>
                     )}
+                    <ProjectSummary projectId={p.id} crm={crm} />
                   </div>
                   <ChevronRight size={16} style={{ alignSelf: "flex-start", marginTop: 4, flexShrink: 0 }} />
                 </div>
