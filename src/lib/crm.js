@@ -361,6 +361,32 @@ export function createCrmApi(supabaseFetch, supabaseProjectUrl, supabaseAnonKey,
     });
   }
 
+  /**
+   * Automatically mark sent invoices as overdue when 7+ days past due_at.
+   * Returns the number of invoices updated.
+   */
+  async function autoMarkOverdue() {
+    const sent = await supabaseFetch(
+      `/invoices?select=id,due_at&status=eq.sent&active=eq.true`
+    ).catch(() => []);
+    if (!sent || sent.length === 0) return 0;
+    const now = new Date();
+    const overdueIds = sent
+      .filter((i) => i.due_at)
+      .filter((i) => {
+        const due = new Date(i.due_at);
+        const daysPast = (now - due) / (1000 * 60 * 60 * 24);
+        return daysPast >= 7;
+      })
+      .map((i) => i.id);
+    if (overdueIds.length === 0) return 0;
+    await supabaseFetch(`/invoices?id=in.(${overdueIds.join(",")})`, {
+      method: "PATCH",
+      body: { status: "overdue", updated_at: now.toISOString() },
+    });
+    return overdueIds.length;
+  }
+
   async function deleteInvoice(id) {
     await supabaseFetch(`/invoices?id=eq.${id}`, { method: "DELETE" });
   }
@@ -1263,6 +1289,7 @@ export function createCrmApi(supabaseFetch, supabaseProjectUrl, supabaseAnonKey,
     updateInvoiceLine,
     deleteInvoiceLine,
     updateInvoice,
+    autoMarkOverdue,
     deleteInvoice,
     draftInvoiceFromProject,
     listTimesheets,

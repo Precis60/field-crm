@@ -3738,6 +3738,7 @@ function InvoicesPanel({ crm, uid, selectedId = null }) {
   const [draft, setDraft] = useState(empty);
 
   async function refresh() {
+    await crm.autoMarkOverdue().catch(() => {});
     const [inv, cust] = await Promise.all([
       crm.listInvoices().catch(() => []),
       crm.listCustomers().catch(() => []),
@@ -3881,10 +3882,8 @@ function InvoicesPanel({ crm, uid, selectedId = null }) {
       if (i.status === "void") return statusFilters.void;
       if (i.status === "draft") return statusFilters.draft;
       if (i.status === "paid") return statusFilters.paid;
-      if (i.status === "sent") {
-        if (isOverdue(i)) return statusFilters.overdue;
-        return statusFilters.sent;
-      }
+      if (i.status === "overdue") return statusFilters.overdue;
+      if (i.status === "sent") return statusFilters.sent;
       return false;
     };
 
