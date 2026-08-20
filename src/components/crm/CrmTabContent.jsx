@@ -1787,6 +1787,7 @@ function TimesheetsSection({ projectId, customerId, crm, uid }) {
           id: invoiceId,
           project_id: projectId,
           customer_id: customerId,
+          customer_name: project.customers?.name || null,
           status: "draft",
           terms: "Due on Receipt",
           subtotal,
@@ -3777,9 +3778,11 @@ function InvoicesPanel({ crm, uid, selectedId = null }) {
     setErr("");
     try {
       const invoiceId = uid();
+      const customer = customers.find((c) => c.id === draft.customerId);
       const invoice = {
         id: invoiceId,
         customer_id: draft.customerId,
+        customer_name: customer?.name || null,
         invoice_number: draft.invoiceNumber.trim(),
         status: "draft",
         terms: draft.terms.trim() || "Due on Receipt",
