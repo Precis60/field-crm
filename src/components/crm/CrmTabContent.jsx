@@ -1129,7 +1129,6 @@ function ProjectList({ projects, customers, sites, crm, uid, onOpen, onChanged, 
                         {p.description}
                       </p>
                     )}
-                    <ProjectSummary projectId={p.id} crm={crm} />
                   </div>
                   <ChevronRight size={16} style={{ alignSelf: "flex-start", marginTop: 4, flexShrink: 0 }} />
                 </div>
@@ -1373,6 +1372,8 @@ function ProjectDetail({ projectId, crm, uid, sites, customers, onBack }) {
           {[statusLabel, project.customers?.name, project.sites?.name].filter(Boolean).join(" · ")}
         </p>
       </div>
+
+      <ProjectSummary projectId={projectId} crm={crm} />
 
       {err && <p className="lp-error">{err}</p>}
       {msg && <p className="lp-saved"><Check size={13} /> {msg}</p>}
