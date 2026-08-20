@@ -1251,14 +1251,18 @@ function ProjectDetail({ projectId, crm, uid, sites, customers, onBack }) {
   }, [crm]);
 
   async function refresh() {
-    const [p, c, inv] = await Promise.all([
-      crm.getProject(projectId),
-      crm.listProjectCosts(projectId),
-      crm.listInvoices({ projectId }),
-    ]);
-    setProject(p);
-    setCosts(c);
-    setInvoices(inv);
+    try {
+      const [p, c, inv] = await Promise.all([
+        crm.getProject(projectId).catch((e) => { setErr(e.message || "Couldn't load project."); return null; }),
+        crm.listProjectCosts(projectId).catch(() => []),
+        crm.listInvoices({ projectId }).catch(() => []),
+      ]);
+      setProject(p);
+      setCosts(c || []);
+      setInvoices(inv || []);
+    } catch (e) {
+      setErr(e.message || "Couldn't load project.");
+    }
   }
 
   useEffect(() => {
