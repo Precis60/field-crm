@@ -1783,13 +1783,17 @@ function TimesheetsSection({ projectId, customerId, crm, uid }) {
       let invoiceId;
       if (invoiceTarget === "new") {
         invoiceId = uid();
+        const invoiceNumber = `INV-${Date.now().toString().slice(-6)}`;
         await crm.createInvoice({
           id: invoiceId,
           project_id: projectId,
           customer_id: customerId,
           customer_name: project.customers?.name || null,
+          invoice_number: invoiceNumber,
           status: "draft",
           terms: "Due on Receipt",
+          currency: "AUD",
+          active: true,
           subtotal,
           tax,
           total,
