@@ -1114,6 +1114,12 @@ export function createCrmApi(supabaseFetch, supabaseProjectUrl, supabaseAnonKey,
     ).catch(() => [])) || [];
   }
 
+  async function getUninvoicedHours() {
+    return (await supabaseFetch(
+      `/projects?select=id,name,status,customer_id,customers(name),timesheets(id,start_at,end_at,billable,invoiced)&active=eq.true&order=name.asc`
+    ).catch(() => [])) || [];
+  }
+
   async function getUtilizationReport({ from, to } = {}) {
     let path = `/timesheets?select=id,start_at,end_at,billable,person_id,people(id,name)&order=start_at.desc`;
     if (from) path += `&start_at=gte.${encodeURIComponent(from)}`;
@@ -1402,6 +1408,7 @@ export function createCrmApi(supabaseFetch, supabaseProjectUrl, supabaseAnonKey,
     getRevenueReport,
     getAgedReceivables,
     getProjectProfitability,
+    getUninvoicedHours,
     getUtilizationReport,
     // Portal: support tickets
     listPortalUsers,

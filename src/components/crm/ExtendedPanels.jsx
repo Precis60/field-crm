@@ -55,21 +55,24 @@ export function ReportsPanel({ crm }) {
   const [receivables, setReceivables] = useState([]);
   const [profitability, setProfitability] = useState([]);
   const [utilization, setUtilization] = useState([]);
+  const [uninvoiced, setUninvoiced] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const [rev, recv, prof, util] = await Promise.all([
+      const [rev, recv, prof, util, uninv] = await Promise.all([
         crm.getRevenueReport({}),
         crm.getAgedReceivables(),
         crm.getProjectProfitability(),
         crm.getUtilizationReport({}),
+        crm.getUninvoicedHours(),
       ]);
       setRevenue(rev);
       setReceivables(recv);
       setProfitability(prof);
       setUtilization(util);
+      setUninvoiced(uninv);
       setLoading(false);
     })();
   }, []);
@@ -101,6 +104,7 @@ export function ReportsPanel({ crm }) {
         <button className={`lp-tab ${view === "revenue" ? "is-active" : ""}`} onClick={() => setView("revenue")}>Revenue</button>
         <button className={`lp-tab ${view === "receivables" ? "is-active" : ""}`} onClick={() => setView("receivables")}>Aged Receivables</button>
         <button className={`lp-tab ${view === "profitability" ? "is-active" : ""}`} onClick={() => setView("profitability")}>Profitability</button>
+        <button className={`lp-tab ${view === "uninvoiced" ? "is-active" : ""}`} onClick={() => setView("uninvoiced")}>Uninvoiced Hours</button>
         <button className={`lp-tab ${view === "utilization" ? "is-active" : ""}`} onClick={() => setView("utilization")}>Utilization</button>
       </div>
 
@@ -237,6 +241,57 @@ export function ReportsPanel({ crm }) {
               })}
             </tbody>
           </table></div>
+        </div>
+      )}
+
+      {view === "uninvoiced" && (
+        <div className="lp-panel">
+          <div className="lp-panel-head">
+            <h4><Clock size={15} /> Uninvoiced Hours by Project</h4>
+          </div>
+          {(() => {
+            const rows = uninvoiced.map((p) => {
+              const timesheets = p.timesheets || [];
+              const uninvoicedEntries = timesheets.filter((t) => !t.invoiced && t.start_at && t.end_at);
+              const uninvoicedHours = uninvoicedEntries.reduce((s, t) => s + (new Date(t.end_at) - new Date(t.start_at)) / 3600000, 0);
+              const billableUninvoiced = uninvoicedEntries.filter((t) => t.billable).reduce((s, t) => s + (new Date(t.end_at) - new Date(t.start_at)) / 3600000, 0);
+              return { ...p, uninvoicedHours: Math.round(uninvoicedHours * 100) / 100, billableUninvoiced: Math.round(billableUninvoiced * 100) / 100, entryCount: uninvoicedEntries.length };
+            }).filter((p) => p.uninvoicedHours > 0).sort((a, b) => b.uninvoicedHours - a.uninvoicedHours);
+            const totalUninvoiced = rows.reduce((s, p) => s + p.uninvoicedHours, 0);
+            const totalBillable = rows.reduce((s, p) => s + p.billableUninvoiced, 0);
+            if (rows.length === 0) return <EmptyState compact icon={<Check size={16} />} text="No uninvoiced hours across all projects." />;
+            return (
+              <>
+                <div className="lp-grid lp-grid-2" style={{ marginBottom: 16 }}>
+                  <div className="lp-stat-card" style={{ textAlign: "center", padding: 12 }}>
+                    <p className="lp-stat-hint" style={{ textTransform: "uppercase" }}>Total Uninvoiced</p>
+                    <p className="lp-stat-value" style={{ fontSize: 22 }}>{totalUninvoiced.toFixed(2)}h</p>
+                  </div>
+                  <div className="lp-stat-card" style={{ textAlign: "center", padding: 12 }}>
+                    <p className="lp-stat-hint" style={{ textTransform: "uppercase" }}>Billable Uninvoiced</p>
+                    <p className="lp-stat-value" style={{ fontSize: 22 }}>{totalBillable.toFixed(2)}h</p>
+                  </div>
+                </div>
+                <div className="lp-table-responsive"><table className="lp-table" style={{ width: "100%" }}>
+                  <thead>
+                    <tr><th>Project</th><th>Customer</th><th>Status</th><th>Entries</th><th>Billable Hours</th><th>Total Hours</th></tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((p) => (
+                      <tr key={p.id}>
+                        <td style={{ fontWeight: 600 }}>{p.name}</td>
+                        <td>{p.customers?.name || "—"}</td>
+                        <td><span className={`lp-status lp-status--${p.status}`}>{p.status}</span></td>
+                        <td>{p.entryCount}</td>
+                        <td style={{ fontWeight: 600, color: "#C97A2B" }}>{p.billableUninvoiced.toFixed(2)}h</td>
+                        <td style={{ fontWeight: 600 }}>{p.uninvoicedHours.toFixed(2)}h</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table></div>
+              </>
+            );
+          })()}
         </div>
       )}
 
