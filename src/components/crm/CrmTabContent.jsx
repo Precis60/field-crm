@@ -799,15 +799,11 @@ function ProjectSummary({ projectId, crm }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [invoices, timesheets, events] = await Promise.all([
+      const [invoices, timesheets] = await Promise.all([
         crm.listInvoices({ projectId }).catch(() => []),
         crm.listTimesheets(projectId).catch(() => []),
-        crm.listEvents().catch(() => []),
       ]);
       if (cancelled) return;
-      const projEvents = (events || []).filter(
-        (e) => e.project_name && e.title && e.title.toLowerCase().includes(String(e.project_name).toLowerCase())
-      );
       const hours = (timesheets || []).reduce((sum, t) => {
         if (!t.start_at || !t.end_at) return sum;
         const ms = new Date(t.end_at) - new Date(t.start_at);
@@ -828,7 +824,6 @@ function ProjectSummary({ projectId, crm }) {
       const outstandingInvoices = (invoices || []).filter((i) => i.status === "sent").length;
       const draftInvoices = (invoices || []).filter((i) => i.status === "draft").length;
       setData({
-        eventCount: projEvents.length,
         timesheetCount: (timesheets || []).length,
         hours: Math.round(hours * 100) / 100,
         billableHours: Math.round(billableHours * 100) / 100,
@@ -846,7 +841,6 @@ function ProjectSummary({ projectId, crm }) {
   if (!data) return <span className="lp-hint" style={{ fontSize: 11 }}>Loading summary…</span>;
 
   const items = [
-    { label: "Events", value: data.eventCount, icon: <CalendarDays size={11} /> },
     { label: "Time entries", value: data.timesheetCount, icon: <Clock size={11} /> },
     { label: "Total hours", value: data.hours.toFixed(2) + "h", icon: <Clock size={11} /> },
     { label: "Billable", value: data.billableHours.toFixed(2) + "h", icon: <Clock size={11} /> },
