@@ -2923,7 +2923,7 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
         </div>
       ) : (
         <div ref={gridRef} className="lp-cal-grid" onSelectStart={(e) => e.preventDefault()} style={{ marginTop: 12, border: "1px solid var(--line)", borderRadius: 12, overflow: "auto", flex: "1 1 auto" }}>
-          <div style={{ width: 1300 }}>
+          <div style={{ width: 1325 }}>
             <div style={{ display: "grid", width: "100%", gridTemplateColumns: `60px repeat(${days.length}, 1fr)`, borderBottom: "1px solid var(--line)", position: "sticky", top: 0, background: "var(--panel)", zIndex: 2 }}>
               <div style={{ padding: "10px 4px" }}></div>
               {days.map((day) => (
