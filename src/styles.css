@@ -162,11 +162,12 @@ body{margin:0;}
 .lp-invoice-form{padding:18px;}
 .lp-invoice-lines{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
 .lp-invoice-line{display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:#fff;border:1px solid var(--line);border-radius:9px;padding:8px 10px;}
-.lp-invoice-line-desc{flex:2 1 200px;}
-.lp-invoice-line-qty{flex:0 1 70px;}
-.lp-invoice-line-rate{flex:0 1 100px;}
+.lp-invoice-line-desc{flex:1 1 100%;min-width:0;}
+.lp-invoice-line-desc input{width:100%;}
+.lp-invoice-line-qty{flex:0 1 80px;}
+.lp-invoice-line-rate{flex:0 1 110px;}
 .lp-invoice-line-type{flex:0 1 150px;}
-.lp-invoice-line-amount{min-width:80px;text-align:right;font-weight:600;font-size:13px;}
+.lp-invoice-line-amount{flex:0 0 90px;text-align:right;font-weight:600;font-size:13px;}
 .lp-invoice-line-remove{flex:0 0 auto;padding:6px 8px;}
 .lp-invoice-discount-row{display:flex;gap:8px;align-items:center;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line);}
 .lp-invoice-totals{display:flex;justify-content:flex-end;padding:16px 0 4px;}
