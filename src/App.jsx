@@ -1778,7 +1778,7 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
       />
       <div className="lp-tabs no-print">
         {/* Core operations */}
-        <button className={`lp-tab ${tab === "brief" ? "is-active" : ""}`} onClick={() => setTab("brief")}>Morning brief</button>
+        <button className={`lp-tab ${tab === "brief" ? "is-active" : ""}`} onClick={() => setTab("brief")}>Brief & Reports</button>
         <button className={`lp-tab ${tab === "sites" ? "is-active" : ""}`} onClick={() => setTab("sites")}>Admin</button>
         <button className={`lp-tab ${tab === "calendar" ? "is-active" : ""}`} onClick={() => setTab("calendar")}>Calendar</button>
         <button className={`lp-tab ${tab === "projects" ? "is-active" : ""}`} onClick={() => setTab("projects")}>Projects</button>
@@ -1799,7 +1799,6 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
         {/* Operations */}
         <button className={`lp-tab ${tab === "time_clock" ? "is-active" : ""}`} onClick={() => setTab("time_clock")}>Time Clock</button>
         <button className={`lp-tab ${tab === "myreport" ? "is-active" : ""}`} onClick={() => { setReportSaved(false); setTab("myreport"); }}>Daily Report</button>
-        <button className={`lp-tab ${tab === "log" ? "is-active" : ""}`} onClick={() => setTab("log")}>Full log</button>
         {/* Communication & support */}
         <button className={`lp-tab ${tab === "support" ? "is-active" : ""}`} onClick={() => setTab("support")} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><MessageSquare size={13} /> Support</button>
         <button className={`lp-tab ${tab === "communications" ? "is-active" : ""}`} onClick={() => setTab("communications")}>Comms</button>
@@ -1812,7 +1811,7 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
         <button className={`lp-tab ${tab === "settings" ? "is-active" : ""}`} onClick={() => setTab("settings")}>Settings</button>
         <button className={`lp-tab ${tab === "passwords" ? "is-active" : ""}`} onClick={() => setTab("passwords")} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><Lock size={13} /> Passwords</button>
       </div>
-      {tab === "brief" && <MorningBrief crm={crm} onOpen={(type, id) => { setSelectedId(id); setTab(type); }} />}
+      {tab === "brief" && <BriefAndReports crm={crm} onOpen={(type, id) => { setSelectedId(id); setTab(type); }} monthsIndex={monthsIndex} getMonths={getMonths} cacheVersion={cacheVersion} onDeleteReport={onDeleteReport} />}
       {tab === "tasks" && <TasksPanel currentManager={currentManager} />}
       {tab === "assign" && <AssignTasksPanel workers={workers} assignedTasks={assignedTasks} onAdd={onAddAssignedTask} onRemove={onRemoveAssignedTask} onUpdate={onUpdateAssignedTask} />}
       {tab === "myreport" && (
@@ -1835,7 +1834,6 @@ function ManagerDashboard({ workers, managers, currentManager, monthsIndex, getM
         )
       )}
       {tab === "schedule" && <ManagerSchedulePanel managers={managers} currentManager={currentManager} />}
-      {tab === "log" && <FullLog monthsIndex={monthsIndex} getMonths={getMonths} cacheVersion={cacheVersion} onDeleteReport={onDeleteReport} />}
       {tab === "sites" && <AdminPanel />}
       {["customers", "contacts", "projects", "calendar", "suppliers", "site_notes", "site_tasks", "invoices", "quotes", "proposals", "passwords", "reports", "inventory", "communications", "audit_log", "time_clock", "marketing", "notifications", "integrations", "support"].includes(tab) && (
         <CrmTabContent tab={tab} crm={crm} uid={uid} sites={sites} selectedId={selectedId} currentManager={currentManager} />
@@ -2676,6 +2674,31 @@ function BriefTasksPanel({ date, assignedTasks }) {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function BriefAndReports({ crm, onOpen, monthsIndex, getMonths, cacheVersion, onDeleteReport }) {
+  const [view, setView] = useState("brief");
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 12, padding: "0 16px" }}>
+        <button
+          className={`lp-tab ${view === "brief" ? "is-active" : ""}`}
+          onClick={() => setView("brief")}
+          style={{ fontSize: 13 }}
+        >Morning Brief</button>
+        <button
+          className={`lp-tab ${view === "log" ? "is-active" : ""}`}
+          onClick={() => setView("log")}
+          style={{ fontSize: 13 }}
+        >Full Log</button>
+      </div>
+      {view === "brief"
+        ? <MorningBrief crm={crm} onOpen={onOpen} />
+        : <FullLog monthsIndex={monthsIndex} getMonths={getMonths} cacheVersion={cacheVersion} onDeleteReport={onDeleteReport} />
+      }
     </div>
   );
 }
