@@ -2005,6 +2005,8 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
   // Drag/resize state: { eventId, mode: "move"|"resize", startMouseY,
   //   startMouseX, origStart, origEnd, dayIndex, daysCount, snap }
   const [drag, setDrag] = useState(null);
+  // Track whether a drag actually happened so onClick can be suppressed
+  const dragHappenedRef = useRef(false);
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(null);
   const empty = () => ({
@@ -2365,13 +2367,13 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
 
   // Begin a drag or resize operation. Uses a 5px movement threshold so
   // a simple click still opens the event editor — the drag only activates
-  // once the user actually drags.
+  // once the user actually drags. dragHappenedRef is set to true if a drag
+  // occurs, so the onClick handler can suppress the click.
   const DRAG_THRESHOLD = 5;
 
   function startDrag(e, event, mode, dayIndex, daysCount) {
-    // Don't start drag on right-click or modifier-click
-    if (e.button !== 0) return;
-    e.stopPropagation();
+    if (e.button !== 0) return; // only left click
+    dragHappenedRef.current = false;
     const origStart = new Date(event.start_at);
     const origEnd = event.end_at ? new Date(event.end_at) : addMinutes(origStart, 60);
     const startX = e.clientX;
@@ -2380,11 +2382,11 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
 
     const beginDrag = () => {
       dragActive = true;
+      dragHappenedRef.current = true;
+      e.preventDefault();
       setDrag({
         eventId: event.id,
         mode,
-        startMouseY: startY,
-        startMouseX: startX,
         origStart,
         origEnd,
         origDayIndex: dayIndex,
@@ -2397,11 +2399,10 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
       const dx = ev.clientX - startX;
       const dy = ev.clientY - startY;
       if (!dragActive) {
-        // Only activate drag after moving past the threshold
         if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
           beginDrag();
         } else {
-          return; // Still just a click — don't update preview
+          return;
         }
       }
       const hour = mouseYToHour(ev.clientY);
@@ -2413,22 +2414,20 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("mouseup", onUp);
 
-      // If the drag never activated, treat it as a click — open the editor
+      // If the drag never activated, it was just a click — let onClick
+      // handle opening the editor. Don't call editEvent here.
       if (!dragActive) {
-        editEvent(event);
+        setDrag(null);
         return;
       }
 
       const hour = mouseYToHour(ev.clientY);
       const dayIdx = mouseXTodayIndex(ev.clientX, daysCount);
       const targetDay = days[dayIdx] || days[0];
-
-      // Clamp hour to 0-24
       const clampedHour = Math.max(0, Math.min(24, hour));
 
       try {
         if (mode === "move") {
-          // Move: preserve duration, change start time and day
           const duration = origEnd - origStart;
           const newStartISO = hoursToMelbourneISO(targetDay, clampedHour);
           const newStart = new Date(newStartISO);
@@ -2439,12 +2438,10 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
             updated_at: new Date().toISOString(),
           });
         } else if (mode === "resize") {
-          // Resize: change end time, keep start
           let newEndHour = clampedHour;
           const startParts = zonedParts(origStart);
           const startH = startParts.hour + startParts.minute / 60;
-          // End must be after start
-          if (newEndHour <= startH) newEndHour = startH + 0.25; // min 15 min
+          if (newEndHour <= startH) newEndHour = startH + 0.25;
           const newEndISO = hoursToMelbourneISO(targetDay, newEndHour);
           await crm.updateEvent(event.id, {
             end_at: newEndISO,
@@ -3030,6 +3027,7 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
                   <div
                     key={`${e.id}-${dayIndex}-${col}`}
                     onMouseDown={(ev) => startDrag(ev, e, "move", dayIndex, days.length)}
+                    onClick={() => { if (!dragHappenedRef.current) editEvent(e); }}
                     title={`${e.title || e.category}${title ? " · " + title : ""}`}
                     style={{
                       position: "absolute",
@@ -3063,7 +3061,7 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
                     {cols === 1 && <span style={{ pointerEvents: "none" }}>{title}</span>}
                     {/* Resize handle at bottom */}
                     <div
-                      onMouseDown={(ev) => startDrag(ev, e, "resize", dayIndex, days.length)}
+                      onMouseDown={(ev) => { ev.stopPropagation(); startDrag(ev, e, "resize", dayIndex, days.length); }}
                       style={{
                         position: "absolute",
                         bottom: 0,
