@@ -1042,6 +1042,22 @@ function ProjectList({ projects, customers, sites, crm, uid, onOpen, onChanged, 
                         p.budget != null ? `Budget ${money(p.budget)}` : "",
                       ].filter(Boolean).join(" · ")}
                     </span>
+                    {p.description && (
+                      <p
+                        style={{
+                          margin: "2px 0 0",
+                          fontSize: 12,
+                          lineHeight: 1.4,
+                          color: "var(--ink)",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {p.description}
+                      </p>
+                    )}
                   </div>
                   <ChevronRight size={16} style={{ alignSelf: "flex-start", marginTop: 4, flexShrink: 0 }} />
                 </div>
