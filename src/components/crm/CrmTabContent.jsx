@@ -3700,9 +3700,19 @@ function InvoicesPanel({ crm, uid, selectedId = null }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [filterLetter, setFilterLetter] = useState("");
+  const [sortBy, setSortBy] = useState("customer");
   const [selected, setSelected] = useState(selectedId);
   const [adding, setAdding] = useState(false);
   const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+  const SORT_OPTIONS = [
+    { value: "customer", label: "Customer Name" },
+    { value: "number", label: "Invoice Number" },
+    { value: "draft", label: "Draft" },
+    { value: "sent", label: "Sent" },
+    { value: "overdue", label: "Over Due" },
+    { value: "paid", label: "Paid" },
+  ];
 
   const round = (n, d = 2) => {
     const f = Math.pow(10, d);
@@ -3850,10 +3860,31 @@ function InvoicesPanel({ crm, uid, selectedId = null }) {
     setBusy(false);
   }
 
-  const sorted = useMemo(() => invoices.map((i) => {
-    const customerName = (i.customers?.name || i.customer_name || "").trim();
-    return { ...i, customerName, letter: customerName[0]?.toUpperCase() || "#" };
-  }).sort((a, b) => a.customerName.localeCompare(b.customerName)), [invoices]);
+  const sorted = useMemo(() => {
+    const mapped = invoices.map((i) => {
+      const customerName = (i.customers?.name || i.customer_name || "").trim();
+      return { ...i, customerName, letter: customerName[0]?.toUpperCase() || "#" };
+    });
+
+    const isOverdue = (i) => {
+      if (i.status !== "sent") return false;
+      if (!i.due_at) return false;
+      return new Date(i.due_at) < new Date();
+    };
+
+    let filtered = mapped;
+    if (sortBy === "draft") filtered = mapped.filter((i) => i.status === "draft");
+    else if (sortBy === "sent") filtered = mapped.filter((i) => i.status === "sent" && !isOverdue(i));
+    else if (sortBy === "overdue") filtered = mapped.filter((i) => isOverdue(i));
+    else if (sortBy === "paid") filtered = mapped.filter((i) => i.status === "paid");
+
+    const sortField = sortBy === "number" ? "invoice_number" : "customerName";
+    return filtered.sort((a, b) => {
+      const av = (a[sortField] || "").trim();
+      const bv = (b[sortField] || "").trim();
+      return av.localeCompare(bv);
+    });
+  }, [invoices, sortBy]);
 
   const visible = filterLetter ? sorted.filter((i) => i.letter === filterLetter) : sorted;
   const counts = ALPHABET.reduce((acc, l) => { acc[l] = sorted.filter((i) => i.letter === l).length; return acc; }, {});
@@ -3982,6 +4013,20 @@ function InvoicesPanel({ crm, uid, selectedId = null }) {
 
       {!adding && (
         <>
+          <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <label className="lp-field" style={{ flex: "0 0 auto", margin: 0 }}>
+              <span className="lp-field-label">Sort by</span>
+              <select
+                className="lp-input"
+                value={sortBy}
+                onChange={(e) => { setSortBy(e.target.value); setFilterLetter(""); }}
+                style={{ width: "auto" }}
+              >
+                {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </label>
+          </div>
+
           <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
             <span className="lp-hint">Jump:</span>
             {ALPHABET.map((l) => (
