@@ -2373,6 +2373,9 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
 
   function startDrag(e, event, mode, dayIndex, daysCount) {
     if (e.button !== 0) return; // only left click
+    // Prevent text selection and other default mousedown behaviour
+    // immediately so dragging doesn't highlight the page.
+    e.preventDefault();
     dragHappenedRef.current = false;
     const origStart = new Date(event.start_at);
     const origEnd = event.end_at ? new Date(event.end_at) : addMinutes(origStart, 60);
@@ -2901,7 +2904,7 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
           </div>
         </div>
       ) : (
-        <div ref={gridRef} style={{ marginTop: 12, border: "1px solid var(--line)", borderRadius: 12, overflow: "auto", flex: "1 1 auto" }}>
+        <div ref={gridRef} style={{ marginTop: 12, border: "1px solid var(--line)", borderRadius: 12, overflow: "auto", flex: "1 1 auto", userSelect: drag ? "none" : "auto" }}>
           <div style={{ display: "grid", gridTemplateColumns: `60px repeat(${days.length}, 1fr)`, borderBottom: "1px solid var(--line)", position: "sticky", top: 0, background: "var(--panel)", zIndex: 2, minWidth: view === "week" ? 760 : 360 }}>
             <div style={{ padding: "10px 4px" }}></div>
             {days.map((day) => (
@@ -3061,7 +3064,7 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
                     {cols === 1 && <span style={{ pointerEvents: "none" }}>{title}</span>}
                     {/* Resize handle at bottom */}
                     <div
-                      onMouseDown={(ev) => { ev.stopPropagation(); startDrag(ev, e, "resize", dayIndex, days.length); }}
+                      onMouseDown={(ev) => { ev.preventDefault(); ev.stopPropagation(); startDrag(ev, e, "resize", dayIndex, days.length); }}
                       style={{
                         position: "absolute",
                         bottom: 0,
