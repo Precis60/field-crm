@@ -2002,6 +2002,7 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const gridRef = useRef(null);
+  const timeGridRef = useRef(null);
   // Drag/resize state: { eventId, mode: "move"|"resize", startMouseY,
   //   startMouseX, origStart, origEnd, dayIndex, daysCount, snap }
   const [drag, setDrag] = useState(null);
@@ -2338,9 +2339,13 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
 
   function mouseYToHour(clientY) {
     const grid = gridRef.current;
+    const timeGrid = timeGridRef.current;
     if (!grid) return 0;
     const rect = grid.getBoundingClientRect();
-    const y = clientY - rect.top + grid.scrollTop;
+    // The time grid starts below the sticky header. Use its offsetTop
+    // to skip the header height, then account for scroll position.
+    const headerHeight = timeGrid ? timeGrid.offsetTop : 0;
+    const y = clientY - rect.top - headerHeight + grid.scrollTop;
     // Snap to nearest 15 minutes
     const snapped = Math.round(y / SNAP_PX) * SNAP_PX;
     return snapped / HOUR_HEIGHT; // hours as decimal
@@ -2350,9 +2355,12 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
     const grid = gridRef.current;
     if (!grid) return 0;
     const rect = grid.getBoundingClientRect();
-    const x = clientX - rect.left;
+    // Account for horizontal scroll — the content may be wider than the viewport
+    const x = clientX - rect.left + grid.scrollLeft;
     const labelWidth = 60;
-    const colWidth = (rect.width - labelWidth) / daysCount;
+    // Use the inner content width (the wrapper), not the scroll container width
+    const contentWidth = grid.scrollWidth || rect.width;
+    const colWidth = (contentWidth - labelWidth) / daysCount;
     const idx = Math.floor((x - labelWidth) / colWidth);
     return Math.max(0, Math.min(daysCount - 1, idx));
   }
@@ -2915,15 +2923,16 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
         </div>
       ) : (
         <div ref={gridRef} className="lp-cal-grid" onSelectStart={(e) => e.preventDefault()} style={{ marginTop: 12, border: "1px solid var(--line)", borderRadius: 12, overflow: "auto", flex: "1 1 auto" }}>
-          <div style={{ display: "grid", gridTemplateColumns: `60px repeat(${days.length}, 1fr)`, borderBottom: "1px solid var(--line)", position: "sticky", top: 0, background: "var(--panel)", zIndex: 2, minWidth: view === "week" ? 760 : 360 }}>
-            <div style={{ padding: "10px 4px" }}></div>
-            {days.map((day) => (
-              <div key={day.toISOString()} style={{ padding: "10px 4px", textAlign: "center", fontWeight: "bold", borderLeft: "1px solid var(--line)" }}>
-                {day.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", timeZone: APP_TIME_ZONE })}
-              </div>
-            ))}
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: `60px repeat(${days.length}, 1fr)`, gridTemplateRows: `repeat(24, ${HOUR_HEIGHT}px)`, position: "relative", height: 24 * HOUR_HEIGHT, minWidth: view === "week" ? 760 : 360 }}>
+          <div style={{ width: view === "week" ? 760 : 360, minWidth: "100%" }}>
+            <div style={{ display: "grid", gridTemplateColumns: `60px repeat(${days.length}, 1fr)`, borderBottom: "1px solid var(--line)", position: "sticky", top: 0, background: "var(--panel)", zIndex: 2 }}>
+              <div style={{ padding: "10px 4px" }}></div>
+              {days.map((day) => (
+                <div key={day.toISOString()} style={{ padding: "10px 4px", textAlign: "center", fontWeight: "bold", borderLeft: "1px solid var(--line)" }}>
+                  {day.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", timeZone: APP_TIME_ZONE })}
+                </div>
+              ))}
+            </div>
+            <div ref={timeGridRef} style={{ display: "grid", gridTemplateColumns: `60px repeat(${days.length}, 1fr)`, gridTemplateRows: `repeat(24, ${HOUR_HEIGHT}px)`, position: "relative", height: 24 * HOUR_HEIGHT }}>
             {hours.map((h) => {
               const label = h === 0 ? "12am" : h < 12 ? `${h}am` : h === 12 ? "12pm" : `${h - 12}pm`;
               return (
@@ -3090,6 +3099,7 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
                 );
               });
             })}
+          </div>
           </div>
         </div>
       )}
