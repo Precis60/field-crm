@@ -2001,6 +2001,10 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const gridRef = useRef(null);
+  // Drag/resize state: { eventId, mode: "move"|"resize", startMouseY,
+  //   startMouseX, origStart, origEnd, dayIndex, daysCount, snap }
+  const [drag, setDrag] = useState(null);
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(null);
   const empty = () => ({
@@ -2325,6 +2329,110 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
     });
   }
 
+  // ---- Drag & resize handlers ----
+  // Snap mouse Y position to 15-minute increments relative to the grid.
+  const SNAP_MINUTES = 15;
+  const SNAP_PX = (HOUR_HEIGHT * SNAP_MINUTES) / 60;
+
+  function mouseYToHour(clientY) {
+    const grid = gridRef.current;
+    if (!grid) return 0;
+    const rect = grid.getBoundingClientRect();
+    const y = clientY - rect.top + grid.scrollTop;
+    // Snap to nearest 15 minutes
+    const snapped = Math.round(y / SNAP_PX) * SNAP_PX;
+    return snapped / HOUR_HEIGHT; // hours as decimal
+  }
+
+  function mouseXTodayIndex(clientX, daysCount) {
+    const grid = gridRef.current;
+    if (!grid) return 0;
+    const rect = grid.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const labelWidth = 60;
+    const colWidth = (rect.width - labelWidth) / daysCount;
+    const idx = Math.floor((x - labelWidth) / colWidth);
+    return Math.max(0, Math.min(daysCount - 1, idx));
+  }
+
+  function hoursToMelbourneISO(dayDate, hourDecimal) {
+    const h = Math.floor(hourDecimal);
+    const m = Math.round((hourDecimal - h) * 60);
+    const dateStr = zonedISODate(dayDate);
+    const pad = (n) => String(n).padStart(2, "0");
+    return zonedDateToUTC(dateStr, `${pad(h)}:${pad(m)}:00`).toISOString();
+  }
+
+  // Begin a drag or resize operation
+  function startDrag(e, event, mode, dayIndex, daysCount) {
+    e.preventDefault();
+    e.stopPropagation();
+    const origStart = new Date(event.start_at);
+    const origEnd = event.end_at ? new Date(event.end_at) : addMinutes(origStart, 60);
+    setDrag({
+      eventId: event.id,
+      mode,
+      startMouseY: e.clientY,
+      startMouseX: e.clientX,
+      origStart,
+      origEnd,
+      origDayIndex: dayIndex,
+      daysCount,
+      event,
+    });
+
+    const onMove = (ev) => {
+      const hour = mouseYToHour(ev.clientY);
+      const dayIdx = mouseXTodayIndex(ev.clientX, daysCount);
+      setDrag((d) => ({ ...d, currentHour: hour, currentDayIndex: dayIdx }));
+    };
+
+    const onUp = async (ev) => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      const hour = mouseYToHour(ev.clientY);
+      const dayIdx = mouseXTodayIndex(ev.clientX, daysCount);
+      const targetDay = days[dayIdx] || days[0];
+
+      // Clamp hour to 0-24
+      const clampedHour = Math.max(0, Math.min(24, hour));
+
+      try {
+        if (mode === "move") {
+          // Move: preserve duration, change start time and day
+          const duration = origEnd - origStart;
+          const newStartISO = hoursToMelbourneISO(targetDay, clampedHour);
+          const newStart = new Date(newStartISO);
+          const newEnd = new Date(newStart.getTime() + duration);
+          await crm.updateEvent(event.id, {
+            start_at: newStartISO,
+            end_at: newEnd.toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+        } else if (mode === "resize") {
+          // Resize: change end time, keep start
+          let newEndHour = clampedHour;
+          const startParts = zonedParts(origStart);
+          const startH = startParts.hour + startParts.minute / 60;
+          // End must be after start
+          if (newEndHour <= startH) newEndHour = startH + 0.25; // min 15 min
+          const newEndISO = hoursToMelbourneISO(targetDay, newEndHour);
+          await crm.updateEvent(event.id, {
+            end_at: newEndISO,
+            updated_at: new Date().toISOString(),
+          });
+        }
+        await refresh();
+      } catch (err) {
+        setErr(err.message || "Couldn't update event.");
+      }
+      setDrag(null);
+    };
+
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }
+
   const weekStart = startOfWeek(selectedDay);
   const monthStart = startOfMonth(selectedDay);
   const monthGridStart = startOfWeek(monthStart);
@@ -2345,7 +2453,7 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginTop: 4 }}>
         <div>
           <h3 style={{ marginBottom: 0 }}><CalendarDays size={16} /> Calendar</h3>
-          <p className="lp-hint" style={{ marginTop: 4 }}>{view === "week" ? "Weekly" : view === "month" ? "Monthly" : "Daily"} view of events by category.</p>
+          <p className="lp-hint" style={{ marginTop: 4 }}>{view === "week" ? "Weekly" : view === "month" ? "Monthly" : "Daily"} view of events by category. {view !== "month" && "Drag events to move, drag bottom edge to resize."}</p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <ChoiceRow options={["Day", "Week", "Month"]} value={view === "day" ? "Day" : view === "month" ? "Month" : "Week"} onChange={(v) => setView(v.toLowerCase())} />
@@ -2767,7 +2875,7 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
           </div>
         </div>
       ) : (
-        <div style={{ marginTop: 12, border: "1px solid var(--line)", borderRadius: 12, overflow: "auto", flex: "1 1 auto" }}>
+        <div ref={gridRef} style={{ marginTop: 12, border: "1px solid var(--line)", borderRadius: 12, overflow: "auto", flex: "1 1 auto" }}>
           <div style={{ display: "grid", gridTemplateColumns: `60px repeat(${days.length}, 1fr)`, borderBottom: "1px solid var(--line)", position: "sticky", top: 0, background: "var(--panel)", zIndex: 2, minWidth: view === "week" ? 760 : 360 }}>
             <div style={{ padding: "10px 4px" }}></div>
             {days.map((day) => (
@@ -2867,18 +2975,33 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
                 // wrong time for anyone outside Melbourne.
                 const startParts = zonedParts(portionStart);
                 const endParts = zonedParts(portionEnd);
-                const startH = startParts.hour + startParts.minute / 60;
+                let startH = startParts.hour + startParts.minute / 60;
                 let endH = endParts.hour + endParts.minute / 60;
                 if (endH === 0 && portionEnd.getTime() !== portionStart.getTime()) endH = 24;
+
+                // If this event is being dragged/resized, show live preview
+                const isDragging = drag?.eventId === e.id;
+                if (isDragging && drag.currentHour != null) {
+                  if (drag.mode === "move") {
+                    const duration = (drag.origEnd - drag.origStart) / 3600000;
+                    const newDayIdx = drag.currentDayIndex ?? dayIndex;
+                    // Only render in the column being dragged over
+                    if (newDayIdx !== dayIndex) return null;
+                    startH = drag.currentHour;
+                    endH = Math.min(24, startH + duration);
+                  } else if (drag.mode === "resize") {
+                    endH = Math.max(startH + 0.25, drag.currentHour);
+                  }
+                }
+
                 const top = startH * HOUR_HEIGHT;
                 const height = Math.max((endH - startH) * HOUR_HEIGHT, 18);
                 const title = [e.title ? e.category : null, e.project_name, e.site_name].filter(Boolean).join(" · ");
                 return (
-                  <button
+                  <div
                     key={`${e.id}-${dayIndex}-${col}`}
-                    type="button"
-                    onClick={() => editEvent(e)}
-                    disabled={busy}
+                    onMouseDown={(ev) => startDrag(ev, e, "move", dayIndex, days.length)}
+                    onClick={() => { if (!drag) editEvent(e); }}
                     title={`${e.title || e.category}${title ? " · " + title : ""}`}
                     style={{
                       position: "absolute",
@@ -2898,17 +3021,33 @@ function CalendarPanel({ crm, uid, sites = [], selectedId = null }) {
                       color: "#333",
                       overflow: "hidden",
                       textAlign: "left",
-                      cursor: "pointer",
-                      zIndex: 1,
+                      cursor: isDragging ? "grabbing" : "grab",
+                      zIndex: isDragging ? 10 : 1,
+                      opacity: isDragging ? 0.8 : 1,
                       border: "none",
                       display: "flex",
                       flexDirection: "column",
+                      userSelect: "none",
                     }}
                   >
-                    <strong style={{ lineHeight: 1.2 }}>{e.title || e.category}</strong>
-                    <span>{portionStart.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", timeZone: APP_TIME_ZONE })} – {portionEnd.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", timeZone: APP_TIME_ZONE })}</span>
-                    {cols === 1 && <span>{title}</span>}
-                  </button>
+                    <strong style={{ lineHeight: 1.2, pointerEvents: "none" }}>{e.title || e.category}</strong>
+                    <span style={{ pointerEvents: "none" }}>{portionStart.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", timeZone: APP_TIME_ZONE })} – {portionEnd.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", timeZone: APP_TIME_ZONE })}</span>
+                    {cols === 1 && <span style={{ pointerEvents: "none" }}>{title}</span>}
+                    {/* Resize handle at bottom */}
+                    <div
+                      onMouseDown={(ev) => startDrag(ev, e, "resize", dayIndex, days.length)}
+                      style={{
+                        position: "absolute",
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        height: 8,
+                        cursor: "ns-resize",
+                        background: "transparent",
+                        borderTop: "2px solid transparent",
+                      }}
+                    />
+                  </div>
                 );
               });
             })}
