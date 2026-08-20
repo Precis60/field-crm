@@ -3701,6 +3701,7 @@ function InvoicesPanel({ crm, uid, selectedId = null }) {
   const [err, setErr] = useState("");
   const [filterLetter, setFilterLetter] = useState("");
   const [sortBy, setSortBy] = useState("customer");
+  const [statusFilters, setStatusFilters] = useState({ draft: true, sent: true, paid: true, void: true, overdue: true });
   const [selected, setSelected] = useState(selectedId);
   const [adding, setAdding] = useState(false);
   const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -3708,10 +3709,14 @@ function InvoicesPanel({ crm, uid, selectedId = null }) {
   const SORT_OPTIONS = [
     { value: "customer", label: "Customer Name" },
     { value: "number", label: "Invoice Number" },
-    { value: "draft", label: "Draft" },
-    { value: "sent", label: "Sent" },
-    { value: "overdue", label: "Over Due" },
-    { value: "paid", label: "Paid" },
+  ];
+
+  const STATUS_FILTERS = [
+    { key: "draft", label: "Draft" },
+    { key: "sent", label: "Sent" },
+    { key: "paid", label: "Paid" },
+    { key: "void", label: "Void" },
+    { key: "overdue", label: "Over Due" },
   ];
 
   const round = (n, d = 2) => {
@@ -3872,11 +3877,18 @@ function InvoicesPanel({ crm, uid, selectedId = null }) {
       return new Date(i.due_at) < new Date();
     };
 
-    let filtered = mapped;
-    if (sortBy === "draft") filtered = mapped.filter((i) => i.status === "draft");
-    else if (sortBy === "sent") filtered = mapped.filter((i) => i.status === "sent" && !isOverdue(i));
-    else if (sortBy === "overdue") filtered = mapped.filter((i) => isOverdue(i));
-    else if (sortBy === "paid") filtered = mapped.filter((i) => i.status === "paid");
+    const matchesFilter = (i) => {
+      if (i.status === "void") return statusFilters.void;
+      if (i.status === "draft") return statusFilters.draft;
+      if (i.status === "paid") return statusFilters.paid;
+      if (i.status === "sent") {
+        if (isOverdue(i)) return statusFilters.overdue;
+        return statusFilters.sent;
+      }
+      return false;
+    };
+
+    const filtered = mapped.filter(matchesFilter);
 
     const sortField = sortBy === "number" ? "invoice_number" : "customerName";
     return filtered.sort((a, b) => {
@@ -3884,7 +3896,7 @@ function InvoicesPanel({ crm, uid, selectedId = null }) {
       const bv = (b[sortField] || "").trim();
       return av.localeCompare(bv);
     });
-  }, [invoices, sortBy]);
+  }, [invoices, sortBy, statusFilters]);
 
   const visible = filterLetter ? sorted.filter((i) => i.letter === filterLetter) : sorted;
   const counts = ALPHABET.reduce((acc, l) => { acc[l] = sorted.filter((i) => i.letter === l).length; return acc; }, {});
@@ -4014,6 +4026,49 @@ function InvoicesPanel({ crm, uid, selectedId = null }) {
       {!adding && (
         <>
           <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span className="lp-hint" style={{ fontWeight: 600 }}>Show:</span>
+            {STATUS_FILTERS.map((f) => {
+              const active = statusFilters[f.key];
+              return (
+                <button
+                  key={f.key}
+                  type="button"
+                  className="lp-tag"
+                  onClick={() => setStatusFilters((prev) => ({ ...prev, [f.key]: !prev[f.key] }))}
+                  style={{
+                    padding: "4px 10px",
+                    fontSize: 12,
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    opacity: active ? 1 : 0.4,
+                    textDecoration: active ? "none" : "line-through",
+                    background: active ? "var(--panel)" : "transparent",
+                    border: "1px solid var(--line)",
+                  }}
+                >
+                  {f.label}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              className="lp-btn-ghost"
+              onClick={() => setStatusFilters({ draft: true, sent: true, paid: true, void: true, overdue: true })}
+              style={{ fontSize: 12, padding: "4px 8px" }}
+            >
+              All
+            </button>
+            <button
+              type="button"
+              className="lp-btn-ghost"
+              onClick={() => setStatusFilters({ draft: false, sent: false, paid: false, void: false, overdue: false })}
+              style={{ fontSize: 12, padding: "4px 8px" }}
+            >
+              None
+            </button>
+          </div>
+
+          <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <label className="lp-field" style={{ flex: "0 0 auto", margin: 0 }}>
               <span className="lp-field-label">Sort by</span>
               <select
